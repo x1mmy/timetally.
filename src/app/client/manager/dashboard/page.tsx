@@ -282,77 +282,48 @@ export default function ManagerDashboardPage() {
                 : 'No employees yet. Add your first employee to get started.'}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredEmployees.map((emp) => (
                 <div
                   key={emp.id}
-                  className="bg-neutral-800 border border-neutral-700 rounded-lg p-6 hover:border-primary/50 transition-colors"
+                  className="bg-neutral-800 border border-neutral-700 rounded-lg p-6"
                 >
-                  {/* Employee Header */}
-                  <div className="flex items-start justify-between mb-4">
+                  {/* Employee Header with Total Pay */}
+                  <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="text-lg font-semibold">
+                      <h3 className="text-xl font-semibold mb-1">
                         {emp.first_name} {emp.last_name}
                       </h3>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded text-xs mt-1 ${
-                          emp.status === 'active'
-                            ? 'bg-green-500/20 text-green-500'
-                            : 'bg-gray-500/20 text-gray-500'
-                        }`}
-                      >
-                        {emp.status}
-                      </span>
-                    </div>
-                    <DollarSign className="w-5 h-5 text-primary" />
-                  </div>
 
-                  {/* Hours Breakdown */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-neutral-400">Weekday ({emp.weekdayHours.toFixed(1)}h)</span>
-                      <span className="font-medium">${(emp.weekdayHours * emp.weekday_rate).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-neutral-400">Saturday ({emp.saturdayHours.toFixed(1)}h)</span>
-                      <span className="font-medium">${(emp.saturdayHours * emp.saturday_rate).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-neutral-400">Sunday ({emp.sundayHours.toFixed(1)}h)</span>
-                      <span className="font-medium">${(emp.sundayHours * emp.sunday_rate).toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Total Pay */}
-                  <div className="pt-4 border-t border-neutral-700">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-neutral-400">Total Pay</span>
-                      <span className="text-2xl font-bold text-primary">
+                    <div className="text-right">
+                      <div className="text-3xl font-bold text-primary">
                         ${emp.totalPay.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center mt-1">
-                      <span className="text-xs text-neutral-500">Total Hours</span>
-                      <span className="text-sm text-neutral-400">{emp.totalHours.toFixed(1)} hrs</span>
+                      </div>
+                      <div className="text-sm text-neutral-400">
+                        {emp.totalHours.toFixed(0)} hours
+                      </div>
                     </div>
                   </div>
 
                   {/* Pay Rates */}
-                  <div className="mt-4 pt-4 border-t border-neutral-700">
-                    <p className="text-xs text-neutral-500 mb-2">Hourly Rates</p>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <span className="text-neutral-400">M-F: </span>
-                        <span className="font-medium">${emp.weekday_rate}/h</span>
-                      </div>
-                      <div>
-                        <span className="text-neutral-400">Sat: </span>
-                        <span className="font-medium">${emp.saturday_rate}/h</span>
-                      </div>
-                      <div>
-                        <span className="text-neutral-400">Sun: </span>
-                        <span className="font-medium">${emp.sunday_rate}/h</span>
-                      </div>
+                  <div className="text-sm text-neutral-400 mb-4">
+                    Weekday: ${emp.weekday_rate.toFixed(2)}/hr | Sat: ${emp.saturday_rate.toFixed(2)}/hr | Sun: ${emp.sunday_rate.toFixed(2)}/hr
+                  </div>
+
+                  {/* Day Boxes */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 text-center">
+                      <div className="text-sm text-neutral-400 mb-2">Weekday</div>
+                      <div className="text-xl font-semibold">{emp.weekdayHours.toFixed(0)} hrs</div>
+                    </div>
+                    <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 text-center">
+                      <div className="text-sm text-neutral-400 mb-2">Saturday</div>
+                      <div className="text-xl font-semibold">{emp.saturdayHours.toFixed(0)} hrs</div>
+                    </div>
+                    <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 text-center">
+                      <div className="text-sm text-neutral-400 mb-2">Sunday</div>
+                      <div className="text-xl font-semibold">{emp.sundayHours.toFixed(0)} hrs</div>
                     </div>
                   </div>
                 </div>
