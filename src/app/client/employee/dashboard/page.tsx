@@ -9,7 +9,7 @@
  */
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { TimeInput } from '@/components/TimeInput'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -27,7 +27,7 @@ import { format } from 'date-fns'
 import type { Timesheet } from '@/types/database'
 
 export default function EmployeeDashboardPage() {
-  // Employee info from session (would come from cookie in real implementation)
+  // Employee info from session cookie (set at PIN login)
   const [employeeName, setEmployeeName] = useState('Employee')
   const [employeeId, setEmployeeId] = useState('')
 
@@ -48,27 +48,50 @@ export default function EmployeeDashboardPage() {
   /**
    * Fetch employee's past timesheets
    */
-  const fetchTimesheets = async () => {
+  const fetchTimesheets = useCallback(async () => {
     try {
-      // In real implementation, employeeId would come from session
+
       if (!employeeId) return
 
       const response = await fetch(`/api/client/timesheets?employeeId=${employeeId}`)
-      const data = await response.json()
+      const json: unknown = await response.json()
 
-      if (response.ok) {
-        setTimesheets(data.timesheets || [])
+      if (response.ok && typeof json === 'object' && json !== null) {
+        const { timesheets } = json as { timesheets?: Timesheet[] }
+        setTimesheets(timesheets ?? [])
       }
     } catch (error) {
       console.error('Error fetching timesheets:', error)
     }
-  }
+  }, [employeeId])
 
   useEffect(() => {
-    // In real implementation, fetch employee info from session
-    // For now, using placeholder
-    fetchTimesheets()
-  }, [employeeId])
+    // Load current employee from session cookie
+    const loadEmployee = async () => {
+      try {
+        const response = await fetch('/api/client/auth/employee/me')
+        const json: unknown = await response.json()
+        if (response.ok && typeof json === 'object' && json !== null) {
+          const { employee } = json as {
+            employee?: { id: string; firstName?: string; lastName?: string }
+          }
+          if (!employee) return
+          const fullName = `${employee.firstName ?? ''} ${employee.lastName ?? ''}`.trim()
+          setEmployeeName(fullName || 'Employee')
+          setEmployeeId(employee.id)
+        }
+      } catch (err) {
+        console.error('Failed to load employee:', err)
+      }
+    }
+    void loadEmployee()
+  }, [])
+
+  // When employeeId changes, fetch timesheets
+  useEffect(() => {
+    if (!employeeId) return
+    void fetchTimesheets()
+  }, [employeeId, fetchTimesheets])
 
   /**
    * Handle timesheet submission
@@ -109,10 +132,18 @@ export default function EmployeeDashboardPage() {
         })
       })
 
-      const data = await response.json()
+      const json: unknown = await response.json()
+
+      // Narrow possible error payload without using `any`
+      const hasErrorMessage = (value: unknown): value is { error: string } => {
+        if (typeof value !== 'object' || value === null) return false
+        const record = value as Record<string, unknown>
+        return typeof record.error === 'string'
+      }
 
       if (!response.ok) {
-        setError(data.error || 'Failed to submit timesheet')
+        const errMsg = hasErrorMessage(json) ? json.error : 'Failed to submit timesheet'
+        setError(errMsg)
         return
       }
 
@@ -121,8 +152,8 @@ export default function EmployeeDashboardPage() {
       setStartTime('')
       setEndTime('')
       setNotes('')
-      fetchTimesheets()
-    } catch (err) {
+      void fetchTimesheets()
+    } catch {
       setError('An error occurred')
     } finally {
       setLoading(false)
@@ -151,7 +182,7 @@ export default function EmployeeDashboardPage() {
             <div className="flex items-center gap-3">
               <Users className="w-8 h-8 text-primary" />
               <div>
-                <h1 className="text-2xl font-bold">Welcome, {employeeName}</h1>
+                <h1 className="text-2xl font-bold">Welcome, <span className="text-primary">{employeeName}</span></h1>
                 <p className="text-sm text-neutral-400">Submit Your Timesheet</p>
               </div>
             </div>

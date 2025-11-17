@@ -3,6 +3,7 @@
  * Used in server components, API routes, and server actions
  */
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 /**
@@ -34,6 +35,24 @@ export async function createSupabaseServer() {
           }
         },
       },
+    }
+  )
+}
+
+/**
+ * Creates a Supabase admin client with service role key
+ * Bypasses Row Level Security (RLS) for admin operations
+ * ONLY use this for admin API routes that require full database access
+ */
+export function createSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
   )
 }

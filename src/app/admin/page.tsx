@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@timetally.com"
-              className="bg-neutral-700 border-neutral-600"
+              className="bg-white border-neutral-600"
               required
             />
           </div>
@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="bg-neutral-700 border-neutral-600"
+              className="bg-white border-neutral-600"
               required
             />
           </div>
@@ -105,7 +105,7 @@ export default function AdminLoginPage() {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full bg-primary hover:bg-primary-600"
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
             disabled={loading}
           >
             {loading ? 'Logging in...' : 'Login to Admin Portal'}

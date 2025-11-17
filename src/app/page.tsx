@@ -77,13 +77,13 @@ export default function Home() {
           </div>
 
           {/* Feature 6 */}
-          <div className="bg-neutral-800 p-6 rounded-lg border border-neutral-700">
+          {/* <div className="bg-neutral-800 p-6 rounded-lg border border-neutral-700">
             <Building2 className="w-12 h-12 text-primary mb-4" />
             <h3 className="text-xl font-semibold mb-2">Admin Portal</h3>
             <p className="text-neutral-400">
               Central admin dashboard for managing multiple clients
             </p>
-          </div>
+          </div> */}
         </div>
       </section>
 
@@ -110,7 +110,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-neutral-800 py-8 mt-20">
         <div className="container mx-auto px-4 text-center text-neutral-500">
-          <p>&copy; {new Date().getFullYear()} TimeTally. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} TimeTally. All rights reserved. | Built by <a href="https://stashlabs.com.au" target="_blank" rel="noopener noreferrer" className=" hover:underline">Stash Labs.</a></p>
         </div>
       </footer>
     </div>

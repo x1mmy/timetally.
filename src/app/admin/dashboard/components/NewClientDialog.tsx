@@ -89,7 +89,7 @@ export function NewClientDialog({ onSuccess }: NewClientDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-primary hover:bg-primary-600">
+        <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
           <Plus className="w-4 h-4 mr-2" />
           Add New Client
         </Button>
@@ -97,40 +97,40 @@ export function NewClientDialog({ onSuccess }: NewClientDialogProps) {
 
       <DialogContent className="bg-neutral-800 border-neutral-700">
         <DialogHeader>
-          <DialogTitle>Create New Client</DialogTitle>
+          <DialogTitle className="text-white">Create New Client</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Business Name */}
           <div className="space-y-2">
-            <Label htmlFor="businessName">Business Name *</Label>
+            <Label htmlFor="businessName" className="text-white">Business Name *</Label>
             <Input
               id="businessName"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               placeholder="Acme Corporation"
-              className="bg-neutral-700 border-neutral-600"
+              className="bg-white text-black border-neutral-600"
               required
             />
           </div>
 
           {/* Contact Email */}
           <div className="space-y-2">
-            <Label htmlFor="contactEmail">Contact Email *</Label>
+            <Label htmlFor="contactEmail" className="text-white">Contact Email *</Label>
             <Input
               id="contactEmail"
               type="email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
               placeholder="manager@acme.com"
-              className="bg-neutral-700 border-neutral-600"
+              className="bg-white text-black border-neutral-600"
               required
             />
           </div>
 
           {/* Subdomain (optional) */}
           <div className="space-y-2">
-            <Label htmlFor="subdomain">
+            <Label htmlFor="subdomain" className="text-white">
               Subdomain (optional)
               <span className="text-xs text-neutral-400 ml-2">
                 Auto-generated if left blank
@@ -141,7 +141,7 @@ export function NewClientDialog({ onSuccess }: NewClientDialogProps) {
               value={subdomain}
               onChange={(e) => setSubdomain(e.target.value.toLowerCase())}
               placeholder="acme"
-              className="bg-neutral-700 border-neutral-600"
+              className="bg-white text-black border-neutral-600"
             />
             {subdomain && (
               <p className="text-xs text-neutral-400">
@@ -152,7 +152,7 @@ export function NewClientDialog({ onSuccess }: NewClientDialogProps) {
 
           {/* Manager PIN (optional) */}
           <div className="space-y-2">
-            <Label htmlFor="managerPin">
+            <Label htmlFor="managerPin" className="text-white">
               Manager PIN (optional)
               <span className="text-xs text-neutral-400 ml-2">
                 Defaults to 0000
@@ -165,7 +165,7 @@ export function NewClientDialog({ onSuccess }: NewClientDialogProps) {
               onChange={(e) => setManagerPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
               placeholder="0000"
               maxLength={4}
-              className="bg-neutral-700 border-neutral-600"
+              className="bg-white text-black border-neutral-600"
             />
           </div>
 
@@ -182,7 +182,7 @@ export function NewClientDialog({ onSuccess }: NewClientDialogProps) {
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              className="bg-neutral-700 border-neutral-600"
+              className="bg-white text-black border-neutral-600"
             >
               Cancel
             </Button>

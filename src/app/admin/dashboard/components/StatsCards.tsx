@@ -4,7 +4,7 @@
  * Shows: total clients, active clients, total employees, inactive clients
  */
 import { Card } from '@/components/ui/card'
-import { Building2, Activity, Users, XCircle } from 'lucide-react'
+import { Building2, Activity, Users, XCircle, MonitorCheck, MonitorX } from 'lucide-react'
 
 interface StatsCardsProps {
   totalClients: number
@@ -29,7 +29,7 @@ export function StatsCards({
     {
       label: 'Active Clients',
       value: activeClients,
-      icon: Activity,
+      icon: MonitorCheck,
       color: 'text-green-500'
     },
     {
@@ -41,7 +41,7 @@ export function StatsCards({
     {
       label: 'Inactive Clients',
       value: inactiveClients,
-      icon: XCircle,
+      icon: MonitorX,
       color: 'text-yellow-500'
     }
   ]
@@ -60,7 +60,7 @@ export function StatsCards({
             {/* Label and Value */}
             <div>
               <p className="text-sm text-neutral-400">{stat.label}</p>
-              <p className="text-3xl font-bold">{stat.value}</p>
+              <p className="text-3xl font-bold text-white">{stat.value}</p>
             </div>
           </div>
         </Card>

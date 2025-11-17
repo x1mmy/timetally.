@@ -10,15 +10,48 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { StatsCards } from './components/StatsCards'
 import { ClientList } from './components/ClientList'
 import { NewClientDialog } from './components/NewClientDialog'
-import { Clock } from 'lucide-react'
+import { EditClientDialog } from './components/EditClientDialog'
+import { Button } from '@/components/ui/button'
+import { Clock, LogOut } from 'lucide-react'
 import type { Client } from '@/types/database'
 
 export default function AdminDashboardPage() {
+  const router = useRouter()
   const [clients, setClients] = useState<(Client & { employees?: { count: number }[] })[]>([])
   const [loading, setLoading] = useState(true)
+  const [authenticated, setAuthenticated] = useState(false)
+  const [editingClient, setEditingClient] = useState<Client | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+
+  /**
+   * Check if user is authenticated
+   */
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // Check if admin_session cookie exists by making a request
+        const response = await fetch('/api/admin/clients', { method: 'HEAD' })
+
+        if (response.status === 401) {
+          // Not authenticated, redirect to login
+          router.push('/admin')
+          return
+        }
+
+        // Authenticated
+        setAuthenticated(true)
+      } catch (error) {
+        console.error('Auth check error:', error)
+        router.push('/admin')
+      }
+    }
+
+    checkAuth()
+  }, [router])
 
   /**
    * Fetch clients from API
@@ -31,6 +64,9 @@ export default function AdminDashboardPage() {
 
       if (response.ok) {
         setClients(data.clients || [])
+      } else if (response.status === 401) {
+        // Session expired, redirect to login
+        router.push('/admin')
       }
     } catch (error) {
       console.error('Error fetching clients:', error)
@@ -39,10 +75,12 @@ export default function AdminDashboardPage() {
     }
   }
 
-  // Load clients on mount
+  // Load clients after authentication is confirmed
   useEffect(() => {
-    fetchClients()
-  }, [])
+    if (authenticated) {
+      fetchClients()
+    }
+  }, [authenticated])
 
   /**
    * Calculate stats from clients data
@@ -58,8 +96,8 @@ export default function AdminDashboardPage() {
    * Handle edit client action
    */
   const handleEdit = (client: Client) => {
-    // TODO: Implement edit dialog
-    console.log('Edit client:', client)
+    setEditingClient(client)
+    setEditDialogOpen(true)
   }
 
   /**
@@ -84,6 +122,36 @@ export default function AdminDashboardPage() {
     }
   }
 
+  /**
+   * Handle logout action
+   */
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', {
+        method: 'DELETE'
+      })
+
+      // Redirect to login page
+      router.push('/admin')
+    } catch (error) {
+      console.error('Error logging out:', error)
+      // Redirect anyway
+      router.push('/admin')
+    }
+  }
+
+  // Show loading screen while checking authentication
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-neutral-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <Clock className="w-12 h-12 text-primary animate-pulse mx-auto mb-4" />
+          <p className="text-neutral-400">Verifying session...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-neutral-900 text-white">
       {/* Header */}
@@ -98,8 +166,18 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
-            {/* Add New Client Button */}
-            <NewClientDialog onSuccess={fetchClients} />
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              <NewClientDialog onSuccess={fetchClients} />
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="text-red-500 hover:bg-red-500/20 hover:text-red-500 bg-neutral-700 border-neutral-600 hover:bg-red-500/20 hover:border-red-500"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -135,6 +213,14 @@ export default function AdminDashboardPage() {
           </section>
         </div>
       </main>
+
+      {/* Edit Client Dialog */}
+      <EditClientDialog
+        client={editingClient}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={fetchClients}
+      />
     </div>
   )
 }

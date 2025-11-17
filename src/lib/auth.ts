@@ -3,6 +3,8 @@
  * Uses bcrypt for secure hashing with 10 salt rounds
  */
 import bcrypt from 'bcryptjs'
+import { createSupabaseServer } from '@/lib/supabase/server'
+import type { AdminUser } from '@/types/database'
 
 const SALT_ROUNDS = 10
 
@@ -45,4 +47,32 @@ export async function verifyPassword(
  */
 export async function verifyPIN(pin: string, hash: string): Promise<boolean> {
   return bcrypt.compare(pin, hash)
+}
+
+/**
+ * Validate an admin session by checking if the admin user exists
+ * @param sessionId - Admin user ID from session cookie
+ * @returns Admin user object if valid, null otherwise
+ */
+export async function validateAdminSession(
+  sessionId: string
+): Promise<AdminUser | null> {
+  try {
+    const supabase = await createSupabaseServer()
+
+    const { data: admin, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('id', sessionId)
+      .single()
+
+    if (error || !admin) {
+      return null
+    }
+
+    return admin
+  } catch (error) {
+    console.error('Session validation error:', error)
+    return null
+  }
 }

@@ -5,7 +5,7 @@
  * Note: Employee PINs are stored as plain text (4 digits) and isolated by client_id
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/server'
 import { getSubdomainFromRequest } from '@/lib/subdomain'
 
 /**
@@ -14,7 +14,7 @@ import { getSubdomainFromRequest } from '@/lib/subdomain'
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const { pin } = await request.json()
 
     // Validate input
@@ -93,7 +93,6 @@ export async function POST(request: NextRequest) {
       success: true,
       employee: {
         id: employee.id,
-        employeeNumber: employee.employee_number,
         firstName: employee.first_name,
         lastName: employee.last_name
       }

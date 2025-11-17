@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
-import { Clock, Users, Shield } from 'lucide-react'
+import { Clock, Users, Shield, Lock } from 'lucide-react'
 
 export default function ClientLandingPage() {
   const [businessName, setBusinessName] = useState<string>('')
@@ -52,8 +52,8 @@ export default function ClientLandingPage() {
           <div className="flex justify-center mb-4">
             <Clock className="w-16 h-16 text-primary" />
           </div>
-          <h1 className="text-4xl font-bold mb-2">{businessName}</h1>
-          <p className="text-xl text-neutral-400">Time & Attendance Portal</p>
+          <h1 className="text-4xl font-bold mb-2">TimeTally</h1>
+          <p className="text-xl text-neutral-400">Payroll Management System</p>
         </div>
 
         {/* Login Options */}
@@ -65,12 +65,12 @@ export default function ClientLandingPage() {
                 <div className="flex justify-center">
                   <Users className="w-16 h-16 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold">Employee Login</h2>
+                <h2 className="text-2xl font-bold text-white">Employee Login</h2>
                 <p className="text-neutral-400">
-                  Submit your timesheet and view your work hours
+                  Submit your weekly timesheet 
                 </p>
                 <div className="pt-4">
-                  <div className="inline-block px-6 py-2 bg-primary rounded-lg">
+                  <div className="inline-block px-6 py-2 bg-primary rounded-lg text-white">
                     Login with PIN
                   </div>
                 </div>
@@ -83,14 +83,14 @@ export default function ClientLandingPage() {
             <Card className="p-8 bg-neutral-800 border-neutral-700 hover:border-primary transition-colors cursor-pointer h-full">
               <div className="text-center space-y-4">
                 <div className="flex justify-center">
-                  <Shield className="w-16 h-16 text-primary" />
+                  <Lock className="w-16 h-16 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold">Manager Access</h2>
+                <h2 className="text-2xl font-bold text-white">Manager Access</h2>
                 <p className="text-neutral-400">
-                  View employee timesheets, manage employees, and export reports
+                  Review and export payroll data
                 </p>
                 <div className="pt-4">
-                  <div className="inline-block px-6 py-2 bg-primary rounded-lg">
+                  <div className="inline-block px-6 py-2 bg-primary rounded-lg text-white">
                     Manager Login
                   </div>
                 </div>
@@ -101,7 +101,7 @@ export default function ClientLandingPage() {
 
         {/* Footer */}
         <div className="text-center mt-12 text-neutral-500 text-sm">
-          <p>Powered by TimeTally</p>
+          <p>2025 © TimeTally. | Built by <a href="https://stashlabs.com.au" target="_blank" rel="noopener noreferrer" className=" hover:underline">Stash Labs.</a></p>
         </div>
       </div>
     </div>

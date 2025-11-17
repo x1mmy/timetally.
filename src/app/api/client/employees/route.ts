@@ -5,16 +5,16 @@
  * Note: Employee PINs are stored as plain text (4 digits) and isolated by client_id
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/server'
 import { getSubdomainFromRequest } from '@/lib/subdomain'
 
 /**
  * GET - List all employees for current client
- * Returns employees ordered by employee number
+ * Returns employees ordered by first name
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     // Get subdomain from request
     const subdomain = getSubdomainFromRequest(request)
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       .from('employees')
       .select('*')
       .eq('client_id', client.id)
-      .order('employee_number', { ascending: true })
+      .order('first_name', { ascending: true })
 
     if (error) throw error
 
@@ -60,15 +60,15 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST - Create new employee
- * Body: { employeeNumber, firstName, lastName, pin }
+ * Body: { firstName, lastName, pin, weekdayRate, saturdayRate, sundayRate }
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer()
-    const { employeeNumber, firstName, lastName, pin } = await request.json()
+    const supabase = createSupabaseAdmin()
+    const { firstName, lastName, pin, weekdayRate, saturdayRate, sundayRate } = await request.json()
 
     // Validate required fields
-    if (!employeeNumber || !firstName || !lastName || !pin) {
+    if (!firstName || !lastName || !pin || weekdayRate === undefined || saturdayRate === undefined || sundayRate === undefined) {
       return NextResponse.json(
         { error: 'All fields are required' },
         { status: 400 }
@@ -79,6 +79,14 @@ export async function POST(request: NextRequest) {
     if (!/^\d{4}$/.test(pin)) {
       return NextResponse.json(
         { error: 'PIN must be 4 digits' },
+        { status: 400 }
+      )
+    }
+
+    // Validate pay rates are positive numbers
+    if (weekdayRate < 0 || saturdayRate < 0 || sundayRate < 0) {
+      return NextResponse.json(
+        { error: 'Pay rates must be positive numbers' },
         { status: 400 }
       )
     }
@@ -107,30 +115,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if employee number already exists for this client
-    const { data: existing } = await supabase
-      .from('employees')
-      .select('id')
-      .eq('client_id', client.id)
-      .eq('employee_number', employeeNumber)
-      .single()
-
-    if (existing) {
-      return NextResponse.json(
-        { error: 'Employee number already exists' },
-        { status: 409 }
-      )
-    }
-
-    // Create employee (PIN stored as plain text, client-isolated)
+    // Create employee with pay rates (PIN stored as plain text, client-isolated)
     const { data: employee, error } = await supabase
       .from('employees')
       .insert({
         client_id: client.id,
-        employee_number: employeeNumber,
         first_name: firstName,
         last_name: lastName,
-        pin: pin
+        pin: pin,
+        weekday_rate: weekdayRate,
+        saturday_rate: saturdayRate,
+        sunday_rate: sundayRate
       })
       .select()
       .single()

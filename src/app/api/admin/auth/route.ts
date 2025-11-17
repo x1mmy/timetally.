@@ -1,7 +1,7 @@
 /**
  * Admin Authentication API Route
- * POST /api/admin/auth - Admin login
- * Validates credentials and creates session cookie
+ * POST /api/admin/auth - Admin login (validates credentials and creates session cookie)
+ * DELETE /api/admin/auth - Admin logout (clears session cookie)
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServer } from '@/lib/supabase/server'
@@ -70,6 +70,35 @@ export async function POST(request: NextRequest) {
     return response
   } catch (error) {
     console.error('Admin auth error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * DELETE - Admin logout
+ * Clears the admin session cookie
+ */
+export async function DELETE() {
+  try {
+    const response = NextResponse.json({
+      success: true,
+      message: 'Logged out successfully'
+    })
+
+    // Clear the session cookie by setting it to expire immediately
+    response.cookies.set('admin_session', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 0 // Expire immediately
+    })
+
+    return response
+  } catch (error) {
+    console.error('Admin logout error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

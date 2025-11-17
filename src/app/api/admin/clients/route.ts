@@ -1,20 +1,56 @@
 /**
  * Admin Clients API Route
+ * HEAD /api/admin/clients - Check authentication
  * GET /api/admin/clients - List all clients
  * POST /api/admin/clients - Create new client
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
+import { createSupabaseAdmin } from '@/lib/supabase/server'
 import { generateSubdomain, validateSubdomain } from '@/lib/utils'
-import { hashPIN } from '@/lib/auth'
+import { hashPIN, validateAdminSession } from '@/lib/auth'
+
+/**
+ * Check if admin is authenticated
+ */
+async function checkAuth(): Promise<NextResponse | null> {
+  const cookieStore = await cookies()
+  const sessionId = cookieStore.get('admin_session')?.value
+
+  if (!sessionId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const admin = await validateAdminSession(sessionId)
+
+  if (!admin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  return null // Auth successful
+}
+
+/**
+ * HEAD - Check authentication status
+ */
+export async function HEAD() {
+  const authError = await checkAuth()
+  if (authError) return authError
+
+  return new NextResponse(null, { status: 200 })
+}
 
 /**
  * GET - List all clients with employee counts
  * Returns clients ordered by creation date (newest first)
  */
 export async function GET(request: NextRequest) {
+  // Check authentication
+  const authError = await checkAuth()
+  if (authError) return authError
+
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     // Fetch all clients with employee count
     const { data: clients, error } = await supabase
       .from('clients')
@@ -41,8 +77,12 @@ export async function GET(request: NextRequest) {
  * Creates client with subdomain and default break rules
  */
 export async function POST(request: NextRequest) {
+  // Check authentication
+  const authError = await checkAuth()
+  if (authError) return authError
+
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const {
       businessName,
       contactEmail,

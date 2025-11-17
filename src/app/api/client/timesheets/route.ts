@@ -4,7 +4,7 @@
  * POST /api/client/timesheets - Create new timesheet
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/server'
 import { getSubdomainFromRequest } from '@/lib/subdomain'
 
 /**
@@ -16,7 +16,7 @@ import { getSubdomainFromRequest } from '@/lib/subdomain'
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const { searchParams } = new URL(request.url)
     const employeeId = searchParams.get('employeeId')
     const startDate = searchParams.get('startDate')
@@ -50,7 +50,6 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         employee:employees(
-          employee_number,
           first_name,
           last_name
         )
@@ -93,7 +92,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const { employeeId, workDate, startTime, endTime, notes } = await request.json()
 
     // Validate required fields

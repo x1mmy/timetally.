@@ -49,21 +49,21 @@ export function ClientList({ clients, onEdit, onDelete }: ClientListProps) {
    * Get employee count from aggregated data
    */
   const getEmployeeCount = (client: Client & { employees?: { count: number }[] }) => {
-    return client.employees?.[0]?.count || 0
+    return client.employees?.[0]?.count ?? 0
   }
 
   return (
     <div className="rounded-lg border border-neutral-700 bg-neutral-800">
       <Table>
         <TableHeader>
-          <TableRow className="border-neutral-700">
-            <TableHead>Business Name</TableHead>
-            <TableHead>Subdomain</TableHead>
-            <TableHead>Contact Email</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Employees</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow className="border-neutral-700 hover:bg-transparent">
+            <TableHead className="text-white">Business Name</TableHead>
+            <TableHead className="text-white">Subdomain</TableHead>
+            <TableHead className="text-white">Contact Email</TableHead>
+            <TableHead className="text-white">Status</TableHead>
+            <TableHead className="text-white">Employees</TableHead>
+            <TableHead className="text-white">Created</TableHead>
+            <TableHead className="text-center text-white">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -75,7 +75,7 @@ export function ClientList({ clients, onEdit, onDelete }: ClientListProps) {
             </TableRow>
           ) : (
             clients.map((client) => (
-              <TableRow key={client.id} className="border-neutral-700">
+              <TableRow key={client.id} className="border-neutral-700 hover:bg-neutral-700/60">
                 {/* Business Name */}
                 <TableCell className="font-medium">
                   {client.business_name}
@@ -122,7 +122,7 @@ export function ClientList({ clients, onEdit, onDelete }: ClientListProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => onEdit?.(client)}
-                      className="bg-neutral-700 border-neutral-600 hover:bg-neutral-600"
+                      className="bg-neutral-700 border-neutral-600 hover:bg-primary/20 hover:border-primary"
                     >
                       <Pencil className="w-4 h-4" />
                     </Button>

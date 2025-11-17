@@ -66,7 +66,7 @@ export default function ManagerLoginPage() {
           <div className="flex justify-center">
             <Shield className="w-12 h-12 text-primary" />
           </div>
-          <h1 className="text-3xl font-bold">Manager Access</h1>
+          <h1 className="text-3xl font-bold text-white">Manager Access</h1>
           <p className="text-neutral-400">Enter your manager PIN</p>
         </div>
 
@@ -98,7 +98,7 @@ export default function ManagerLoginPage() {
         <div className="text-center">
           <a
             href="/client"
-            className="text-sm text-neutral-400 hover:text-primary"
+            className="text-sm text-neutral-400 hover:text-primary transition-colors"
           >
             ← Back to portal selection
           </a>

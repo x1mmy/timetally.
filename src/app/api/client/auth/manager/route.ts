@@ -4,7 +4,7 @@
  * Validates manager PIN for current subdomain
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase/server'
+import { createSupabaseAdmin } from '@/lib/supabase/server'
 import { verifyPIN } from '@/lib/auth'
 import { getSubdomainFromRequest } from '@/lib/subdomain'
 
@@ -14,7 +14,7 @@ import { getSubdomainFromRequest } from '@/lib/subdomain'
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const { pin } = await request.json()
 
     // Validate input

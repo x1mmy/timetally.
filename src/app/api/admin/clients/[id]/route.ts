@@ -5,8 +5,29 @@
  * DELETE /api/admin/clients/[id] - Delete client
  */
 import { NextRequest, NextResponse } from 'next/server'
-import { createSupabaseServer } from '@/lib/supabase/server'
-import { hashPIN } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { createSupabaseAdmin } from '@/lib/supabase/server'
+import { hashPIN, validateAdminSession } from '@/lib/auth'
+
+/**
+ * Check if admin is authenticated
+ */
+async function checkAuth(): Promise<NextResponse | null> {
+  const cookieStore = await cookies()
+  const sessionId = cookieStore.get('admin_session')?.value
+
+  if (!sessionId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const admin = await validateAdminSession(sessionId)
+
+  if (!admin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  return null // Auth successful
+}
 
 /**
  * GET - Get single client by ID
@@ -16,8 +37,12 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  // Check authentication
+  const authError = await checkAuth()
+  if (authError) return authError
+
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const params = await props.params
     const { data: client, error } = await supabase
       .from('clients')
@@ -45,8 +70,12 @@ export async function PATCH(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  // Check authentication
+  const authError = await checkAuth()
+  if (authError) return authError
+
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const params = await props.params
     const body = await request.json()
     const updates: any = {}
@@ -89,8 +118,12 @@ export async function DELETE(
   request: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
+  // Check authentication
+  const authError = await checkAuth()
+  if (authError) return authError
+
   try {
-    const supabase = await createSupabaseServer()
+    const supabase = createSupabaseAdmin()
     const params = await props.params
     const { error } = await supabase
       .from('clients')

@@ -37,10 +37,12 @@ export interface Client {
 export interface Employee {
   id: string
   client_id: string
-  employee_number: string
   first_name: string
   last_name: string
   pin: string // 4-digit PIN (plain text, client-isolated)
+  weekday_rate: number // Hourly rate for Monday-Friday
+  saturday_rate: number // Hourly rate for Saturday
+  sunday_rate: number // Hourly rate for Sunday
   status: 'active' | 'inactive'
   created_at: string
   updated_at: string
@@ -89,7 +91,7 @@ export interface EmployeeWithName extends Employee {
  * Used for displaying timesheet lists with employee names
  */
 export interface TimesheetWithEmployee extends Timesheet {
-  employee: Pick<Employee, 'first_name' | 'last_name' | 'employee_number'>
+  employee: Pick<Employee, 'first_name' | 'last_name'>
 }
 
 /**
@@ -97,7 +99,6 @@ export interface TimesheetWithEmployee extends Timesheet {
  */
 export interface WeeklySummary {
   employee_id: string
-  employee_number: string
   first_name: string
   last_name: string
   total_hours: number
@@ -132,16 +133,21 @@ export interface UpdateClientInput {
 }
 
 export interface CreateEmployeeInput {
-  employeeNumber: string
   firstName: string
   lastName: string
   pin: string
+  weekdayRate: number
+  saturdayRate: number
+  sundayRate: number
 }
 
 export interface UpdateEmployeeInput {
   firstName?: string
   lastName?: string
   pin?: string
+  weekdayRate?: number
+  saturdayRate?: number
+  sundayRate?: number
   status?: 'active' | 'inactive'
 }
 
