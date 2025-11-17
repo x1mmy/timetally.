@@ -1,6 +1,7 @@
 /**
  * Employee Authentication API Route
  * POST /api/client/auth/employee - Employee PIN-only login
+ * DELETE /api/client/auth/employee - Employee logout
  * Validates 4-digit PIN for current subdomain
  * Note: Employee PINs are stored as plain text (4 digits) and isolated by client_id
  */
@@ -114,4 +115,22 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
+}
+
+/**
+ * DELETE - Employee logout
+ * Clears the session cookie
+ */
+export async function DELETE() {
+  const response = NextResponse.json({ success: true })
+
+  // Clear the session cookie
+  response.cookies.set('employee_session', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0
+  })
+
+  return response
 }
