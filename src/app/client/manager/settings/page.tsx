@@ -35,10 +35,10 @@ export default function ManagerSettingsPage() {
   const fetchEmployees = async () => {
     try {
       const response = await fetch('/api/client/employees')
-      const data = await response.json()
+      const data = await response.json() as { employees?: Employee[] }
 
       if (response.ok) {
-        setEmployees(data.employees || [])
+        setEmployees(data.employees ?? [])
       }
     } catch (error) {
       console.error('Error fetching employees:', error)
@@ -47,20 +47,70 @@ export default function ManagerSettingsPage() {
     }
   }
 
+  /**
+   * Fetch break rules
+   */
+  const fetchBreakRules = async () => {
+    try {
+      const response = await fetch('/api/client/break-rules')
+      const data = await response.json() as {
+        rules?: Array<{ min_hours: number; break_minutes: number }>
+      }
+
+      if (response.ok && data.rules) {
+        const rules = data.rules
+        const underFive = rules.find((r) => r.min_hours === 0)
+        const fiveToSeven = rules.find((r) => r.min_hours === 5)
+        const overSeven = rules.find((r) => r.min_hours === 7)
+
+        setBreakRules({
+          underFiveHours: underFive?.break_minutes ?? 0,
+          fiveToSevenHours: fiveToSeven?.break_minutes ?? 30,
+          overSevenHours: overSeven?.break_minutes ?? 30,
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching break rules:', error)
+    }
+  }
+
   useEffect(() => {
-    fetchEmployees()
+    void fetchEmployees()
+    void fetchBreakRules()
   }, [])
 
   /**
-   * Save break rules (placeholder - implement API route later)
+   * Save break rules
    */
   const handleSaveBreakRules = async () => {
     setSaving(true)
-    // TODO: Implement API route to save break rules
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/client/break-rules', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          underFiveHours: breakRules.underFiveHours,
+          fiveToSevenHours: breakRules.fiveToSevenHours,
+          overSevenHours: breakRules.overSevenHours,
+        }),
+      })
+
+      const data = await response.json() as { success?: boolean; error?: string }
+
+      if (response.ok && data.success) {
+        alert('Break rules saved successfully!')
+        await fetchBreakRules() // Refresh to confirm save
+      } else {
+        alert(`Failed to save break rules: ${data.error ?? 'Unknown error'}`)
+      }
+    } catch (error) {
+      console.error('Error saving break rules:', error)
+      alert('Failed to save break rules')
+    } finally {
       setSaving(false)
-      alert('Break rules saved successfully!')
-    }, 500)
+    }
   }
 
   /**

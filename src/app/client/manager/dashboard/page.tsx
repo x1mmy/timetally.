@@ -27,6 +27,8 @@ interface EmployeeWithPay extends Employee {
   sundayHours: number
   totalPay: number
   totalHours: number
+  rawHours: number // Total hours before break deductions
+  breakMinutes: number // Total break minutes
 }
 
 export default function ManagerDashboardPage() {
@@ -105,23 +107,38 @@ export default function ManagerDashboardPage() {
     ])
 
     // Calculate hours by day type for each employee
-    const payData = timesheetsData.reduce((acc: Record<string, { weekday: number; saturday: number; sunday: number }>, ts: TimesheetWithEmployee) => {
+    type PayDataEntry = { weekday: number; saturday: number; sunday: number; rawHours: number; breakMinutes: number }
+    const payData = timesheetsData.reduce((acc: Record<string, PayDataEntry>, ts: TimesheetWithEmployee) => {
       if (!acc[ts.employee_id]) {
-        acc[ts.employee_id] = { weekday: 0, saturday: 0, sunday: 0 }
+        acc[ts.employee_id] = { weekday: 0, saturday: 0, sunday: 0, rawHours: 0, breakMinutes: 0 }
       }
 
       const dayType = getDayType(ts.work_date)
       const hours = parseFloat(ts.total_hours.toString())
+      const breakMins = ts.break_minutes || 0
+
+      // Calculate raw hours from start/end time if available
+      let rawHours = hours
+      if (ts.start_time && ts.end_time) {
+        const start = new Date(`2000-01-01T${ts.start_time}`)
+        const end = new Date(`2000-01-01T${ts.end_time}`)
+        rawHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+      }
 
       acc[ts.employee_id][dayType] += hours
+      acc[ts.employee_id].rawHours += rawHours
+      acc[ts.employee_id].breakMinutes += breakMins
       return acc
     }, {})
 
     // Merge employees with pay data
     const employeesWithPay: EmployeeWithPay[] = employeesData.map((emp: Employee) => {
-      const weekdayHours = payData[emp.id]?.weekday || 0
-      const saturdayHours = payData[emp.id]?.saturday || 0
-      const sundayHours = payData[emp.id]?.sunday || 0
+      const empData = payData[emp.id]
+      const weekdayHours = empData?.weekday ?? 0
+      const saturdayHours = empData?.saturday ?? 0
+      const sundayHours = empData?.sunday ?? 0
+      const rawHours = empData?.rawHours ?? 0
+      const breakMinutes = empData?.breakMinutes ?? 0
 
       const totalPay =
         (weekdayHours * emp.weekday_rate) +
@@ -135,6 +152,8 @@ export default function ManagerDashboardPage() {
         sundayHours,
         totalHours: weekdayHours + saturdayHours + sundayHours,
         totalPay,
+        rawHours,
+        breakMinutes,
       }
     })
 
@@ -230,7 +249,7 @@ export default function ManagerDashboardPage() {
 
           {/* Summary Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-6 bg-neutral-800 rounded-lg border border-neutral-700">
+            <div className="p-6 bg-neutral-800 rounded-lg border border-neutral-700 ring-blue-500/40 shadow-xl shadow-blue-500/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-neutral-400">Total Payroll</p>
@@ -239,7 +258,7 @@ export default function ManagerDashboardPage() {
                 <DollarSign className="w-8 h-8 text-primary" />
               </div>
             </div>
-            <div className="p-6 bg-neutral-800 rounded-lg border border-neutral-700">
+            <div className="p-6 bg-neutral-800 rounded-lg border border-neutral-700 ring-blue-500/40 shadow-xl shadow-blue-500/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-neutral-400">Total Hours</p>
@@ -248,7 +267,7 @@ export default function ManagerDashboardPage() {
                 <Clock className="w-8 h-8 text-primary" />
               </div>
             </div>
-            <div className="p-6 bg-neutral-800 rounded-lg border border-neutral-700">
+            <div className="p-6 bg-neutral-800 rounded-lg border border-neutral-700 ring-blue-500/40 shadow-xl shadow-blue-500/50">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-neutral-400">Employees</p>
@@ -286,7 +305,8 @@ export default function ManagerDashboardPage() {
               {filteredEmployees.map((emp) => (
                 <div
                   key={emp.id}
-                  className="bg-neutral-800 border border-neutral-700 rounded-lg p-6"
+                  onClick={() => router.push(`/client/manager/employee/${emp.id}`)}
+                  className="bg-neutral-800 border border-neutral-700 rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors"
                 >
                   {/* Employee Header with Total Pay */}
                   <div className="flex items-start justify-between mb-3">
@@ -294,14 +314,16 @@ export default function ManagerDashboardPage() {
                       <h3 className="text-xl font-semibold mb-1">
                         {emp.first_name} {emp.last_name}
                       </h3>
-
                     </div>
                     <div className="text-right">
                       <div className="text-3xl font-bold text-primary">
                         ${emp.totalPay.toFixed(2)}
                       </div>
-                      <div className="text-sm text-neutral-400">
-                        {emp.totalHours.toFixed(0)} hours
+                      <div className="text-xs text-neutral-500">
+                        {emp.rawHours.toFixed(2)} hrs → {emp.totalHours.toFixed(2)} hrs
+                      </div>
+                      <div className="text-xs text-neutral-500">
+                        ({emp.breakMinutes} min break)
                       </div>
                     </div>
                   </div>
@@ -313,17 +335,17 @@ export default function ManagerDashboardPage() {
 
                   {/* Day Boxes */}
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 text-center">
+                    <div className="bg-blue-500/20 border border-blue-500/40 rounded-lg p-4 text-center">
                       <div className="text-sm text-neutral-400 mb-2">Weekday</div>
-                      <div className="text-xl font-semibold">{emp.weekdayHours.toFixed(0)} hrs</div>
+                      <div className="text-xl font-semibold">{emp.weekdayHours.toFixed(2)} hrs</div>
                     </div>
-                    <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 text-center">
+                    <div className="bg-blue-500/20 border border-blue-500/40 rounded-lg p-4 text-center">
                       <div className="text-sm text-neutral-400 mb-2">Saturday</div>
-                      <div className="text-xl font-semibold">{emp.saturdayHours.toFixed(0)} hrs</div>
+                      <div className="text-xl font-semibold">{emp.saturdayHours.toFixed(2)} hrs</div>
                     </div>
-                    <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 text-center">
+                    <div className="bg-blue-500/20 border border-blue-500/40 rounded-lg p-4 text-center">
                       <div className="text-sm text-neutral-400 mb-2">Sunday</div>
-                      <div className="text-xl font-semibold">{emp.sundayHours.toFixed(0)} hrs</div>
+                      <div className="text-xl font-semibold">{emp.sundayHours.toFixed(2)} hrs</div>
                     </div>
                   </div>
                 </div>
