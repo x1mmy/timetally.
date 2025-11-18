@@ -89,7 +89,7 @@ export default function EmployeeDetailPage() {
 
         const timesheet = sheets.find((ts) => ts.work_date === dateString)
 
-        if (timesheet && timesheet.start_time && timesheet.end_time) {
+        if (timesheet?.start_time && timesheet?.end_time) {
           const rawHours =
             (new Date(`2000-01-01T${timesheet.end_time}`).getTime() -
               new Date(`2000-01-01T${timesheet.start_time}`).getTime()) /
@@ -101,7 +101,7 @@ export default function EmployeeDetailPage() {
 
           breakdown.push({
             date: dateString,
-            dayName: daysOfWeek[i],
+            dayName: daysOfWeek[i] ?? '',
             startTime: timesheet.start_time,
             endTime: timesheet.end_time,
             rawHours,
@@ -112,7 +112,7 @@ export default function EmployeeDetailPage() {
         } else {
           breakdown.push({
             date: dateString,
-            dayName: daysOfWeek[i],
+            dayName: daysOfWeek[i] ?? '',
             startTime: null,
             endTime: null,
             rawHours: 0,

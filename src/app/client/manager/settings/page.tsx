@@ -1,10 +1,29 @@
 /**
  * Manager Settings Page
- * Configure break rules and manage employees
+ *
+ * Central hub for configuring break rules and managing employees.
+ * Provides full CRUD (Create, Read, Update, Delete) operations for employees.
+ *
  * Features:
- * - Break rules configuration
- * - Employee list with edit/delete
- * - Pay rate management
+ * - Break rules configuration (automatic break deductions by hours worked)
+ * - Employee management with full CRUD operations:
+ *   - CREATE: Add new employees with EmployeeDialog (mode="add")
+ *   - READ: View employee list with pay rates
+ *   - UPDATE: Edit employee details with EmployeeDialog (mode="edit")
+ *   - DELETE: Remove employees with confirmation dialog
+ * - Pay rate management (weekday, Saturday, Sunday rates)
+ * - 4-digit PIN assignment with uniqueness validation
+ * - Real-time data refresh after operations
+ *
+ * Components Used:
+ * - EmployeeDialog: Reusable modal for add/edit employee operations
+ *
+ * API Endpoints:
+ * - GET /api/client/employees - Fetch all employees
+ * - POST /api/client/employees - Create new employee
+ * - PUT /api/client/employees/[id] - Update employee
+ * - DELETE /api/client/employees/[id] - Delete employee
+ * - GET/POST /api/client/break-rules - Fetch/save break rules
  */
 'use client'
 
@@ -13,8 +32,9 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Settings, ArrowLeft, Save, Trash2, Edit } from 'lucide-react'
+import { Settings, ArrowLeft, Save, Trash2 } from 'lucide-react'
 import type { Employee } from '@/types/database'
+import { EmployeeDialog } from './components/EmployeeDialog'
 
 export default function ManagerSettingsPage() {
   const router = useRouter()
@@ -114,17 +134,32 @@ export default function ManagerSettingsPage() {
   }
 
   /**
-   * Delete employee (placeholder - implement later)
+   * Delete employee
+   * Sends DELETE request to API and refreshes employee list on success
+   * Shows confirmation dialog before deletion (cannot be undone)
    */
   const handleDeleteEmployee = async (employeeId: string) => {
-    if (!confirm('Are you sure you want to delete this employee?')) return
+    // Confirm deletion with user (this action is irreversible)
+    if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return
 
     try {
-      // TODO: Implement delete API
-      console.log('Delete employee:', employeeId)
-      await fetchEmployees()
+      // Send DELETE request to API
+      const response = await fetch(`/api/client/employees/${employeeId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json() as { success?: boolean; error?: string }
+
+      if (response.ok && data.success) {
+        alert('Employee deleted successfully!')
+        // Refresh employee list to reflect deletion
+        await fetchEmployees()
+      } else {
+        alert(`Failed to delete employee: ${data.error ?? 'Unknown error'}`)
+      }
     } catch (error) {
       console.error('Error deleting employee:', error)
+      alert('Failed to delete employee')
     }
   }
 
@@ -240,25 +275,33 @@ export default function ManagerSettingsPage() {
             </div>
           </div>
 
-          {/* Employees Section */}
+          {/* Employees Section - CRUD Management */}
           <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-6">Employees</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold">Employees</h2>
+              {/* Add Employee Button - Opens dialog in 'add' mode */}
+              <EmployeeDialog mode="add" onSuccess={fetchEmployees} />
+            </div>
 
+            {/* Loading State */}
             {loading ? (
               <div className="text-center py-8 text-neutral-400">
                 Loading employees...
               </div>
             ) : employees.length === 0 ? (
+              /* Empty State */
               <div className="text-center py-8 text-neutral-400">
-                No employees found. Add employees from the dashboard.
+                No employees found. Click &quot;Add Employee&quot; to get started.
               </div>
             ) : (
+              /* Employee List */
               <div className="space-y-3">
                 {employees.map((emp) => (
                   <div
                     key={emp.id}
                     className="flex items-center justify-between p-4 bg-neutral-700/50 rounded-lg border border-neutral-600"
                   >
+                    {/* Employee Info Display */}
                     <div className="flex-1">
                       <h3 className="font-semibold">
                         {emp.first_name} {emp.last_name}
@@ -270,18 +313,15 @@ export default function ManagerSettingsPage() {
                       </div>
                     </div>
 
+                    {/* Action Buttons - Edit & Delete */}
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="bg-neutral-800 border-neutral-700 hover:bg-primary/20 hover:border-primary"
-                        onClick={() => {
-                          // TODO: Implement edit employee
-                          alert('Edit functionality coming soon!')
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
+                      {/* Edit Button - Opens dialog in 'edit' mode with employee data */}
+                      <EmployeeDialog
+                        mode="edit"
+                        employee={emp}
+                        onSuccess={fetchEmployees}
+                      />
+                      {/* Delete Button - Confirms then deletes employee */}
                       <Button
                         size="sm"
                         variant="outline"

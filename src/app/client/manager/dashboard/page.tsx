@@ -1,19 +1,24 @@
 /**
  * Manager Dashboard Page - Payroll View
- * Shows employee cards with pay calculations
+ *
+ * Main payroll dashboard showing employee hours and pay calculations for the week.
+ * Read-only view focused on payroll tracking and employee time data.
+ *
  * Features:
- * - Employee cards with pay rates
- * - Weekly pay calculations
- * - Search employees
- * - Add new employees
- * - Week navigator
- * - Settings access
+ * - Employee cards with pay rates and hours breakdown (weekday/Saturday/Sunday)
+ * - Weekly pay calculations with break deductions
+ * - Search employees by name
+ * - Week navigator (previous/next week)
+ * - Settings access (for employee management and break rules)
+ * - Click employee card to view detailed daily breakdown
+ *
+ * Note: Employee CRUD operations (add/edit/delete) are handled in Settings page.
+ * This dashboard focuses on viewing payroll data and navigating between weeks.
  */
 'use client'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AddEmployeeDialog } from './components/AddEmployeeDialog'
 import { WeekNavigator } from '@/components/WeekNavigator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -223,7 +228,6 @@ export default function ManagerDashboardPage() {
                 <Settings className="w-4 h-4 mr-2" />
                 Settings
               </Button>
-              <AddEmployeeDialog onSuccess={loadData} />
               <Button
                 variant="outline"
                 onClick={handleLogout}

@@ -60,14 +60,31 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST - Create new employee
- * Body: { firstName, lastName, pin, weekdayRate, saturdayRate, sundayRate }
+ *
+ * Creates a new employee record with name, PIN, and pay rates.
+ * PIN must be unique within the client (enforced at database level).
+ *
+ * Request Body:
+ * - firstName: string - Employee's first name (required)
+ * - lastName: string - Employee's last name (required)
+ * - pin: string - 4-digit PIN for clock in/out (required, must be unique)
+ * - weekdayRate: number - Hourly rate for Monday-Friday (required, must be >= 0)
+ * - saturdayRate: number - Hourly rate for Saturday (required, must be >= 0)
+ * - sundayRate: number - Hourly rate for Sunday (required, must be >= 0)
+ *
+ * Returns: { employee: Employee } - Created employee object (status 201)
+ *
+ * Error Responses:
+ * - 400: Validation error (missing fields, invalid PIN format, negative rates, duplicate PIN)
+ * - 404: Client not found (invalid subdomain)
+ * - 500: Server error
  */
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseAdmin()
     const { firstName, lastName, pin, weekdayRate, saturdayRate, sundayRate } = await request.json()
 
-    // Validate required fields
+    // Validate all required fields are present
     if (!firstName || !lastName || !pin || weekdayRate === undefined || saturdayRate === undefined || sundayRate === undefined) {
       return NextResponse.json(
         { error: 'All fields are required' },
@@ -75,7 +92,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate PIN format (should be 4 digits)
+    // Validate PIN format: must be exactly 4 digits
     if (!/^\d{4}$/.test(pin)) {
       return NextResponse.json(
         { error: 'PIN must be 4 digits' },
@@ -83,7 +100,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate pay rates are positive numbers
+    // Validate pay rates are non-negative numbers
     if (weekdayRate < 0 || saturdayRate < 0 || sundayRate < 0) {
       return NextResponse.json(
         { error: 'Pay rates must be positive numbers' },
@@ -101,7 +118,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get client ID from subdomain
+    // Resolve client ID from subdomain
     const { data: client } = await supabase
       .from('clients')
       .select('id')
@@ -115,7 +132,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create employee with pay rates (PIN stored as plain text, client-isolated)
+    // Insert new employee record
+    // Note: PIN is stored as plain text, but isolated per client via unique constraint (client_id, pin)
     const { data: employee, error } = await supabase
       .from('employees')
       .insert({
@@ -130,7 +148,17 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      // Check for duplicate PIN error (PostgreSQL unique constraint violation)
+      // Error code 23505 = unique_violation on (client_id, pin)
+      if (error.code === '23505' && error.message?.includes('employees_client_pin_key')) {
+        return NextResponse.json(
+          { error: `PIN ${pin} is already in use. Please choose a different 4-digit PIN.` },
+          { status: 400 }
+        )
+      }
+      throw error
+    }
 
     return NextResponse.json({ employee }, { status: 201 })
   } catch (error) {
