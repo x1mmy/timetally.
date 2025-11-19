@@ -146,7 +146,8 @@ export default function EmployeeDashboardPage() {
   useEffect(() => {
     if (!employeeId) return;
     void fetchTimesheets();
-  }, [employeeId, fetchTimesheets]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId]);
 
   /**
    * Handle week navigation

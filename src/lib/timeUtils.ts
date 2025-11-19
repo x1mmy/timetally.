@@ -63,7 +63,8 @@ export function parseTimeString(timeStr: string): Time12Hour | null {
   const cleaned = timeStr.replace(/\s/g, "").toUpperCase();
 
   // Check for 12-hour format with AM/PM
-  const match12 = cleaned.match(/^(\d{1,2}):?(\d{2})(AM|PM)$/);
+  const regex12 = /^(\d{1,2}):?(\d{2})(AM|PM)$/;
+  const match12 = regex12.exec(cleaned);
   if (match12) {
     const hours = parseInt(match12[1] ?? "0", 10);
     const minutes = parseInt(match12[2] ?? "0", 10);
@@ -75,7 +76,8 @@ export function parseTimeString(timeStr: string): Time12Hour | null {
   }
 
   // Check for 24-hour format
-  const match24 = cleaned.match(/^(\d{1,2}):(\d{2})$/);
+  const regex24 = /^(\d{1,2}):(\d{2})$/;
+  const match24 = regex24.exec(cleaned);
   if (match24) {
     const hours24 = parseInt(match24[1] ?? "0", 10);
     const minutes = parseInt(match24[2] ?? "0", 10);

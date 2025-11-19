@@ -29,7 +29,6 @@ export default function EmployeeDetailPage() {
   const employeeId = params.employeeId as string;
 
   const [employee, setEmployee] = useState<Employee | null>(null);
-  const [timesheets, setTimesheets] = useState<TimesheetWithEmployee[]>([]);
   const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -79,8 +78,6 @@ export default function EmployeeDetailPage() {
       };
       const sheets = tsData.timesheets ?? [];
 
-      setTimesheets(sheets);
-
       // Create daily breakdown for the week
       const breakdown: DailyBreakdown[] = [];
       const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -99,7 +96,7 @@ export default function EmployeeDetailPage() {
             (1000 * 60 * 60);
 
           const totalHours = parseFloat(timesheet.total_hours.toString());
-          const breakMinutes = timesheet.break_minutes || 0;
+          const breakMinutes = timesheet.break_minutes ?? 0;
           const hourlyRate = getHourlyRate(dateString, emp);
 
           breakdown.push({
@@ -136,6 +133,7 @@ export default function EmployeeDetailPage() {
 
   useEffect(() => {
     void loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employeeId]);
 
   if (loading || !employee) {

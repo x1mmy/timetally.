@@ -144,7 +144,7 @@ export default function ManagerDashboardPage() {
         const entry = acc[ts.employee_id]!;
         const dayType = getDayType(ts.work_date);
         const hours = parseFloat(ts.total_hours.toString());
-        const breakMins = ts.break_minutes || 0;
+        const breakMins = ts.break_minutes ?? 0;
 
         // Calculate raw hours from start/end time if available
         let rawHours = hours;
@@ -200,7 +200,8 @@ export default function ManagerDashboardPage() {
 
   // Load data on mount and when week changes
   useEffect(() => {
-    loadData();
+    void loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWeekStart]);
 
   /**
