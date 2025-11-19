@@ -6,62 +6,62 @@
  * - Session cookie creation
  * - Redirect to dashboard on success
  */
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Clock } from 'lucide-react'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Clock } from "lucide-react";
 
 export default function AdminLoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   /**
    * Handle login form submission
    */
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      const response = await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      })
+      const response = await fetch("/api/admin/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Login failed')
-        return
+        setError(data.error || "Login failed");
+        return;
       }
 
       // Redirect to dashboard on successful login
-      router.push('/admin/dashboard')
+      router.push("/admin/dashboard");
     } catch (err) {
-      setError('An error occurred')
+      setError("An error occurred");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-900">
-      <div className="w-full max-w-md p-8 space-y-6 bg-neutral-800 rounded-lg border border-neutral-700">
+    <div className="flex min-h-screen items-center justify-center bg-neutral-900">
+      <div className="w-full max-w-md space-y-6 rounded-lg border border-neutral-700 bg-neutral-800 p-8">
         {/* Header */}
-        <div className="text-center space-y-2">
+        <div className="space-y-2 text-center">
           <div className="flex justify-center">
-            <Clock className="w-12 h-12 text-primary" />
+            <Clock className="text-primary h-12 w-12" />
           </div>
-          <h1 className="text-3xl font-bold text-primary">TimeTally Admin</h1>
+          <h1 className="text-primary text-3xl font-bold">TimeTally Admin</h1>
           <p className="text-neutral-400">Login to Admin Portal</p>
         </div>
 
@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@timetally.com"
-              className="bg-white border-neutral-600"
+              className="border-neutral-600 bg-white"
               required
             />
           </div>
@@ -90,14 +90,14 @@ export default function AdminLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="bg-white border-neutral-600"
+              className="border-neutral-600 bg-white"
               required
             />
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 text-sm text-red-500 bg-red-500/10 rounded border border-red-500/20">
+            <div className="rounded border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
               {error}
             </div>
           )}
@@ -105,13 +105,13 @@ export default function AdminLoginPage() {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
             disabled={loading}
           >
-            {loading ? 'Logging in...' : 'Login to Admin Portal'}
+            {loading ? "Logging in..." : "Login to Admin Portal"}
           </Button>
         </form>
       </div>
     </div>
-  )
+  );
 }

@@ -22,10 +22,10 @@
  * - PUT /api/client/employees/[id] - Updates existing employee
  */
 
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -34,17 +34,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { UserPlus, Edit, Loader2 } from 'lucide-react'
-import type { Employee } from '@/types/database'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { UserPlus, Edit, Loader2 } from "lucide-react";
+import type { Employee } from "@/types/database";
 
 interface EmployeeDialogProps {
-  mode: 'add' | 'edit'
-  employee?: Employee
-  onSuccess?: () => void
-  trigger?: React.ReactNode
+  mode: "add" | "edit";
+  employee?: Employee;
+  onSuccess?: () => void;
+  trigger?: React.ReactNode;
 }
 
 export function EmployeeDialog({
@@ -54,18 +54,18 @@ export function EmployeeDialog({
   trigger,
 }: EmployeeDialogProps) {
   // Dialog and loading state
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form fields state
   // Default pay rates: Weekday $25, Saturday $30, Sunday $35
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [pin, setPin] = useState('')
-  const [weekdayRate, setWeekdayRate] = useState('25.00')
-  const [saturdayRate, setSaturdayRate] = useState('30.00')
-  const [sundayRate, setSundayRate] = useState('35.00')
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [pin, setPin] = useState("");
+  const [weekdayRate, setWeekdayRate] = useState("25.00");
+  const [saturdayRate, setSaturdayRate] = useState("30.00");
+  const [sundayRate, setSundayRate] = useState("35.00");
 
   /**
    * Initialize or reset form based on mode and dialog state
@@ -73,70 +73,70 @@ export function EmployeeDialog({
    * - Add mode: Reset to default values
    */
   useEffect(() => {
-    if (mode === 'edit' && employee) {
+    if (mode === "edit" && employee) {
       // Pre-populate form with existing employee data
-      setFirstName(employee.first_name)
-      setLastName(employee.last_name)
-      setPin(employee.pin)
-      setWeekdayRate(employee.weekday_rate.toFixed(2))
-      setSaturdayRate(employee.saturday_rate.toFixed(2))
-      setSundayRate(employee.sunday_rate.toFixed(2))
-    } else if (mode === 'add') {
+      setFirstName(employee.first_name);
+      setLastName(employee.last_name);
+      setPin(employee.pin);
+      setWeekdayRate(employee.weekday_rate.toFixed(2));
+      setSaturdayRate(employee.saturday_rate.toFixed(2));
+      setSundayRate(employee.sunday_rate.toFixed(2));
+    } else if (mode === "add") {
       // Reset to default values when opening in add mode
-      setFirstName('')
-      setLastName('')
-      setPin('')
-      setWeekdayRate('25.00')
-      setSaturdayRate('30.00')
-      setSundayRate('35.00')
+      setFirstName("");
+      setLastName("");
+      setPin("");
+      setWeekdayRate("25.00");
+      setSaturdayRate("30.00");
+      setSundayRate("35.00");
     }
-  }, [mode, employee, open])
+  }, [mode, employee, open]);
 
   /**
    * Handle form submission
    * Validates all fields, sends API request, and handles response
    */
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
     // Client-side validation before sending to API
 
     // Validate required text fields
     if (!firstName.trim()) {
-      setError('First name is required')
-      return
+      setError("First name is required");
+      return;
     }
     if (!lastName.trim()) {
-      setError('Last name is required')
-      return
+      setError("Last name is required");
+      return;
     }
 
     // Validate PIN format: must be exactly 4 digits
     if (!/^\d{4}$/.test(pin)) {
-      setError('PIN must be exactly 4 digits')
-      return
+      setError("PIN must be exactly 4 digits");
+      return;
     }
 
     // Parse and validate pay rates
-    const weekdayRateNum = parseFloat(weekdayRate)
-    const saturdayRateNum = parseFloat(saturdayRate)
-    const sundayRateNum = parseFloat(sundayRate)
+    const weekdayRateNum = parseFloat(weekdayRate);
+    const saturdayRateNum = parseFloat(saturdayRate);
+    const sundayRateNum = parseFloat(sundayRate);
 
     if (isNaN(weekdayRateNum) || weekdayRateNum < 0) {
-      setError('Weekday rate must be a valid positive number')
-      return
+      setError("Weekday rate must be a valid positive number");
+      return;
     }
     if (isNaN(saturdayRateNum) || saturdayRateNum < 0) {
-      setError('Saturday rate must be a valid positive number')
-      return
+      setError("Saturday rate must be a valid positive number");
+      return;
     }
     if (isNaN(sundayRateNum) || sundayRateNum < 0) {
-      setError('Sunday rate must be a valid positive number')
-      return
+      setError("Sunday rate must be a valid positive number");
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       // Build request payload
@@ -147,73 +147,73 @@ export function EmployeeDialog({
         weekdayRate: weekdayRateNum,
         saturdayRate: saturdayRateNum,
         sundayRate: sundayRateNum,
-      }
+      };
 
-      let response: Response
+      let response: Response;
 
       // Send POST request for new employees
-      if (mode === 'add') {
-        response = await fetch('/api/client/employees', {
-          method: 'POST',
+      if (mode === "add") {
+        response = await fetch("/api/client/employees", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        })
+        });
       } else {
         // Send PUT request for updating existing employees
         response = await fetch(`/api/client/employees/${employee?.id}`, {
-          method: 'PUT',
+          method: "PUT",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
-        })
+        });
       }
 
-      const data = (await response.json()) as { error?: string }
+      const data = (await response.json()) as { error?: string };
 
       // Handle API errors (validation, duplicate PIN, etc.)
       if (!response.ok) {
-        setError(data.error ?? 'Failed to save employee')
-        setLoading(false)
-        return
+        setError(data.error ?? "Failed to save employee");
+        setLoading(false);
+        return;
       }
 
       // Success - close dialog and reset loading state
-      setOpen(false)
-      setLoading(false)
+      setOpen(false);
+      setLoading(false);
 
       // Reset form to defaults after successful add (not needed for edit mode)
-      if (mode === 'add') {
-        setFirstName('')
-        setLastName('')
-        setPin('')
-        setWeekdayRate('25.00')
-        setSaturdayRate('30.00')
-        setSundayRate('35.00')
+      if (mode === "add") {
+        setFirstName("");
+        setLastName("");
+        setPin("");
+        setWeekdayRate("25.00");
+        setSaturdayRate("30.00");
+        setSundayRate("35.00");
       }
 
       // Call success callback to refresh employee list
-      onSuccess?.()
+      onSuccess?.();
     } catch (err) {
       // Handle unexpected errors (network issues, etc.)
-      console.error('Error saving employee:', err)
-      setError('Failed to save employee')
-      setLoading(false)
+      console.error("Error saving employee:", err);
+      setError("Failed to save employee");
+      setLoading(false);
     }
-  }
+  };
 
   /**
    * Handle PIN input changes
    * Restricts input to numeric digits only and max 4 characters
    */
   const handlePinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '') // Remove non-digit characters
+    const value = e.target.value.replace(/\D/g, ""); // Remove non-digit characters
     if (value.length <= 4) {
-      setPin(value)
+      setPin(value);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -221,35 +221,35 @@ export function EmployeeDialog({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button
-            size={mode === 'edit' ? 'sm' : 'default'}
-            variant={mode === 'edit' ? 'outline' : 'default'}
+            size={mode === "edit" ? "sm" : "default"}
+            variant={mode === "edit" ? "outline" : "default"}
             className={
-              mode === 'edit'
-                ? 'bg-neutral-800 border-neutral-700 hover:bg-primary/20 hover:border-primary'
-                : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+              mode === "edit"
+                ? "hover:bg-primary/20 hover:border-primary border-neutral-700 bg-neutral-800"
+                : "bg-primary hover:bg-primary/90 text-primary-foreground"
             }
           >
-            {mode === 'edit' ? (
-              <Edit className="w-4 h-4" />
+            {mode === "edit" ? (
+              <Edit className="h-4 w-4" />
             ) : (
               <>
-                <UserPlus className="w-4 h-4 mr-2" />
+                <UserPlus className="mr-2 h-4 w-4" />
                 Add Employee
               </>
             )}
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] bg-neutral-800 border-neutral-700 text-white">
+      <DialogContent className="border-neutral-700 bg-neutral-800 text-white sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>
-              {mode === 'add' ? 'Add New Employee' : 'Edit Employee'}
+              {mode === "add" ? "Add New Employee" : "Edit Employee"}
             </DialogTitle>
             <DialogDescription className="text-neutral-400">
-              {mode === 'add'
-                ? 'Enter employee details and pay rates'
-                : 'Update employee details and pay rates'}
+              {mode === "add"
+                ? "Enter employee details and pay rates"
+                : "Update employee details and pay rates"}
             </DialogDescription>
           </DialogHeader>
 
@@ -263,7 +263,7 @@ export function EmployeeDialog({
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="John"
                 required
-                className="bg-neutral-700 border-neutral-600"
+                className="border-neutral-600 bg-neutral-700"
               />
             </div>
 
@@ -276,7 +276,7 @@ export function EmployeeDialog({
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Doe"
                 required
-                className="bg-neutral-700 border-neutral-600"
+                className="border-neutral-600 bg-neutral-700"
               />
             </div>
 
@@ -292,7 +292,7 @@ export function EmployeeDialog({
                 placeholder="1234"
                 maxLength={4}
                 required
-                className="bg-neutral-700 border-neutral-600"
+                className="border-neutral-600 bg-neutral-700"
               />
               <p className="text-xs text-neutral-400">
                 Used for employee clock in/out
@@ -301,7 +301,9 @@ export function EmployeeDialog({
 
             {/* Pay Rates */}
             <div className="grid gap-2">
-              <Label className="text-base font-semibold">Pay Rates (per hour)</Label>
+              <Label className="text-base font-semibold">
+                Pay Rates (per hour)
+              </Label>
 
               <div className="grid gap-3">
                 {/* Weekday Rate */}
@@ -319,7 +321,7 @@ export function EmployeeDialog({
                       value={weekdayRate}
                       onChange={(e) => setWeekdayRate(e.target.value)}
                       required
-                      className="bg-neutral-700 border-neutral-600"
+                      className="border-neutral-600 bg-neutral-700"
                     />
                   </div>
                 </div>
@@ -339,7 +341,7 @@ export function EmployeeDialog({
                       value={saturdayRate}
                       onChange={(e) => setSaturdayRate(e.target.value)}
                       required
-                      className="bg-neutral-700 border-neutral-600"
+                      className="border-neutral-600 bg-neutral-700"
                     />
                   </div>
                 </div>
@@ -359,7 +361,7 @@ export function EmployeeDialog({
                       value={sundayRate}
                       onChange={(e) => setSundayRate(e.target.value)}
                       required
-                      className="bg-neutral-700 border-neutral-600"
+                      className="border-neutral-600 bg-neutral-700"
                     />
                   </div>
                 </div>
@@ -368,7 +370,7 @@ export function EmployeeDialog({
 
             {/* Error Message */}
             {error && (
-              <div className="p-3 rounded-lg bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
+              <div className="rounded-lg border border-red-500/50 bg-red-900/20 p-3 text-sm text-red-400">
                 {error}
               </div>
             )}
@@ -380,7 +382,7 @@ export function EmployeeDialog({
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={loading}
-              className="bg-neutral-700 border-neutral-600 hover:bg-neutral-600"
+              className="border-neutral-600 bg-neutral-700 hover:bg-neutral-600"
             >
               Cancel
             </Button>
@@ -391,18 +393,18 @@ export function EmployeeDialog({
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {mode === 'add' ? 'Adding...' : 'Updating...'}
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {mode === "add" ? "Adding..." : "Updating..."}
                 </>
-              ) : mode === 'add' ? (
-                'Add Employee'
+              ) : mode === "add" ? (
+                "Add Employee"
               ) : (
-                'Update Employee'
+                "Update Employee"
               )}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

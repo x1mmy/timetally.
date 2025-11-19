@@ -2,7 +2,7 @@
 const config = {
   eslint: {
     // Only run ESLint on these directories during production builds
-    dirs: ['src'],
+    dirs: ["src"],
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true,

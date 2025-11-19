@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
@@ -128,5 +128,34 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  h1 {
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  h2 {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  h3 {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  h4,
+  .subheading {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  small,
+  .caption {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
   }
 }

@@ -25,113 +25,121 @@
  * - DELETE /api/client/employees/[id] - Delete employee
  * - GET/POST /api/client/break-rules - Fetch/save break rules
  */
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Settings, ArrowLeft, Save, Trash2 } from 'lucide-react'
-import type { Employee } from '@/types/database'
-import { EmployeeDialog } from './components/EmployeeDialog'
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Settings, ArrowLeft, Save, Trash2, Search } from "lucide-react";
+import type { Employee } from "@/types/database";
+import { EmployeeDialog } from "./components/EmployeeDialog";
 
 export default function ManagerSettingsPage() {
-  const router = useRouter()
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  const router = useRouter();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Break rules state
   const [breakRules, setBreakRules] = useState({
     underFiveHours: 0,
     fiveToSevenHours: 30,
     overSevenHours: 60,
-  })
+  });
 
   /**
    * Fetch employees
    */
   const fetchEmployees = async () => {
     try {
-      const response = await fetch('/api/client/employees')
-      const data = await response.json() as { employees?: Employee[] }
+      const response = await fetch("/api/client/employees");
+      const data = (await response.json()) as { employees?: Employee[] };
 
       if (response.ok) {
-        setEmployees(data.employees ?? [])
+        setEmployees(data.employees ?? []);
       }
     } catch (error) {
-      console.error('Error fetching employees:', error)
+      console.error("Error fetching employees:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   /**
    * Fetch break rules
    */
   const fetchBreakRules = async () => {
     try {
-      const response = await fetch('/api/client/break-rules')
-      const data = await response.json() as {
-        rules?: Array<{ min_hours: number; break_minutes: number }>
-      }
+      const response = await fetch("/api/client/break-rules");
+      const data = (await response.json()) as {
+        rules?: Array<{ min_hours: number; break_minutes: number }>;
+      };
 
       if (response.ok && data.rules) {
-        const rules = data.rules
-        const underFive = rules.find((r) => r.min_hours === 0)
-        const fiveToSeven = rules.find((r) => r.min_hours === 5)
-        const overSeven = rules.find((r) => r.min_hours === 7)
+        const rules = data.rules;
+        const underFive = rules.find((r) => r.min_hours === 0);
+        const fiveToSeven = rules.find((r) => r.min_hours === 5);
+        const overSeven = rules.find((r) => r.min_hours === 7);
 
         setBreakRules({
           underFiveHours: underFive?.break_minutes ?? 0,
           fiveToSevenHours: fiveToSeven?.break_minutes ?? 30,
           overSevenHours: overSeven?.break_minutes ?? 30,
-        })
+        });
       }
     } catch (error) {
-      console.error('Error fetching break rules:', error)
+      console.error("Error fetching break rules:", error);
     }
-  }
+  };
 
   useEffect(() => {
-    void fetchEmployees()
-    void fetchBreakRules()
-  }, [])
+    void fetchEmployees();
+    void fetchBreakRules();
+  }, []);
 
   /**
    * Save break rules
    */
   const handleSaveBreakRules = async () => {
-    setSaving(true)
+    setSaving(true);
     try {
-      const response = await fetch('/api/client/break-rules', {
-        method: 'POST',
+      const response = await fetch("/api/client/break-rules", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           underFiveHours: breakRules.underFiveHours,
           fiveToSevenHours: breakRules.fiveToSevenHours,
           overSevenHours: breakRules.overSevenHours,
         }),
-      })
+      });
 
-      const data = await response.json() as { success?: boolean; error?: string }
+      const data = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+        recalculated?: boolean;
+      };
 
       if (response.ok && data.success) {
-        alert('Break rules saved successfully!')
-        await fetchBreakRules() // Refresh to confirm save
+        const message = data.recalculated
+          ? "Break rules saved successfully! All existing timesheets have been recalculated with the new rules."
+          : "Break rules saved successfully!";
+        alert(message);
+        await fetchBreakRules(); // Refresh to confirm save
       } else {
-        alert(`Failed to save break rules: ${data.error ?? 'Unknown error'}`)
+        alert(`Failed to save break rules: ${data.error ?? "Unknown error"}`);
       }
     } catch (error) {
-      console.error('Error saving break rules:', error)
-      alert('Failed to save break rules')
+      console.error("Error saving break rules:", error);
+      alert("Failed to save break rules");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   /**
    * Delete employee
@@ -140,28 +148,36 @@ export default function ManagerSettingsPage() {
    */
   const handleDeleteEmployee = async (employeeId: string) => {
     // Confirm deletion with user (this action is irreversible)
-    if (!confirm('Are you sure you want to delete this employee? This action cannot be undone.')) return
+    if (
+      !confirm(
+        "Are you sure you want to delete this employee? This action cannot be undone.",
+      )
+    )
+      return;
 
     try {
       // Send DELETE request to API
       const response = await fetch(`/api/client/employees/${employeeId}`, {
-        method: 'DELETE',
-      })
+        method: "DELETE",
+      });
 
-      const data = await response.json() as { success?: boolean; error?: string }
+      const data = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+      };
 
       if (response.ok && data.success) {
-        alert('Employee deleted successfully!')
+        alert("Employee deleted successfully!");
         // Refresh employee list to reflect deletion
-        await fetchEmployees()
+        await fetchEmployees();
       } else {
-        alert(`Failed to delete employee: ${data.error ?? 'Unknown error'}`)
+        alert(`Failed to delete employee: ${data.error ?? "Unknown error"}`);
       }
     } catch (error) {
-      console.error('Error deleting employee:', error)
-      alert('Failed to delete employee')
+      console.error("Error deleting employee:", error);
+      alert("Failed to delete employee");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-neutral-900 text-white">
@@ -170,9 +186,9 @@ export default function ManagerSettingsPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Settings className="w-8 h-8 text-primary" />
+              <Settings className="text-primary h-8 w-8" />
               <div>
-                <h1 className="text-2xl font-bold">Manager Settings</h1>
+                <h1 className="text-2xl font-bold">Manager Settings<span className="text-primary">.</span></h1>
                 <p className="text-sm text-neutral-400">
                   Configure break rules and manage employees
                 </p>
@@ -181,10 +197,10 @@ export default function ManagerSettingsPage() {
 
             <Button
               variant="outline"
-              onClick={() => router.push('/client/manager/dashboard')}
-            className="bg-neutral-800 border-neutral-700 hover:bg-neutral-700"
+              onClick={() => router.push("/client/manager/dashboard")}
+              className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
             >
-              <ArrowLeft className="w-4 h-4 mr-2 " />
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Button>
           </div>
@@ -193,16 +209,16 @@ export default function ManagerSettingsPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="mx-auto max-w-4xl space-y-8">
           {/* Break Rules Section */}
-          <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-6">Break Rules</h2>
-            <p className="text-sm text-neutral-400 mb-6">
+          <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-6">
+            <h2 className="mb-6 text-xl font-semibold">Break Rules</h2>
+            <p className="mb-6 text-sm text-neutral-400">
               Configure automatic break deductions based on hours worked
             </p>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="underFive">Under 5 hours</Label>
                   <div className="flex items-center gap-2">
@@ -217,7 +233,7 @@ export default function ManagerSettingsPage() {
                           underFiveHours: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="bg-neutral-700 border-neutral-600"
+                      className="border-neutral-600 bg-neutral-700"
                     />
                     <span className="text-sm text-neutral-400">min</span>
                   </div>
@@ -237,7 +253,7 @@ export default function ManagerSettingsPage() {
                           fiveToSevenHours: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="bg-neutral-700 border-neutral-600"
+                      className="border-neutral-600 bg-neutral-700"
                     />
                     <span className="text-sm text-neutral-400">min</span>
                   </div>
@@ -257,7 +273,7 @@ export default function ManagerSettingsPage() {
                           overSevenHours: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="bg-neutral-700 border-neutral-600"
+                      className="border-neutral-600 bg-neutral-700"
                     />
                     <span className="text-sm text-neutral-400">min</span>
                   </div>
@@ -269,44 +285,67 @@ export default function ManagerSettingsPage() {
                 disabled={saving}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Break Rules'}
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving..." : "Save Break Rules"}
               </Button>
             </div>
           </div>
 
           {/* Employees Section - CRUD Management */}
-          <div className="bg-neutral-800 border border-neutral-700 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
+          <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-6">
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold">Employees</h2>
               {/* Add Employee Button - Opens dialog in 'add' mode */}
               <EmployeeDialog mode="add" onSuccess={fetchEmployees} />
             </div>
 
+            {/* Search Input */}
+            {!loading && employees.length > 0 && (
+              <div className="mb-4 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+                <Input
+                  type="text"
+                  placeholder="Search employees by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 border-neutral-600 bg-neutral-700"
+                />
+              </div>
+            )}
+
             {/* Loading State */}
             {loading ? (
-              <div className="text-center py-8 text-neutral-400">
+              <div className="py-8 text-center text-neutral-400">
                 Loading employees...
               </div>
             ) : employees.length === 0 ? (
               /* Empty State */
-              <div className="text-center py-8 text-neutral-400">
-                No employees found. Click &quot;Add Employee&quot; to get started.
+              <div className="py-8 text-center text-neutral-400">
+                No employees found. Click &quot;Add Employee&quot; to get
+                started.
               </div>
             ) : (
               /* Employee List */
               <div className="space-y-3">
-                {employees.map((emp) => (
+                {employees
+                  .filter((emp) => {
+                    // Filter employees based on search query
+                    if (!searchQuery.trim()) return true;
+                    const query = searchQuery.toLowerCase();
+                    const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+                    return fullName.includes(query);
+                  })
+                  .map((emp) => (
                   <div
                     key={emp.id}
-                    className="flex items-center justify-between p-4 bg-neutral-700/50 rounded-lg border border-neutral-600"
+                    className="flex items-center justify-between rounded-lg border border-neutral-600 bg-neutral-700/50 p-4"
                   >
                     {/* Employee Info Display */}
                     <div className="flex-1">
                       <h3 className="font-semibold">
                         {emp.first_name} {emp.last_name}
                       </h3>
-                      <div className="flex gap-4 mt-1 text-sm text-neutral-400">
+                      <div className="mt-1 flex gap-4 text-sm text-neutral-400">
                         <span>Weekday: ${emp.weekday_rate}/h</span>
                         <span>Saturday: ${emp.saturday_rate}/h</span>
                         <span>Sunday: ${emp.sunday_rate}/h</span>
@@ -325,19 +364,30 @@ export default function ManagerSettingsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="bg-neutral-800 border-neutral-700 hover:bg-red-900/50 hover:border-red-500"
+                        className="border-neutral-700 bg-neutral-800 hover:border-red-500 hover:bg-red-900/50"
                         onClick={() => handleDeleteEmployee(emp.id)}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
                 ))}
+                {/* No search results message */}
+                {employees.filter((emp) => {
+                  if (!searchQuery.trim()) return true;
+                  const query = searchQuery.toLowerCase();
+                  const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+                  return fullName.includes(query);
+                }).length === 0 && (
+                  <div className="py-8 text-center text-neutral-400">
+                    No employees found matching &quot;{searchQuery}&quot;
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </main>
     </div>
-  )
+  );
 }

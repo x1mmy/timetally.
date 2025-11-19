@@ -8,9 +8,9 @@
  * Validation: PIN uniqueness, pay rate validation, required fields
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import type { UpdateEmployeeInput } from '@/types/database'
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServer } from "@/lib/supabase/server";
+import type { UpdateEmployeeInput } from "@/types/database";
 
 /**
  * PUT - Update an employee
@@ -36,37 +36,37 @@ import type { UpdateEmployeeInput } from '@/types/database'
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const supabase = await createClient()
-    const employeeId = params.id
+    const supabase = await createSupabaseServer();
+    const { id: employeeId } = await params;
 
     // Verify user authentication
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Parse request body with UpdateEmployeeInput type
-    const body = (await request.json()) as UpdateEmployeeInput
+    const body = (await request.json()) as UpdateEmployeeInput;
 
     // Build update object dynamically based on provided fields
     // Only fields that are defined in the request will be updated
-    const updates: Record<string, unknown> = {}
+    const updates: Record<string, unknown> = {};
 
     // Update first name if provided
     if (body.firstName !== undefined) {
-      updates.first_name = body.firstName.trim()
+      updates.first_name = body.firstName.trim();
     }
 
     // Update last name if provided
     if (body.lastName !== undefined) {
-      updates.last_name = body.lastName.trim()
+      updates.last_name = body.lastName.trim();
     }
 
     // Update PIN if provided (with validation)
@@ -74,99 +74,106 @@ export async function PUT(
       // Validate PIN format: must be exactly 4 digits
       if (!/^\d{4}$/.test(body.pin)) {
         return NextResponse.json(
-          { error: 'PIN must be exactly 4 digits' },
-          { status: 400 }
-        )
+          { error: "PIN must be exactly 4 digits" },
+          { status: 400 },
+        );
       }
 
       // Check if PIN is already in use by another employee in the same client
       // Uses maybeSingle() to avoid errors when no match is found
       const { data: existingEmployee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('pin', body.pin)
-        .neq('id', employeeId) // Exclude current employee from check
-        .maybeSingle()
+        .from("employees")
+        .select("id")
+        .eq("pin", body.pin)
+        .neq("id", employeeId) // Exclude current employee from check
+        .maybeSingle();
 
       if (existingEmployee) {
         return NextResponse.json(
-          { error: `PIN ${body.pin} is already in use. Please choose a different 4-digit PIN.` },
-          { status: 400 }
-        )
+          {
+            error: `PIN ${body.pin} is already in use. Please choose a different 4-digit PIN.`,
+          },
+          { status: 400 },
+        );
       }
 
-      updates.pin = body.pin
+      updates.pin = body.pin;
     }
     // Update weekday pay rate if provided (Monday-Friday)
     if (body.weekdayRate !== undefined) {
       if (body.weekdayRate < 0) {
         return NextResponse.json(
-          { error: 'Weekday rate must be positive' },
-          { status: 400 }
-        )
+          { error: "Weekday rate must be positive" },
+          { status: 400 },
+        );
       }
-      updates.weekday_rate = body.weekdayRate
+      updates.weekday_rate = body.weekdayRate;
     }
 
     // Update Saturday pay rate if provided
     if (body.saturdayRate !== undefined) {
       if (body.saturdayRate < 0) {
         return NextResponse.json(
-          { error: 'Saturday rate must be positive' },
-          { status: 400 }
-        )
+          { error: "Saturday rate must be positive" },
+          { status: 400 },
+        );
       }
-      updates.saturday_rate = body.saturdayRate
+      updates.saturday_rate = body.saturdayRate;
     }
 
     // Update Sunday pay rate if provided
     if (body.sundayRate !== undefined) {
       if (body.sundayRate < 0) {
         return NextResponse.json(
-          { error: 'Sunday rate must be positive' },
-          { status: 400 }
-        )
+          { error: "Sunday rate must be positive" },
+          { status: 400 },
+        );
       }
-      updates.sunday_rate = body.sundayRate
+      updates.sunday_rate = body.sundayRate;
     }
 
     // Update employee status if provided (active/inactive)
     if (body.status !== undefined) {
-      updates.status = body.status
+      updates.status = body.status;
     }
 
     // Execute the update query in the database
     const { data: employee, error } = await supabase
-      .from('employees')
+      .from("employees")
       .update(updates)
-      .eq('id', employeeId)
+      .eq("id", employeeId)
       .select()
-      .single()
+      .single();
 
     if (error) {
       // Handle database constraint errors (e.g., duplicate PIN in race condition)
       // PostgreSQL error code 23505 = unique_violation
-      if (error.code === '23505' && error.message?.includes('employees_client_pin_key')) {
+      if (
+        error.code === "23505" &&
+        error.message?.includes("employees_client_pin_key")
+      ) {
         return NextResponse.json(
-          { error: `PIN ${body.pin} is already in use. Please choose a different 4-digit PIN.` },
-          { status: 400 }
-        )
+          {
+            error: `PIN ${body.pin} is already in use. Please choose a different 4-digit PIN.`,
+          },
+          { status: 400 },
+        );
       }
-      console.error('Error updating employee:', error)
+      console.error("Error updating employee:", error);
       return NextResponse.json(
-        { error: 'Failed to update employee' },
-        { status: 500 }
-      )
+        { error: "Failed to update employee" },
+        { status: 500 },
+      );
     }
 
     // Return updated employee data
-    return NextResponse.json({ employee })
+    return NextResponse.json({ employee });
   } catch (error) {
-    console.error('Error in PUT /api/client/employees/[id]:', error)
+    console.error("Error in PUT /api/client/employees/[id]:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 
@@ -187,45 +194,45 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const supabase = await createClient()
-    const employeeId = params.id
+    const supabase = await createSupabaseServer();
+    const { id: employeeId } = await params;
 
     // Verify user authentication
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Execute deletion in database
     // Note: Related records (timesheets) may cascade delete based on FK constraints
     const { error } = await supabase
-      .from('employees')
+      .from("employees")
       .delete()
-      .eq('id', employeeId)
+      .eq("id", employeeId);
 
     if (error) {
-      console.error('Error deleting employee:', error)
+      console.error("Error deleting employee:", error);
       return NextResponse.json(
-        { error: 'Failed to delete employee' },
-        { status: 500 }
-      )
+        { error: "Failed to delete employee" },
+        { status: 500 },
+      );
     }
 
     // Return success confirmation
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
     // Handle unexpected errors
-    console.error('Error in DELETE /api/client/employees/[id]:', error)
+    console.error("Error in DELETE /api/client/employees/[id]:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
