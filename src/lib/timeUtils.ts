@@ -136,8 +136,8 @@ export function formatHoursAndMinutes(decimalHours: number): string {
   if (hours === 0) {
     return `${minutes} min`;
   } else if (minutes === 0) {
-    return `${hours} ${hours === 1 ? 'hr' : 'hrs'}`;
+    return `${hours} ${hours === 1 ? "hr" : "hrs"}`;
   } else {
-    return `${hours} ${hours === 1 ? 'hr' : 'hrs'} ${minutes} min`;
+    return `${hours} ${hours === 1 ? "hr" : "hrs"} ${minutes} min`;
   }
 }

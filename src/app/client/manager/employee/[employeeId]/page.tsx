@@ -286,7 +286,9 @@ export default function EmployeeDetailPage() {
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
               <div>
                 <p className="text-sm text-neutral-400">Total Paid Hours</p>
-                <p className="text-2xl font-bold">{formatHoursAndMinutes(totalHours)}</p>
+                <p className="text-2xl font-bold">
+                  {formatHoursAndMinutes(totalHours)}
+                </p>
               </div>
               <div>
                 <p className="text-sm text-neutral-400">

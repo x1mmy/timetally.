@@ -188,7 +188,9 @@ export default function ManagerSettingsPage() {
             <div className="flex items-center gap-3">
               <Settings className="text-primary h-8 w-8" />
               <div>
-                <h1 className="text-2xl font-bold">Manager Settings<span className="text-primary">.</span></h1>
+                <h1 className="text-2xl font-bold">
+                  Manager Settings<span className="text-primary">.</span>
+                </h1>
                 <p className="text-sm text-neutral-400">
                   Configure break rules and manage employees
                 </p>
@@ -301,14 +303,14 @@ export default function ManagerSettingsPage() {
 
             {/* Search Input */}
             {!loading && employees.length > 0 && (
-              <div className="mb-4 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+              <div className="relative mb-4">
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 <Input
                   type="text"
                   placeholder="Search employees by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 border-neutral-600 bg-neutral-700"
+                  className="border-neutral-600 bg-neutral-700 pl-10"
                 />
               </div>
             )}
@@ -332,51 +334,53 @@ export default function ManagerSettingsPage() {
                     // Filter employees based on search query
                     if (!searchQuery.trim()) return true;
                     const query = searchQuery.toLowerCase();
-                    const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+                    const fullName =
+                      `${emp.first_name} ${emp.last_name}`.toLowerCase();
                     return fullName.includes(query);
                   })
                   .map((emp) => (
-                  <div
-                    key={emp.id}
-                    className="flex items-center justify-between rounded-lg border border-neutral-600 bg-neutral-700/50 p-4"
-                  >
-                    {/* Employee Info Display */}
-                    <div className="flex-1">
-                      <h3 className="font-semibold">
-                        {emp.first_name} {emp.last_name}
-                      </h3>
-                      <div className="mt-1 flex gap-4 text-sm text-neutral-400">
-                        <span>Weekday: ${emp.weekday_rate}/h</span>
-                        <span>Saturday: ${emp.saturday_rate}/h</span>
-                        <span>Sunday: ${emp.sunday_rate}/h</span>
+                    <div
+                      key={emp.id}
+                      className="flex items-center justify-between rounded-lg border border-neutral-600 bg-neutral-700/50 p-4"
+                    >
+                      {/* Employee Info Display */}
+                      <div className="flex-1">
+                        <h3 className="font-semibold">
+                          {emp.first_name} {emp.last_name}
+                        </h3>
+                        <div className="mt-1 flex gap-4 text-sm text-neutral-400">
+                          <span>Weekday: ${emp.weekday_rate}/h</span>
+                          <span>Saturday: ${emp.saturday_rate}/h</span>
+                          <span>Sunday: ${emp.sunday_rate}/h</span>
+                        </div>
+                      </div>
+
+                      {/* Action Buttons - Edit & Delete */}
+                      <div className="flex gap-2">
+                        {/* Edit Button - Opens dialog in 'edit' mode with employee data */}
+                        <EmployeeDialog
+                          mode="edit"
+                          employee={emp}
+                          onSuccess={fetchEmployees}
+                        />
+                        {/* Delete Button - Confirms then deletes employee */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-neutral-700 bg-neutral-800 hover:border-red-500 hover:bg-red-900/50"
+                          onClick={() => handleDeleteEmployee(emp.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
-
-                    {/* Action Buttons - Edit & Delete */}
-                    <div className="flex gap-2">
-                      {/* Edit Button - Opens dialog in 'edit' mode with employee data */}
-                      <EmployeeDialog
-                        mode="edit"
-                        employee={emp}
-                        onSuccess={fetchEmployees}
-                      />
-                      {/* Delete Button - Confirms then deletes employee */}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-neutral-700 bg-neutral-800 hover:border-red-500 hover:bg-red-900/50"
-                        onClick={() => handleDeleteEmployee(emp.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
                 {/* No search results message */}
                 {employees.filter((emp) => {
                   if (!searchQuery.trim()) return true;
                   const query = searchQuery.toLowerCase();
-                  const fullName = `${emp.first_name} ${emp.last_name}`.toLowerCase();
+                  const fullName =
+                    `${emp.first_name} ${emp.last_name}`.toLowerCase();
                   return fullName.includes(query);
                 }).length === 0 && (
                   <div className="py-8 text-center text-neutral-400">

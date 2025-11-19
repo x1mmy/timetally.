@@ -52,7 +52,9 @@ export default function ClientLandingPage() {
           <div className="mb-4 flex justify-center">
             <Clock className="text-primary h-16 w-16" />
           </div>
-          <h1 className="mb-2 text-4xl font-bold">TimeTally<span className="text-primary">.</span></h1>
+          <h1 className="mb-2 text-4xl font-bold">
+            TimeTally<span className="text-primary">.</span>
+          </h1>
           <p className="text-xl text-neutral-400">Payroll Management System</p>
         </div>
 

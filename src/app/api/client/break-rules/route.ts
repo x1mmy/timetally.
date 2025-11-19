@@ -160,14 +160,16 @@ export async function POST(request: NextRequest) {
       .from("timesheets")
       .update({
         break_minutes: null,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq("client_id", clientId);
 
     if (recalcError) {
       console.error("Error recalculating timesheets:", recalcError);
       // Don't fail the request - rules are saved, just log the warning
-      console.warn("Break rules saved but existing timesheets may not be recalculated");
+      console.warn(
+        "Break rules saved but existing timesheets may not be recalculated",
+      );
     }
 
     return NextResponse.json({

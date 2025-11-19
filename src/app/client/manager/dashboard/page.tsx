@@ -239,7 +239,9 @@ export default function ManagerDashboardPage() {
             <div className="flex items-center gap-3">
               <DollarSign className="text-primary h-8 w-8" />
               <div>
-                <h1 className="text-2xl font-bold">Payroll Dashboard<span className="text-primary">.</span></h1>
+                <h1 className="text-2xl font-bold">
+                  Payroll Dashboard<span className="text-primary">.</span>
+                </h1>
                 <p className="text-sm text-neutral-400">
                   {format(currentWeekStart, "MMM dd")} -{" "}
                   {format(weekEnd, "MMM dd, yyyy")}
@@ -284,7 +286,7 @@ export default function ManagerDashboardPage() {
           {/* Summary Stats */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* shadow-xl shadow-blue-500/50 ring-blue-500/40 */}
-            <div className="hover: rounded-lg border border-neutral-700 bg-neutral-800 p-6 hover:border-primary/50">
+            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-neutral-400">Total Payroll</p>
@@ -293,16 +295,18 @@ export default function ManagerDashboardPage() {
                 <DollarSign className="text-primary h-8 w-8" />
               </div>
             </div>
-            <div className="hover: rounded-lg border border-neutral-700 bg-neutral-800 p-6 hover:border-primary/50">
+            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-neutral-400">Total Hours</p>
-                  <p className="text-3xl font-bold">{formatHoursAndMinutes(totalHours)}</p>
+                  <p className="text-3xl font-bold">
+                    {formatHoursAndMinutes(totalHours)}
+                  </p>
                 </div>
                 <Clock className="text-primary h-8 w-8" />
               </div>
             </div>
-            <div className="hover: rounded-lg border border-neutral-700 bg-neutral-800 p-6 hover:border-primary/50">
+            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-neutral-400">Employees</p>
