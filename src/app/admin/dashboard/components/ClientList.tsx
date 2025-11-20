@@ -92,7 +92,7 @@ export function ClientList({ clients, onEdit, onDelete }: ClientListProps) {
                 {/* Subdomain with link */}
                 <TableCell>
                   <a
-                    href={`http://${client.subdomain}.timetally.local:3000`}
+                    href={`https://${client.subdomain}.timetally.com.au`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary flex items-center gap-1 hover:underline"
