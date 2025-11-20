@@ -9,7 +9,10 @@ export const metadata: Metadata = {
   title: "TimeTally - Simple Timesheet Management",
   description:
     "Multi-tenant timesheet management with subdomain-based client isolation",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [
+    { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
+    { rel: "icon", url: "/favicon.ico", sizes: "any" }, // Fallback
+  ],
 };
 
 const satoshi = localFont({

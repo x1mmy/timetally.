@@ -17,8 +17,8 @@
  */
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { WeekNavigator } from "@/components/WeekNavigator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
   Settings,
   Users,
   Clock,
+  Calendar,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
@@ -44,8 +45,15 @@ interface EmployeeWithPay extends Employee {
   breakMinutes: number; // Total break minutes
 }
 
-export default function ManagerDashboardPage() {
+function ManagerDashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get initial state from URL params
+  const urlViewMode = searchParams.get("viewMode") as "week" | "custom" | null;
+  const urlStartDate = searchParams.get("startDate");
+  const urlEndDate = searchParams.get("endDate");
+
   const [currentWeekStart, setCurrentWeekStart] = useState(
     startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
@@ -54,7 +62,26 @@ export default function ManagerDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Date range picker state - initialize from URL if available
+  const [viewMode, setViewMode] = useState<"week" | "custom">(
+    urlViewMode ?? "week"
+  );
+  const [customStartDate, setCustomStartDate] = useState<Date>(
+    urlStartDate
+      ? new Date(urlStartDate)
+      : startOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+  const [customEndDate, setCustomEndDate] = useState<Date>(
+    urlEndDate
+      ? new Date(urlEndDate)
+      : endOfWeek(new Date(), { weekStartsOn: 1 })
+  );
+
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+
+  // Get the actual date range based on view mode
+  const actualStartDate = viewMode === "week" ? currentWeekStart : customStartDate;
+  const actualEndDate = viewMode === "week" ? weekEnd : customEndDate;
 
   /**
    * Calculate day type (weekday, saturday, sunday)
@@ -89,12 +116,12 @@ export default function ManagerDashboardPage() {
   };
 
   /**
-   * Fetch timesheets for current week
+   * Fetch timesheets for current date range
    */
   const fetchTimesheets = async () => {
     try {
-      const startDate = format(currentWeekStart, "yyyy-MM-dd");
-      const endDate = format(weekEnd, "yyyy-MM-dd");
+      const startDate = format(actualStartDate, "yyyy-MM-dd");
+      const endDate = format(actualEndDate, "yyyy-MM-dd");
 
       const response = await fetch(
         `/api/client/timesheets?startDate=${startDate}&endDate=${endDate}`,
@@ -198,11 +225,23 @@ export default function ManagerDashboardPage() {
     setLoading(false);
   };
 
-  // Load data on mount and when week changes
+  // Load data on mount and when date range changes
   useEffect(() => {
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWeekStart]);
+  }, [currentWeekStart, viewMode, customStartDate, customEndDate]);
+
+  // Update URL when view mode or date range changes
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set("viewMode", viewMode);
+    params.set("startDate", format(actualStartDate, "yyyy-MM-dd"));
+    params.set("endDate", format(actualEndDate, "yyyy-MM-dd"));
+
+    router.replace(`/client/manager/dashboard?${params.toString()}`, {
+      scroll: false,
+    });
+  }, [viewMode, actualStartDate, actualEndDate, router]);
 
   /**
    * Filter employees by search query
@@ -244,8 +283,8 @@ export default function ManagerDashboardPage() {
                   Payroll Dashboard<span className="text-primary">.</span>
                 </h1>
                 <p className="text-sm text-neutral-400">
-                  {format(currentWeekStart, "MMM dd")} -{" "}
-                  {format(weekEnd, "MMM dd, yyyy")}
+                  {format(actualStartDate, "MMM dd")} -{" "}
+                  {format(actualEndDate, "MMM dd, yyyy")}
                 </p>
               </div>
             </div>
@@ -274,15 +313,77 @@ export default function ManagerDashboardPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <div className="space-y-6">
-          {/* Week Navigator */}
-          <WeekNavigator
-            weekStart={currentWeekStart}
-            weekEnd={weekEnd}
-            onPrevious={() =>
-              setCurrentWeekStart(addWeeks(currentWeekStart, -1))
-            }
-            onNext={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
-          />
+          {/* View Mode Toggle */}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex gap-2">
+              <Button
+                variant={viewMode === "week" ? "default" : "outline"}
+                onClick={() => setViewMode("week")}
+                className={
+                  viewMode === "week"
+                    ? "bg-primary text-white"
+                    : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+                }
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Week View
+              </Button>
+              <Button
+                variant={viewMode === "custom" ? "default" : "outline"}
+                onClick={() => setViewMode("custom")}
+                className={
+                  viewMode === "custom"
+                    ? "bg-primary text-white"
+                    : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+                }
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                Custom Range
+              </Button>
+            </div>
+          </div>
+
+          {/* Week Navigator - Show only in week mode */}
+          {viewMode === "week" && (
+            <WeekNavigator
+              weekStart={currentWeekStart}
+              weekEnd={weekEnd}
+              onPrevious={() =>
+                setCurrentWeekStart(addWeeks(currentWeekStart, -1))
+              }
+              onNext={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
+            />
+          )}
+
+          {/* Custom Date Range Picker - Show only in custom mode */}
+          {viewMode === "custom" && (
+            <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm text-neutral-400">
+                    Start Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={format(customStartDate, "yyyy-MM-dd")}
+                    onChange={(e) => setCustomStartDate(new Date(e.target.value))}
+                    className="border-neutral-700 bg-neutral-900"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm text-neutral-400">
+                    End Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={format(customEndDate, "yyyy-MM-dd")}
+                    onChange={(e) => setCustomEndDate(new Date(e.target.value))}
+                    className="border-neutral-700 bg-neutral-900"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Summary Stats */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -342,14 +443,22 @@ export default function ManagerDashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {filteredEmployees.map((emp) => (
-                <div
-                  key={emp.id}
-                  onClick={() =>
-                    router.push(`/client/manager/employee/${emp.id}`)
-                  }
-                  className="hover:border-primary/50 cursor-pointer rounded-lg border border-neutral-700 bg-neutral-800 p-6 transition-colors"
-                >
+              {filteredEmployees.map((emp) => {
+                const params = new URLSearchParams({
+                  viewMode,
+                  startDate: format(actualStartDate, "yyyy-MM-dd"),
+                  endDate: format(actualEndDate, "yyyy-MM-dd"),
+                });
+                return (
+                  <div
+                    key={emp.id}
+                    onClick={() =>
+                      router.push(
+                        `/client/manager/employee/${emp.id}?${params.toString()}`,
+                      )
+                    }
+                    className="hover:border-primary/50 cursor-pointer rounded-lg border border-neutral-700 bg-neutral-800 p-6 transition-colors"
+                  >
                   {/* Employee Header with Total Pay */}
                   <div className="mb-3 flex items-start justify-between">
                     <div>
@@ -406,11 +515,28 @@ export default function ManagerDashboardPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ManagerDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-neutral-900 text-white">
+          <div className="text-center">
+            <div className="mb-4 text-xl">Loading dashboard...</div>
+          </div>
+        </div>
+      }
+    >
+      <ManagerDashboardContent />
+    </Suspense>
   );
 }
