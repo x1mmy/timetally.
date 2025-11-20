@@ -7,27 +7,27 @@
  * - Displays clock icon
  * - Optional label
  */
-'use client'
+"use client";
 
-import { Input } from '@/components/ui/input'
-import { Clock } from 'lucide-react'
+import { Input } from "@/components/ui/input";
+import { Clock } from "lucide-react";
 
 interface TimeInputProps {
   /** Current time value (HH:MM) */
-  value: string
+  value: string;
   /** Callback when value changes */
-  onChange: (value: string) => void
+  onChange: (value: string) => void;
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string;
   /** Optional label */
-  label?: string
+  label?: string;
 }
 
 export function TimeInput({
   value,
   onChange,
-  placeholder = '--:--',
-  label
+  placeholder = "--:--",
+  label,
 }: TimeInputProps) {
   /**
    * Handle input change
@@ -35,27 +35,25 @@ export function TimeInput({
    */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Remove all non-numeric characters
-    let val = e.target.value.replace(/[^0-9]/g, '')
+    let val = e.target.value.replace(/[^0-9]/g, "");
 
     // Auto-format: insert colon after 2 digits
     if (val.length >= 2) {
-      val = val.slice(0, 2) + ':' + val.slice(2, 4)
+      val = val.slice(0, 2) + ":" + val.slice(2, 4);
     }
 
-    onChange(val)
-  }
+    onChange(val);
+  };
 
   return (
     <div className="space-y-2">
       {/* Optional label */}
-      {label && (
-        <label className="text-sm font-medium">{label}</label>
-      )}
+      {label && <label className="text-sm font-medium">{label}</label>}
 
       {/* Input with clock icon */}
       <div className="relative">
         {/* Clock icon positioned on the left */}
-        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+        <Clock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-neutral-400" />
 
         {/* Time input field */}
         <Input
@@ -64,9 +62,9 @@ export function TimeInput({
           onChange={handleChange}
           placeholder={placeholder}
           maxLength={5} // HH:MM = 5 characters
-          className="pl-10 bg-neutral-800 border-neutral-700"
+          className="border-neutral-700 bg-neutral-800 pl-10"
         />
       </div>
     </div>
-  )
+  );
 }

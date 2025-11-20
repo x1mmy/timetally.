@@ -1,293 +1,428 @@
 /**
  * Employee Dashboard Page
- * Main dashboard for employees to submit and view timesheets
+ * Weekly timesheet entry with start/end time per day
  * Features:
- * - Submit today's timesheet
- * - View past timesheets
- * - See weekly summary
- * - Time input with validation
+ * - Weekly view with all days
+ * - Save start time first, end time later
+ * - Week navigation
+ * - Logout functionality
  */
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { TimeInput } from '@/components/TimeInput'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+import { useCallback, useEffect, useState } from "react";
+import { TimePicker } from "@/components/TimePicker";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Users, Clock, Calendar } from 'lucide-react'
-import { format } from 'date-fns'
-import type { Timesheet } from '@/types/database'
+  format,
+  addWeeks,
+  startOfWeek,
+  endOfWeek,
+  eachDayOfInterval,
+} from "date-fns";
+import { useRouter } from "next/navigation";
+import type { Timesheet } from "@/types/database";
+import { formatHoursAndMinutes } from "@/lib/timeUtils";
+
+interface DayEntry {
+  date: Date;
+  dayName: string;
+  dayNumber: number;
+  monthName: string;
+  startTime: string;
+  endTime: string;
+}
 
 export default function EmployeeDashboardPage() {
-  // Employee info from session (would come from cookie in real implementation)
-  const [employeeName, setEmployeeName] = useState('Employee')
-  const [employeeId, setEmployeeId] = useState('')
+  const router = useRouter();
 
-  // Timesheet form state
-  const [workDate, setWorkDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
-  const [notes, setNotes] = useState('')
+  // Employee info
+  const [employeeName, setEmployeeName] = useState("Employee");
+  const [employeeId, setEmployeeId] = useState("");
+
+  // Week navigation
+  const [currentWeek, setCurrentWeek] = useState(0); // 0 = current week, -1 = last week, 1 = next week
+
+  // Week days with entries
+  const [weekDays, setWeekDays] = useState<DayEntry[]>([]);
 
   // UI state
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState<string | null>(null); // stores the date being saved
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   // Past timesheets
-  const [timesheets, setTimesheets] = useState<Timesheet[]>([])
+  const [timesheets, setTimesheets] = useState<Timesheet[]>([]);
 
   /**
-   * Fetch employee's past timesheets
+   * Get week start and end dates
    */
-  const fetchTimesheets = async () => {
+  const getWeekDates = useCallback((weekOffset: number) => {
+    const today = new Date();
+    const weekStart = startOfWeek(addWeeks(today, weekOffset), {
+      weekStartsOn: 1,
+    }); // Monday
+    const weekEnd = endOfWeek(addWeeks(today, weekOffset), { weekStartsOn: 1 }); // Sunday
+    return { weekStart, weekEnd };
+  }, []);
+
+  /**
+   * Initialize week days
+   */
+  const initializeWeekDays = useCallback(
+    (weekOffset: number, existingTimesheets: Timesheet[]) => {
+      const { weekStart, weekEnd } = getWeekDates(weekOffset);
+      const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+      const weekEntries: DayEntry[] = days.map((date) => {
+        const dateStr = format(date, "yyyy-MM-dd");
+        const existingEntry = existingTimesheets.find(
+          (ts) => format(new Date(ts.work_date), "yyyy-MM-dd") === dateStr,
+        );
+
+        return {
+          date,
+          dayName: format(date, "EEEE"),
+          dayNumber: parseInt(format(date, "d")),
+          monthName: format(date, "MMM"),
+          startTime: existingEntry?.start_time?.slice(0, 5) ?? "",
+          endTime: existingEntry?.end_time?.slice(0, 5) ?? "",
+        };
+      });
+
+      setWeekDays(weekEntries);
+    },
+    [getWeekDates],
+  );
+
+  /**
+   * Fetch employee's timesheets
+   */
+  const fetchTimesheets = useCallback(async () => {
     try {
-      // In real implementation, employeeId would come from session
-      if (!employeeId) return
+      if (!employeeId) return;
 
-      const response = await fetch(`/api/client/timesheets?employeeId=${employeeId}`)
-      const data = await response.json()
+      const response = await fetch(
+        `/api/client/timesheets?employeeId=${employeeId}`,
+      );
+      const json: unknown = await response.json();
 
-      if (response.ok) {
-        setTimesheets(data.timesheets || [])
+      if (response.ok && typeof json === "object" && json !== null) {
+        const { timesheets: fetchedTimesheets } = json as {
+          timesheets?: Timesheet[];
+        };
+        setTimesheets(fetchedTimesheets ?? []);
+        initializeWeekDays(currentWeek, fetchedTimesheets ?? []);
       }
     } catch (error) {
-      console.error('Error fetching timesheets:', error)
+      console.error("Error fetching timesheets:", error);
     }
-  }
+  }, [employeeId, currentWeek, initializeWeekDays]);
 
   useEffect(() => {
-    // In real implementation, fetch employee info from session
-    // For now, using placeholder
-    fetchTimesheets()
-  }, [employeeId])
+    // Load current employee from session cookie
+    const loadEmployee = async () => {
+      try {
+        const response = await fetch("/api/client/auth/employee/me");
+        const json: unknown = await response.json();
+        if (response.ok && typeof json === "object" && json !== null) {
+          const { employee } = json as {
+            employee?: { id: string; firstName?: string; lastName?: string };
+          };
+          if (!employee) return;
+          const fullName =
+            `${employee.firstName ?? ""} ${employee.lastName ?? ""}`.trim();
+          setEmployeeName(fullName || "Employee");
+          setEmployeeId(employee.id);
+        }
+      } catch (err) {
+        console.error("Failed to load employee:", err);
+      }
+    };
+    void loadEmployee();
+  }, []);
+
+  // When employeeId changes, fetch timesheets
+  useEffect(() => {
+    if (!employeeId) return;
+    void fetchTimesheets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employeeId]);
 
   /**
-   * Handle timesheet submission
+   * Handle week navigation
    */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    setSuccess('')
+  const navigateWeek = (direction: "prev" | "next") => {
+    const newWeek = direction === "prev" ? currentWeek - 1 : currentWeek + 1;
+    setCurrentWeek(newWeek);
+    initializeWeekDays(newWeek, timesheets);
+  };
 
-    // Validate time format
-    if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
-      setError('Please enter valid times in HH:MM format')
-      setLoading(false)
-      return
+  /**
+   * Update time for a specific day
+   */
+  const updateDayTime = (
+    index: number,
+    field: "startTime" | "endTime",
+    value: string,
+  ) => {
+    setWeekDays((prev) => {
+      const updated = [...prev];
+      const current = updated[index];
+      if (!current) return updated;
+
+      if (field === "startTime") {
+        updated[index] = { ...current, startTime: value };
+      } else {
+        updated[index] = { ...current, endTime: value };
+      }
+      return updated;
+    });
+  };
+
+  /**
+   * Save timesheet for a specific day
+   */
+  const saveDay = async (dayEntry: DayEntry) => {
+    const dateStr = format(dayEntry.date, "yyyy-MM-dd");
+    setLoading(dateStr);
+    setError("");
+    setSuccess("");
+
+    // Check if at least one time is filled
+    if (!dayEntry.startTime && !dayEntry.endTime) {
+      setError("Please enter at least a start time or end time");
+      setLoading(null);
+      return;
     }
 
-    // Validate end time is after start time
-    const start = new Date(`2000-01-01T${startTime}`)
-    const end = new Date(`2000-01-01T${endTime}`)
+    // If both times are provided, validate end time is after start time
+    if (dayEntry.startTime && dayEntry.endTime) {
+      const start = new Date(`2000-01-01T${dayEntry.startTime}:00`);
+      const end = new Date(`2000-01-01T${dayEntry.endTime}:00`);
 
-    if (end <= start) {
-      setError('End time must be after start time')
-      setLoading(false)
-      return
+      if (end <= start) {
+        setError("End time must be after start time");
+        setLoading(null);
+        return;
+      }
     }
 
     try {
-      const response = await fetch('/api/client/timesheets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/client/timesheets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          employeeId, // Would come from session
-          workDate,
-          startTime: startTime + ':00', // Add seconds
-          endTime: endTime + ':00',
-          notes: notes.trim() || undefined
-        })
-      })
+          employeeId,
+          workDate: dateStr,
+          startTime: dayEntry.startTime ? dayEntry.startTime + ":00" : null,
+          endTime: dayEntry.endTime ? dayEntry.endTime + ":00" : null,
+        }),
+      });
 
-      const data = await response.json()
+      const json: unknown = await response.json();
+
+      const hasErrorMessage = (value: unknown): value is { error: string } => {
+        if (typeof value !== "object" || value === null) return false;
+        const record = value as Record<string, unknown>;
+        return typeof record.error === "string";
+      };
 
       if (!response.ok) {
-        setError(data.error || 'Failed to submit timesheet')
-        return
+        const errMsg = hasErrorMessage(json)
+          ? json.error
+          : "Failed to save timesheet";
+        setError(errMsg);
+        return;
       }
 
-      // Success - reset form and refresh timesheets
-      setSuccess('Timesheet submitted successfully!')
-      setStartTime('')
-      setEndTime('')
-      setNotes('')
-      fetchTimesheets()
-    } catch (err) {
-      setError('An error occurred')
+      setSuccess("Time saved successfully!");
+      setTimeout(() => setSuccess(""), 2000);
+      void fetchTimesheets();
+    } catch {
+      setError("An error occurred");
     } finally {
-      setLoading(false)
+      setLoading(null);
     }
-  }
+  };
+
+  /**
+   * Handle logout
+   */
+  const handleLogout = async () => {
+    try {
+      // Clear session cookie
+      await fetch("/api/client/auth/employee", { method: "DELETE" });
+      router.push("/client");
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
 
   /**
    * Calculate total hours for current week
    */
+  const { weekStart, weekEnd } = getWeekDates(currentWeek);
   const weeklyHours = timesheets
-    .filter(ts => {
-      const tsDate = new Date(ts.work_date)
-      const today = new Date()
-      const weekStart = new Date(today)
-      weekStart.setDate(today.getDate() - today.getDay())
-      return tsDate >= weekStart
+    .filter((ts) => {
+      const tsDate = new Date(ts.work_date);
+      return tsDate >= weekStart && tsDate <= weekEnd;
     })
-    .reduce((sum, ts) => sum + parseFloat(ts.total_hours.toString()), 0)
+    .reduce((sum, ts) => sum + parseFloat(ts.total_hours.toString()), 0);
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white">
+    <div className="min-h-screen bg-neutral-950 text-white">
       {/* Header */}
-      <header className="border-b border-neutral-700 bg-neutral-800">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b border-neutral-800 bg-neutral-900">
+        <div className="container mx-auto px-6 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Users className="w-8 h-8 text-primary" />
-              <div>
-                <h1 className="text-2xl font-bold">Welcome, {employeeName}</h1>
-                <p className="text-sm text-neutral-400">Submit Your Timesheet</p>
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold">
+                Welcome,{" "}
+                <span className="text-primary underline">{employeeName}</span>
+              </h1>
+              <p className="mt-1 text-neutral-400">
+                Enter your hours for the week
+              </p>
             </div>
 
-            {/* Weekly Hours Display */}
-            <div className="bg-neutral-700 px-4 py-2 rounded-lg">
-              <p className="text-sm text-neutral-400">This Week</p>
-              <p className="text-2xl font-bold">{weeklyHours.toFixed(2)} hrs</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 rounded-lg border border-neutral-700 px-4 py-2 transition-colors hover:bg-neutral-800"
+              >
+                <LogOut className="h-5 w-5" />
+                Logout
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Timesheet Submission Form */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <Clock className="w-6 h-6 text-primary" />
-              Submit Timesheet
-            </h2>
+      <main className="container mx-auto max-w-4xl px-6 py-8">
+        {/* Week Navigation */}
+        <div className="mb-6 rounded-2xl bg-neutral-900 p-6 shadow-xl ring-1 shadow-blue-500/50 ring-blue-500/40">
+          <div className="mb-4 flex items-center justify-between">
+            <button
+              onClick={() => navigateWeek("prev")}
+              className="flex items-center gap-2 rounded-lg bg-neutral-800 px-4 py-2 transition-colors hover:bg-neutral-700"
+            >
+              <ChevronLeft className="h-5 w-5" />
+              Previous Week
+            </button>
 
-            <form onSubmit={handleSubmit} className="space-y-6 bg-neutral-800 p-6 rounded-lg border border-neutral-700">
-              {/* Work Date */}
-              <div className="space-y-2">
-                <Label htmlFor="workDate">
-                  <Calendar className="w-4 h-4 inline mr-2" />
-                  Work Date
-                </Label>
-                <Input
-                  id="workDate"
-                  type="date"
-                  value={workDate}
-                  onChange={(e) => setWorkDate(e.target.value)}
-                  max={format(new Date(), 'yyyy-MM-dd')}
-                  className="bg-neutral-700 border-neutral-600"
-                  required
-                />
-              </div>
+            <div className="text-center">
+              <h2 className="text-xl font-semibold">
+                {format(weekStart, "d MMM")} - {format(weekEnd, "d MMM yyyy")}
+              </h2>
+            </div>
 
-              {/* Start Time */}
-              <TimeInput
-                label="Start Time"
-                value={startTime}
-                onChange={setStartTime}
-                placeholder="09:00"
-              />
-
-              {/* End Time */}
-              <TimeInput
-                label="End Time"
-                value={endTime}
-                onChange={setEndTime}
-                placeholder="17:00"
-              />
-
-              {/* Notes (optional) */}
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Input
-                  id="notes"
-                  type="text"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any notes about your shift"
-                  className="bg-neutral-700 border-neutral-600"
-                />
-              </div>
-
-              {/* Success Message */}
-              {success && (
-                <div className="p-3 text-sm text-green-500 bg-green-500/10 rounded border border-green-500/20">
-                  {success}
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 text-sm text-red-500 bg-red-500/10 rounded border border-red-500/20">
-                  {error}
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary-600"
-                disabled={loading}
-              >
-                {loading ? 'Submitting...' : 'Submit Timesheet'}
-              </Button>
-            </form>
+            <button
+              onClick={() => navigateWeek("next")}
+              className="flex items-center gap-2 rounded-lg bg-neutral-800 px-4 py-2 transition-colors hover:bg-neutral-700"
+            >
+              Next Week
+              <ChevronRight className="h-5 w-5" />
+            </button>
           </div>
 
-          {/* Past Timesheets */}
-          <div className="space-y-6">
-            <h2 className="text-xl font-semibold">Recent Timesheets</h2>
-
-            <div className="rounded-lg border border-neutral-700 bg-neutral-800">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-neutral-700">
-                    <TableHead>Date</TableHead>
-                    <TableHead>Start</TableHead>
-                    <TableHead>End</TableHead>
-                    <TableHead>Hours</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {timesheets.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-neutral-400">
-                        No timesheets yet. Submit your first one!
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    timesheets.slice(0, 10).map((ts) => (
-                      <TableRow key={ts.id} className="border-neutral-700">
-                        <TableCell>
-                          {format(new Date(ts.work_date), 'EEE, MMM d')}
-                        </TableCell>
-                        <TableCell>{ts.start_time}</TableCell>
-                        <TableCell>{ts.end_time}</TableCell>
-                        <TableCell className="font-semibold">
-                          {parseFloat(ts.total_hours.toString()).toFixed(2)} hrs
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+          {/* Total Hours */}
+          <div className="flex justify-center">
+            <div className="bg-primary rounded-full px-6 py-3">
+              <p className="text-lg font-semibold">
+                Total: {formatHoursAndMinutes(weeklyHours)}
+              </p>
             </div>
           </div>
         </div>
+
+        {/* Success/Error Messages */}
+        {success && (
+          <div className="mb-4 rounded-lg border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-500">
+            {success}
+          </div>
+        )}
+        {error && (
+          <div className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-500">
+            {error}
+          </div>
+        )}
+
+        {/* Days List */}
+        <div className="space-y-4">
+          {weekDays.map((day, index) => {
+            const dateStr = format(day.date, "yyyy-MM-dd");
+            const isLoading = loading === dateStr;
+
+            return (
+              <div
+                key={dateStr}
+                className="rounded-xl border border-neutral-800 bg-neutral-900 p-6"
+              >
+                <div className="flex items-start gap-6">
+                  {/* Day Number */}
+                  <div className="flex min-w-[60px] flex-col items-center justify-center rounded-lg bg-neutral-800 px-4 py-2">
+                    <div className="text-3xl font-bold">{day.dayNumber}</div>
+                  </div>
+
+                  {/* Day Info and Times */}
+                  <div className="flex-1">
+                    <div className="mb-4">
+                      <h3 className="text-xl font-semibold">{day.dayName}</h3>
+                      <p className="text-sm text-neutral-400">
+                        {day.dayName.slice(0, 3)}, {day.dayNumber}{" "}
+                        {day.monthName}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Start Time */}
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">
+                          Start Time
+                        </label>
+                        <TimePicker
+                          value={day.startTime}
+                          onChange={(value: string) =>
+                            updateDayTime(index, "startTime", value)
+                          }
+                          placeholder="--:-- --"
+                        />
+                      </div>
+
+                      {/* End Time */}
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">
+                          End Time
+                        </label>
+                        <TimePicker
+                          value={day.endTime}
+                          onChange={(value: string) =>
+                            updateDayTime(index, "endTime", value)
+                          }
+                          placeholder="--:-- --"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="mt-4">
+                      <Button
+                        onClick={() => saveDay(day)}
+                        disabled={isLoading || (!day.startTime && !day.endTime)}
+                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isLoading ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </main>
     </div>
-  )
+  );
 }

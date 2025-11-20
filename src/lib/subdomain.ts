@@ -2,7 +2,7 @@
  * Subdomain utility functions
  * Extract and work with subdomain information from requests
  */
-import { headers } from 'next/headers'
+import { headers } from "next/headers";
 
 /**
  * Get the current subdomain from request headers
@@ -10,9 +10,9 @@ import { headers } from 'next/headers'
  * @returns Subdomain string or null if on root domain
  */
 export async function getSubdomain(): Promise<string | null> {
-  const headersList = await headers()
-  const subdomain = headersList.get('x-subdomain')
-  return subdomain || null
+  const headersList = await headers();
+  const subdomain = headersList.get("x-subdomain");
+  return subdomain || null;
 }
 
 /**
@@ -20,8 +20,8 @@ export async function getSubdomain(): Promise<string | null> {
  * @returns True if on admin subdomain
  */
 export async function isAdminSubdomain(): Promise<boolean> {
-  const subdomain = await getSubdomain()
-  return subdomain === 'admin'
+  const subdomain = await getSubdomain();
+  return subdomain === "admin";
 }
 
 /**
@@ -29,8 +29,8 @@ export async function isAdminSubdomain(): Promise<boolean> {
  * @returns True if on a client subdomain (not admin, not root)
  */
 export async function isClientSubdomain(): Promise<boolean> {
-  const subdomain = await getSubdomain()
-  return subdomain !== null && subdomain !== 'admin'
+  const subdomain = await getSubdomain();
+  return subdomain !== null && subdomain !== "admin";
 }
 
 /**
@@ -39,7 +39,7 @@ export async function isClientSubdomain(): Promise<boolean> {
  * @returns Subdomain string or null
  */
 export function getSubdomainFromRequest(request: Request): string | null {
-  const headersList = new Headers(request.headers)
-  const subdomain = headersList.get('x-subdomain')
-  return subdomain || null
+  const headersList = new Headers(request.headers);
+  const subdomain = headersList.get("x-subdomain");
+  return subdomain || null;
 }

@@ -43,25 +43,25 @@ CREATE INDEX idx_clients_status ON clients(status);
 -- TABLE: employees
 -- Stores employees for each client
 -- Each employee has a 4-digit PIN for login (plain text, isolated by client_id)
+-- Pay rates vary by day type (weekday/saturday/sunday)
 -- =====================================================
 CREATE TABLE employees (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-  employee_number VARCHAR(50) NOT NULL,
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
   pin VARCHAR(4) NOT NULL, -- 4-digit PIN (plain text, client-isolated)
+  weekday_rate DECIMAL(10,2) NOT NULL, -- Hourly rate for Monday-Friday
+  saturday_rate DECIMAL(10,2) NOT NULL, -- Hourly rate for Saturday
+  sunday_rate DECIMAL(10,2) NOT NULL, -- Hourly rate for Sunday
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(client_id, employee_number), -- Employee number unique within client
   UNIQUE(client_id, pin) -- PIN unique within client (for PIN-only login)
 );
 
 -- Create index on client_id for efficient client-specific queries
 CREATE INDEX idx_employees_client_id ON employees(client_id);
--- Create composite index for employee number lookups within a client
-CREATE INDEX idx_employees_client_employee ON employees(client_id, employee_number);
 -- Create composite index for PIN lookups within a client (for authentication)
 CREATE INDEX idx_employees_client_pin ON employees(client_id, pin);
 -- Create index on status for filtering active employees

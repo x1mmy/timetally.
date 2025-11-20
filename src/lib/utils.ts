@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 /**
  * Merge Tailwind CSS classes with proper precedence
@@ -7,7 +7,7 @@ import { twMerge } from "tailwind-merge"
  * @returns Merged class string
  */
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
@@ -16,8 +16,8 @@ export function cn(...inputs: ClassValue[]) {
  * @returns True if valid email format
  */
 export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 }
 
 /**
@@ -29,8 +29,8 @@ export function validateEmail(email: string): boolean {
  * @returns True if valid subdomain format
  */
 export function validateSubdomain(subdomain: string): boolean {
-  const subdomainRegex = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$/
-  return subdomainRegex.test(subdomain)
+  const subdomainRegex = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])?$/;
+  return subdomainRegex.test(subdomain);
 }
 
 /**
@@ -45,10 +45,10 @@ export function validateSubdomain(subdomain: string): boolean {
 export function generateSubdomain(businessName: string): string {
   return businessName
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')
-    .substring(0, 63)
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .substring(0, 63);
 }
 
 /**
@@ -57,11 +57,11 @@ export function generateSubdomain(businessName: string): string {
  * @returns Formatted time string HH:MM
  */
 export function formatTime(time: string): string {
-  const cleaned = time.replace(/[^0-9]/g, '')
+  const cleaned = time.replace(/[^0-9]/g, "");
   if (cleaned.length >= 2) {
-    return cleaned.slice(0, 2) + ':' + cleaned.slice(2, 4)
+    return cleaned.slice(0, 2) + ":" + cleaned.slice(2, 4);
   }
-  return cleaned
+  return cleaned;
 }
 
 /**
@@ -71,12 +71,12 @@ export function formatTime(time: string): string {
  * @returns Hours as decimal number
  */
 export function calculateHours(start: string, end: string): number {
-  const [startHour = 0, startMin = 0] = start.split(':').map(Number)
-  const [endHour = 0, endMin = 0] = end.split(':').map(Number)
+  const [startHour = 0, startMin = 0] = start.split(":").map(Number);
+  const [endHour = 0, endMin = 0] = end.split(":").map(Number);
 
-  const startMinutes = startHour * 60 + startMin
-  const endMinutes = endHour * 60 + endMin
+  const startMinutes = startHour * 60 + startMin;
+  const endMinutes = endHour * 60 + endMin;
 
-  const diffMinutes = endMinutes - startMinutes
-  return diffMinutes / 60
+  const diffMinutes = endMinutes - startMinutes;
+  return diffMinutes / 60;
 }
