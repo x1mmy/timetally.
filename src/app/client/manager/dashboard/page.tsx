@@ -17,7 +17,7 @@
  */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WeekNavigator } from "@/components/WeekNavigator";
 import { Button } from "@/components/ui/button";
@@ -45,7 +45,7 @@ interface EmployeeWithPay extends Employee {
   breakMinutes: number; // Total break minutes
 }
 
-export default function ManagerDashboardPage() {
+function ManagerDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -522,5 +522,21 @@ export default function ManagerDashboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ManagerDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-neutral-900 text-white">
+          <div className="text-center">
+            <div className="mb-4 text-xl">Loading dashboard...</div>
+          </div>
+        </div>
+      }
+    >
+      <ManagerDashboardContent />
+    </Suspense>
   );
 }

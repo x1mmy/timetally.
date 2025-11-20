@@ -4,7 +4,7 @@
  */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,7 @@ interface DailyBreakdown {
   pay: number;
 }
 
-export default function EmployeeDetailPage() {
+function EmployeeDetailContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -327,5 +327,19 @@ export default function EmployeeDetailPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function EmployeeDetailPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-neutral-900 text-white">
+          <div className="text-neutral-400">Loading employee details...</div>
+        </div>
+      }
+    >
+      <EmployeeDetailContent />
+    </Suspense>
   );
 }
