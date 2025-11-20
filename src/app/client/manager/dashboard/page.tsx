@@ -20,6 +20,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WeekNavigator } from "@/components/WeekNavigator";
+import { AnimatedStatCard } from "@/components/AnimatedStatCard";
+import { AnimatedCard } from "@/components/AnimatedCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -232,9 +234,15 @@ export default function ManagerDashboardPage() {
   const totalHours = employees.reduce((sum, emp) => sum + emp.totalHours, 0);
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white">
+    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+      {/* Animated Background */}
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute -top-40 right-20 h-96 w-96 animate-pulse-slow rounded-full bg-gradient-to-br from-blue-500/10 to-purple-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 left-20 h-96 w-96 animate-pulse-slower rounded-full bg-gradient-to-tr from-cyan-500/10 to-blue-500/10 blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-neutral-700 bg-neutral-800">
+      <header className="relative border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -284,38 +292,33 @@ export default function ManagerDashboardPage() {
             onNext={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
           />
 
-          {/* Summary Stats */}
+          {/* Summary Stats - Animated */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {/* shadow-xl shadow-blue-500/50 ring-blue-500/40 */}
-            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-400">Total Payroll</p>
-                  <p className="text-3xl font-bold">${totalPay.toFixed(2)}</p>
-                </div>
-                <DollarSign className="text-primary h-8 w-8" />
-              </div>
-            </div>
-            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-400">Total Hours</p>
-                  <p className="text-3xl font-bold">
-                    {formatHoursAndMinutes(totalHours)}
-                  </p>
-                </div>
-                <Clock className="text-primary h-8 w-8" />
-              </div>
-            </div>
-            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-400">Employees</p>
-                  <p className="text-3xl font-bold">{employees.length}</p>
-                </div>
-                <Users className="text-primary h-8 w-8" />
-              </div>
-            </div>
+            <AnimatedStatCard
+              label="Total Payroll"
+              value={totalPay}
+              prefix="$"
+              decimals={2}
+              icon={DollarSign}
+              iconColor="text-green-400"
+              animate={true}
+              duration={2000}
+            />
+            <AnimatedStatCard
+              label="Total Hours"
+              value={formatHoursAndMinutes(totalHours)}
+              icon={Clock}
+              iconColor="text-blue-400"
+              animate={false}
+            />
+            <AnimatedStatCard
+              label="Employees"
+              value={employees.length}
+              icon={Users}
+              iconColor="text-purple-400"
+              animate={true}
+              duration={1500}
+            />
           </div>
 
           {/* Search Bar */}
@@ -342,28 +345,32 @@ export default function ManagerDashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {filteredEmployees.map((emp) => (
-                <div
+              {filteredEmployees.map((emp, index) => (
+                <AnimatedCard
                   key={emp.id}
                   onClick={() =>
                     router.push(`/client/manager/employee/${emp.id}`)
                   }
-                  className="hover:border-primary/50 cursor-pointer rounded-lg border border-neutral-700 bg-neutral-800 p-6 transition-colors"
+                  gradient="from-blue-500 to-cyan-500"
+                  glowColor="blue"
+                  className="p-8 transition-all duration-500"
                 >
                   {/* Employee Header with Total Pay */}
-                  <div className="mb-3 flex items-start justify-between">
+                  <div className="mb-4 flex items-start justify-between">
                     <div>
-                      <h3 className="mb-1 text-xl font-semibold">
+                      <h3 className="mb-2 text-2xl font-bold tracking-tight">
                         {emp.first_name} {emp.last_name}
                       </h3>
+                      <div className="text-sm text-neutral-400">
+                        Weekday: <span className="font-semibold text-neutral-300">${emp.weekday_rate.toFixed(2)}/hr</span> | Sat: <span className="font-semibold text-neutral-300">${emp.saturday_rate.toFixed(2)}/hr</span> | Sun: <span className="font-semibold text-neutral-300">${emp.sunday_rate.toFixed(2)}/hr</span>
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-primary text-3xl font-bold">
+                      <div className="bg-gradient-to-br from-green-400 to-emerald-400 bg-clip-text text-4xl font-black tabular-nums tracking-tight text-transparent">
                         ${emp.totalPay.toFixed(2)}
                       </div>
-                      <div className="text-xs text-neutral-500">
-                        {formatHoursAndMinutes(emp.rawHours)} →{" "}
-                        {formatHoursAndMinutes(emp.totalHours)}
+                      <div className="mt-1 text-xs text-neutral-500">
+                        <span className="text-neutral-400">{formatHoursAndMinutes(emp.rawHours)}</span> → <span className="text-green-400">{formatHoursAndMinutes(emp.totalHours)}</span>
                       </div>
                       <div className="text-xs text-neutral-500">
                         ({emp.breakMinutes} min break)
@@ -371,41 +378,42 @@ export default function ManagerDashboardPage() {
                     </div>
                   </div>
 
-                  {/* Pay Rates */}
-                  <div className="mb-4 text-sm text-neutral-400">
-                    Weekday: ${emp.weekday_rate.toFixed(2)}/hr | Sat: $
-                    {emp.saturday_rate.toFixed(2)}/hr | Sun: $
-                    {emp.sunday_rate.toFixed(2)}/hr
-                  </div>
-
-                  {/* Day Boxes */}
+                  {/* Day Boxes with enhanced styling */}
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-blue-500/40 bg-blue-500/20 p-4 text-center">
-                      <div className="mb-2 text-sm text-neutral-400">
+                    <div className="group/day rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-blue-600/10 p-4 text-center transition-all duration-300 hover:scale-105 hover:border-blue-400/50 hover:from-blue-500/20 hover:to-blue-600/20 hover:shadow-lg hover:shadow-blue-500/20">
+                      <div className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400 group-hover/day:text-neutral-300">
                         Weekday
                       </div>
-                      <div className="text-xl font-semibold">
+                      <div className="text-xl font-bold tabular-nums text-blue-300 group-hover/day:text-blue-200">
                         {formatHoursAndMinutes(emp.weekdayHours)}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-blue-500/40 bg-blue-500/20 p-4 text-center">
-                      <div className="mb-2 text-sm text-neutral-400">
+                    <div className="group/day rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-purple-600/10 p-4 text-center transition-all duration-300 hover:scale-105 hover:border-purple-400/50 hover:from-purple-500/20 hover:to-purple-600/20 hover:shadow-lg hover:shadow-purple-500/20">
+                      <div className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400 group-hover/day:text-neutral-300">
                         Saturday
                       </div>
-                      <div className="text-xl font-semibold">
+                      <div className="text-xl font-bold tabular-nums text-purple-300 group-hover/day:text-purple-200">
                         {formatHoursAndMinutes(emp.saturdayHours)}
                       </div>
                     </div>
-                    <div className="rounded-lg border border-blue-500/40 bg-blue-500/20 p-4 text-center">
-                      <div className="mb-2 text-sm text-neutral-400">
+                    <div className="group/day rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-amber-600/10 p-4 text-center transition-all duration-300 hover:scale-105 hover:border-amber-400/50 hover:from-amber-500/20 hover:to-amber-600/20 hover:shadow-lg hover:shadow-amber-500/20">
+                      <div className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400 group-hover/day:text-neutral-300">
                         Sunday
                       </div>
-                      <div className="text-xl font-semibold">
+                      <div className="text-xl font-bold tabular-nums text-amber-300 group-hover/day:text-amber-200">
                         {formatHoursAndMinutes(emp.sundayHours)}
                       </div>
                     </div>
                   </div>
-                </div>
+
+                  {/* Click indicator */}
+                  <div className="mt-4 flex items-center justify-center gap-2 text-xs text-neutral-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                    <span>Click to view details</span>
+                    <svg className="h-3 w-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </AnimatedCard>
               ))}
             </div>
           )}

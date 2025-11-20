@@ -6,8 +6,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, DollarSign, Clock, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatedStatCard } from "@/components/AnimatedStatCard";
+import { AnimatedCard } from "@/components/AnimatedCard";
 import { startOfWeek, endOfWeek, format, getDay } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
@@ -138,7 +140,7 @@ export default function EmployeeDetailPage() {
 
   if (loading || !employee) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-neutral-900 text-white">
+      <div className="flex min-h-screen items-center justify-center bg-neutral-950 text-white">
         <div className="text-neutral-400">Loading...</div>
       </div>
     );
@@ -155,25 +157,34 @@ export default function EmployeeDetailPage() {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white">
+    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+      {/* Animated Background */}
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute -top-40 right-20 h-96 w-96 animate-pulse-slow rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 left-20 h-96 w-96 animate-pulse-slower rounded-full bg-gradient-to-tr from-blue-500/10 to-cyan-500/10 blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-neutral-700 bg-neutral-800">
-        <div className="container mx-auto px-4 py-4">
+      <header className="relative border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-6">
           <Button
             variant="ghost"
             onClick={() => router.push("/client/manager/dashboard")}
-            className="text-primary hover:text-primary/80 mb-4 hover:bg-neutral-700"
+            className="group mb-4 text-blue-400 transition-all hover:bg-blue-500/10 hover:text-blue-300"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
             Back to Dashboard
           </Button>
 
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">
-                {employee.first_name} {employee.last_name}
+              <h1 className="text-4xl font-black tracking-tight">
+                <span className="bg-gradient-to-br from-white to-blue-200 bg-clip-text text-transparent">
+                  {employee.first_name} {employee.last_name}
+                </span>
               </h1>
-              <p className="mt-1 text-sm text-neutral-400">
+              <p className="mt-2 flex items-center gap-2 text-sm text-neutral-400">
+                <Calendar className="h-4 w-4" />
                 {format(currentWeekStart, "MMM d")} -{" "}
                 {format(weekEnd, "MMM d, yyyy")}
               </p>
@@ -183,55 +194,75 @@ export default function EmployeeDetailPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="relative container mx-auto px-4 py-8">
         <div className="mx-auto max-w-4xl space-y-6">
-          {/* Summary Cards */}
+          {/* Summary Cards - Enhanced */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4">
-              <p className="text-sm text-neutral-400">Weekday Rate</p>
-              <p className="text-xl font-bold">
-                ${employee.weekday_rate.toFixed(2)}/hr
-              </p>
-            </div>
-            <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4">
-              <p className="text-sm text-neutral-400">Saturday Rate</p>
-              <p className="text-xl font-bold">
-                ${employee.saturday_rate.toFixed(2)}/hr
-              </p>
-            </div>
-            <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4">
-              <p className="text-sm text-neutral-400">Sunday Rate</p>
-              <p className="text-xl font-bold">
-                ${employee.sunday_rate.toFixed(2)}/hr
-              </p>
-            </div>
-            <div className="bg-primary/20 border-primary/40 rounded-lg border p-4">
-              <p className="text-sm text-neutral-400">Total Pay</p>
-              <p className="text-primary text-xl font-bold">
-                ${totalPay.toFixed(2)}
-              </p>
-              <p className="mt-1 text-xs text-neutral-400">
-                {formatHoursAndMinutes(totalHours)}
-              </p>
-            </div>
+            <AnimatedStatCard
+              label="Weekday Rate"
+              value={employee.weekday_rate}
+              prefix="$"
+              suffix="/hr"
+              decimals={2}
+              icon={DollarSign}
+              iconColor="text-blue-400"
+              animate={true}
+              duration={1500}
+            />
+            <AnimatedStatCard
+              label="Saturday Rate"
+              value={employee.saturday_rate}
+              prefix="$"
+              suffix="/hr"
+              decimals={2}
+              icon={DollarSign}
+              iconColor="text-purple-400"
+              animate={true}
+              duration={1700}
+            />
+            <AnimatedStatCard
+              label="Sunday Rate"
+              value={employee.sunday_rate}
+              prefix="$"
+              suffix="/hr"
+              decimals={2}
+              icon={DollarSign}
+              iconColor="text-amber-400"
+              animate={true}
+              duration={1900}
+            />
+            <AnimatedStatCard
+              label="Total Pay"
+              value={totalPay}
+              prefix="$"
+              decimals={2}
+              icon={DollarSign}
+              iconColor="text-green-400"
+              animate={true}
+              duration={2000}
+            />
           </div>
 
-          {/* Daily Breakdown */}
-          <div className="space-y-3">
-            {dailyBreakdown.map((day) => (
-              <div
+          {/* Daily Breakdown - Enhanced */}
+          <div className="space-y-4">
+            {dailyBreakdown.map((day, index) => (
+              <AnimatedCard
                 key={day.date}
-                className="rounded-lg border border-neutral-700 bg-neutral-800 p-5"
+                gradient="from-blue-500 to-purple-500"
+                glowColor={day.startTime && day.endTime ? "blue" : "blue"}
+                className="p-6"
+                hover={!!(day.startTime && day.endTime)}
               >
-                <div className="mb-3 flex items-center justify-between">
+                <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold">
+                    <h3 className="text-xl font-bold tracking-tight">
                       {day.dayName}, {format(new Date(day.date), "d MMM")}
                     </h3>
                   </div>
                   {day.startTime && day.endTime ? (
                     <div className="text-right">
-                      <p className="text-sm text-neutral-400">
+                      <div className="inline-flex items-center gap-2 rounded-lg bg-blue-500/20 px-3 py-1.5 text-sm font-semibold text-blue-300">
+                        <Clock className="h-4 w-4" />
                         {format(
                           new Date(`2000-01-01T${day.startTime}`),
                           "h:mm a",
@@ -241,7 +272,7 @@ export default function EmployeeDetailPage() {
                           new Date(`2000-01-01T${day.endTime}`),
                           "h:mm a",
                         )}
-                      </p>
+                      </div>
                     </div>
                   ) : (
                     <p className="text-sm text-neutral-500">No hours logged</p>
@@ -249,32 +280,32 @@ export default function EmployeeDetailPage() {
                 </div>
 
                 {day.startTime && day.endTime && (
-                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
-                    <div>
-                      <p className="text-neutral-400">Raw Hours</p>
-                      <p className="font-semibold">
+                  <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+                      <p className="mb-1 text-xs text-neutral-400">Raw Hours</p>
+                      <p className="text-lg font-bold text-white">
                         {formatHoursAndMinutes(day.rawHours)}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-neutral-400">Unpaid Break Time</p>
-                      <p className="font-semibold">{day.breakMinutes} min</p>
+                    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+                      <p className="mb-1 text-xs text-neutral-400">Break Time</p>
+                      <p className="text-lg font-bold text-amber-400">{day.breakMinutes} min</p>
                     </div>
-                    <div>
-                      <p className="text-neutral-400">Paid Hours</p>
-                      <p className="font-semibold">
+                    <div className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4">
+                      <p className="mb-1 text-xs text-neutral-400">Paid Hours</p>
+                      <p className="text-lg font-bold text-blue-400">
                         {formatHoursAndMinutes(day.totalHours)}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-neutral-400">Pay</p>
-                      <p className="text-primary font-semibold">
+                    <div className="rounded-xl border border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/10 p-4">
+                      <p className="mb-1 text-xs text-neutral-400">Pay</p>
+                      <p className="bg-gradient-to-br from-green-400 to-emerald-400 bg-clip-text text-lg font-bold text-transparent">
                         ${day.pay.toFixed(2)}
                       </p>
                     </div>
                   </div>
                 )}
-              </div>
+              </AnimatedCard>
             ))}
           </div>
 

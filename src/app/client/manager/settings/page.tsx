@@ -32,7 +32,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, ArrowLeft, Save, Trash2, Search } from "lucide-react";
+import { AnimatedCard } from "@/components/AnimatedCard";
+import { Settings, ArrowLeft, Save, Trash2, Search, Users, Coffee } from "lucide-react";
 import type { Employee } from "@/types/database";
 import { EmployeeDialog } from "./components/EmployeeDialog";
 
@@ -180,29 +181,40 @@ export default function ManagerSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white">
+    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+      {/* Animated Background */}
+      <div className="pointer-events-none fixed inset-0">
+        <div className="absolute -top-40 left-20 h-96 w-96 animate-pulse-slow rounded-full bg-gradient-to-br from-amber-500/10 to-orange-500/10 blur-3xl" />
+        <div className="absolute -bottom-40 right-20 h-96 w-96 animate-pulse-slower rounded-full bg-gradient-to-tr from-purple-500/10 to-pink-500/10 blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-neutral-700 bg-neutral-800">
-        <div className="container mx-auto px-4 py-4">
+      <header className="relative border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Settings className="text-primary h-8 w-8" />
+            <div className="flex items-center gap-4">
+              <div className="rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-3">
+                <Settings className="h-8 w-8 text-amber-400" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold">
-                  Manager Settings<span className="text-primary">.</span>
+                <h1 className="text-3xl font-black tracking-tight">
+                  <span className="bg-gradient-to-br from-white to-amber-200 bg-clip-text text-transparent">
+                    Manager Settings
+                  </span>
+                  <span className="text-amber-500">.</span>
                 </h1>
-                <p className="text-sm text-neutral-400">
+                <p className="mt-1 text-sm text-neutral-400">
                   Configure break rules and manage employees
                 </p>
               </div>
             </div>
 
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => router.push("/client/manager/dashboard")}
-              className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+              className="group text-blue-400 transition-all hover:bg-blue-500/10 hover:text-blue-300"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
               Back to Dashboard
             </Button>
           </div>
@@ -210,14 +222,21 @@ export default function ManagerSettingsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="relative container mx-auto px-4 py-8">
         <div className="mx-auto max-w-4xl space-y-8">
-          {/* Break Rules Section */}
-          <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-            <h2 className="mb-6 text-xl font-semibold">Break Rules</h2>
-            <p className="mb-6 text-sm text-neutral-400">
-              Configure automatic break deductions based on hours worked
-            </p>
+          {/* Break Rules Section - Enhanced */}
+          <AnimatedCard gradient="from-amber-500 to-orange-500" glowColor="amber" className="p-8">
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-3">
+                <Coffee className="h-6 w-6 text-amber-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">Break Rules</h2>
+                <p className="text-sm text-neutral-400">
+                  Configure automatic break deductions based on hours worked
+                </p>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -285,18 +304,24 @@ export default function ManagerSettingsPage() {
               <Button
                 onClick={handleSaveBreakRules}
                 disabled={saving}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                className="group relative overflow-hidden bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-amber-500/50 transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-amber-500/60"
               >
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="mr-2 h-4 w-4 transition-transform group-hover:rotate-12" />
                 {saving ? "Saving..." : "Save Break Rules"}
+                <div className="absolute inset-0 -z-0 bg-gradient-to-r from-orange-500 to-amber-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               </Button>
             </div>
-          </div>
+          </AnimatedCard>
 
-          {/* Employees Section - CRUD Management */}
-          <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-6">
+          {/* Employees Section - CRUD Management - Enhanced */}
+          <AnimatedCard gradient="from-blue-500 to-purple-500" glowColor="purple" className="p-8">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Employees</h2>
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-3">
+                  <Users className="h-6 w-6 text-blue-400" />
+                </div>
+                <h2 className="text-2xl font-bold">Employees</h2>
+              </div>
               {/* Add Employee Button - Opens dialog in 'add' mode */}
               <EmployeeDialog mode="add" onSuccess={fetchEmployees} />
             </div>
@@ -327,8 +352,8 @@ export default function ManagerSettingsPage() {
                 started.
               </div>
             ) : (
-              /* Employee List */
-              <div className="space-y-3">
+              /* Employee List - Enhanced */
+              <div className="space-y-4">
                 {employees
                   .filter((emp) => {
                     // Filter employees based on search query
@@ -341,17 +366,23 @@ export default function ManagerSettingsPage() {
                   .map((emp) => (
                     <div
                       key={emp.id}
-                      className="flex items-center justify-between rounded-lg border border-neutral-600 bg-neutral-700/50 p-4"
+                      className="group flex items-center justify-between rounded-xl border border-neutral-800 bg-gradient-to-br from-neutral-900/50 to-neutral-950/50 p-5 transition-all duration-300 hover:-translate-y-1 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
                     >
                       {/* Employee Info Display */}
                       <div className="flex-1">
-                        <h3 className="font-semibold">
+                        <h3 className="text-lg font-bold text-white group-hover:text-blue-300">
                           {emp.first_name} {emp.last_name}
                         </h3>
-                        <div className="mt-1 flex gap-4 text-sm text-neutral-400">
-                          <span>Weekday: ${emp.weekday_rate}/h</span>
-                          <span>Saturday: ${emp.saturday_rate}/h</span>
-                          <span>Sunday: ${emp.sunday_rate}/h</span>
+                        <div className="mt-2 flex flex-wrap gap-3 text-sm">
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-blue-500/10 px-2 py-1 text-blue-400">
+                            <span className="font-medium">Weekday:</span> ${emp.weekday_rate}/h
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-purple-500/10 px-2 py-1 text-purple-400">
+                            <span className="font-medium">Sat:</span> ${emp.saturday_rate}/h
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-500/10 px-2 py-1 text-amber-400">
+                            <span className="font-medium">Sun:</span> ${emp.sunday_rate}/h
+                          </span>
                         </div>
                       </div>
 
@@ -367,10 +398,10 @@ export default function ManagerSettingsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-neutral-700 bg-neutral-800 hover:border-red-500 hover:bg-red-900/50"
+                          className="group/delete border-neutral-700 bg-neutral-800 transition-all hover:scale-105 hover:border-red-500 hover:bg-red-500/20 hover:shadow-lg hover:shadow-red-500/20"
                           onClick={() => handleDeleteEmployee(emp.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4 transition-transform group-hover/delete:rotate-12" />
                         </Button>
                       </div>
                     </div>
@@ -389,7 +420,7 @@ export default function ManagerSettingsPage() {
                 )}
               </div>
             )}
-          </div>
+          </AnimatedCard>
         </div>
       </main>
     </div>
