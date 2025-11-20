@@ -5,10 +5,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { startOfWeek, endOfWeek, format, getDay } from "date-fns";
+import { startOfWeek, endOfWeek, format, getDay, addDays, differenceInDays } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
 
@@ -26,14 +26,24 @@ interface DailyBreakdown {
 export default function EmployeeDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const employeeId = params.employeeId as string;
 
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const currentWeekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
+  // Get date range and view mode from URL params or default to current week
+  const startDateParam = searchParams.get("startDate");
+  const endDateParam = searchParams.get("endDate");
+  const viewModeParam = searchParams.get("viewMode") as "week" | "custom" | null;
+
+  const currentWeekStart = startDateParam
+    ? new Date(startDateParam)
+    : startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekEnd = endDateParam
+    ? new Date(endDateParam)
+    : endOfWeek(currentWeekStart, { weekStartsOn: 1 });
 
   /**
    * Get hourly rate based on day of week
@@ -78,14 +88,16 @@ export default function EmployeeDetailPage() {
       };
       const sheets = tsData.timesheets ?? [];
 
-      // Create daily breakdown for the week
+      // Create daily breakdown for the date range
       const breakdown: DailyBreakdown[] = [];
-      const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const totalDays = differenceInDays(weekEnd, currentWeekStart) + 1;
 
-      for (let i = 0; i < 7; i++) {
-        const date = new Date(currentWeekStart);
-        date.setDate(date.getDate() + i);
+      for (let i = 0; i < totalDays; i++) {
+        const date = addDays(currentWeekStart, i);
         const dateString = format(date, "yyyy-MM-dd");
+        const dayOfWeek = getDay(date);
+        const dayName = daysOfWeek[dayOfWeek] ?? "";
 
         const timesheet = sheets.find((ts) => ts.work_date === dateString);
 
@@ -101,7 +113,7 @@ export default function EmployeeDetailPage() {
 
           breakdown.push({
             date: dateString,
-            dayName: daysOfWeek[i] ?? "",
+            dayName,
             startTime: timesheet.start_time,
             endTime: timesheet.end_time,
             rawHours,
@@ -112,7 +124,7 @@ export default function EmployeeDetailPage() {
         } else {
           breakdown.push({
             date: dateString,
-            dayName: daysOfWeek[i] ?? "",
+            dayName,
             startTime: null,
             endTime: null,
             rawHours: 0,
@@ -134,7 +146,7 @@ export default function EmployeeDetailPage() {
   useEffect(() => {
     void loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [employeeId]);
+  }, [employeeId, startDateParam, endDateParam, viewModeParam]);
 
   if (loading || !employee) {
     return (
@@ -154,6 +166,16 @@ export default function EmployeeDetailPage() {
     0,
   );
 
+  // Function to navigate back with URL params
+  const handleBackToDashboard = () => {
+    const params = new URLSearchParams({
+      viewMode: viewModeParam ?? "week",
+      startDate: format(currentWeekStart, "yyyy-MM-dd"),
+      endDate: format(weekEnd, "yyyy-MM-dd"),
+    });
+    router.push(`/client/manager/dashboard?${params.toString()}`);
+  };
+
   return (
     <div className="min-h-screen bg-neutral-900 text-white">
       {/* Header */}
@@ -161,7 +183,7 @@ export default function EmployeeDetailPage() {
         <div className="container mx-auto px-4 py-4">
           <Button
             variant="ghost"
-            onClick={() => router.push("/client/manager/dashboard")}
+            onClick={handleBackToDashboard}
             className="text-primary hover:text-primary/80 mb-4 hover:bg-neutral-700"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
