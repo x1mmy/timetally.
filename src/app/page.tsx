@@ -141,9 +141,8 @@ export default function Home() {
               <div className="flex flex-col items-center justify-center gap-4 pt-8 sm:flex-row">
 
               {/* Express Your Interest Button */}
-              {/* TODO: Add the link to the form */}
                 <Link
-                  href=""
+                  href="https://airtable.com/app5rtz40muNLx7Sb/pagN27LT5K7caBPsT/form"
                   className="group rounded-xl border-2 border-blue-500/50 bg-blue-500/10 px-8 py-4 font-semibold text-white backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-blue-400 hover:bg-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30"
                 >
                   <span className="flex items-center gap-2">
