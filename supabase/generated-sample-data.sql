@@ -45,7 +45,7 @@ SELECT 'Break Rules', COUNT(*) FROM break_rules;
 -- =====================================================
 --
 -- ADMIN LOGIN:
---   URL: http://admin.timetally.local:3000
+--   URL: http://timetally.local:3000/admin
 --   Email: admin@timetally.com
 --   Password: admin123
 --
