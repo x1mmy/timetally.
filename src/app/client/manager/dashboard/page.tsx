@@ -30,10 +30,12 @@ import {
   Users,
   Clock,
   Calendar,
+  Download,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
+import { exportPayrollToCSV } from "@/lib/csvExport";
 
 interface EmployeeWithPay extends Employee {
   weekdayHours: number;
@@ -232,16 +234,35 @@ function ManagerDashboardContent() {
   }, [currentWeekStart, viewMode, customStartDate, customEndDate]);
 
   // Update URL when view mode or date range changes
+  // Only update if values actually changed to prevent infinite loop
   useEffect(() => {
+    const startDateStr = format(actualStartDate, "yyyy-MM-dd");
+    const endDateStr = format(actualEndDate, "yyyy-MM-dd");
+
+    // Check if URL already matches current state
+    const currentParams = new URLSearchParams(window.location.search);
+    const currentViewMode = currentParams.get("viewMode");
+    const currentStartDate = currentParams.get("startDate");
+    const currentEndDate = currentParams.get("endDate");
+
+    if (
+      currentViewMode === viewMode &&
+      currentStartDate === startDateStr &&
+      currentEndDate === endDateStr
+    ) {
+      return; // URL already matches, no update needed
+    }
+
     const params = new URLSearchParams();
     params.set("viewMode", viewMode);
-    params.set("startDate", format(actualStartDate, "yyyy-MM-dd"));
-    params.set("endDate", format(actualEndDate, "yyyy-MM-dd"));
+    params.set("startDate", startDateStr);
+    params.set("endDate", endDateStr);
 
     router.replace(`/client/manager/dashboard?${params.toString()}`, {
       scroll: false,
     });
-  }, [viewMode, actualStartDate, actualEndDate, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode, currentWeekStart, customStartDate, customEndDate]);
 
   /**
    * Filter employees by search query
@@ -264,6 +285,24 @@ function ManagerDashboardContent() {
     } catch (error) {
       console.error("Logout error:", error);
     }
+  };
+
+  /**
+   * Handle CSV export - Payroll-ready universal format
+   */
+  const handleExportCSV = () => {
+    const employeeData = filteredEmployees.map((emp) => ({
+      firstName: emp.first_name,
+      lastName: emp.last_name,
+      weekdayHours: emp.weekdayHours,
+      saturdayHours: emp.saturdayHours,
+      sundayHours: emp.sundayHours,
+    }));
+
+    exportPayrollToCSV({
+      employees: employeeData,
+      weekEndingDate: actualEndDate, // Use end date as week-ending date
+    });
   };
 
   // Calculate summary stats
@@ -419,15 +458,25 @@ function ManagerDashboardContent() {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-            <Input
-              placeholder="Search employees by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-neutral-700 bg-neutral-800 pl-10"
-            />
+          {/* Search Bar and Export Button */}
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              <Input
+                placeholder="Search employees by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="border-neutral-700 bg-neutral-800 pl-10"
+              />
+            </div>
+            <Button
+              onClick={handleExportCSV}
+              className="bg-primary hover:bg-primary/90 text-white"
+              disabled={filteredEmployees.length === 0}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export to CSV
+            </Button>
           </div>
 
           {/* Employee Cards */}
