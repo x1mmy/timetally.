@@ -32,9 +32,10 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, ArrowLeft, Save, Trash2, Search } from "lucide-react";
+import { Settings, ArrowLeft, Save, Trash2, Search, Users, Clock } from "lucide-react";
 import type { Employee } from "@/types/database";
 import { EmployeeDialog } from "./components/EmployeeDialog";
+import { motion } from "framer-motion";
 
 export default function ManagerSettingsPage() {
   const router = useRouter();
@@ -180,13 +181,31 @@ export default function ManagerSettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white">
-      {/* Header */}
-      <header className="border-b border-neutral-700 bg-neutral-800">
+    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+      {/* Animated Background */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-40 top-20 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
+        <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-purple-500/5 blur-3xl" />
+      </div>
+
+      {/* Header - Matching Dashboard Style */}
+      <motion.header
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100 }}
+        className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl"
+      >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Settings className="text-primary h-8 w-8" />
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-3"
+            >
+              <div className="rounded-xl bg-primary/10 p-2 ring-2 ring-primary/20">
+                <Settings className="h-8 w-8 text-primary" />
+              </div>
               <div>
                 <h1 className="text-2xl font-bold">
                   Manager Settings<span className="text-primary">.</span>
@@ -195,34 +214,57 @@ export default function ManagerSettingsPage() {
                   Configure break rules and manage employees
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <Button
-              variant="outline"
-              onClick={() => router.push("/client/manager/dashboard")}
-              className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+            <motion.div
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
+              <Button
+                variant="outline"
+                onClick={() => router.push("/client/manager/dashboard")}
+                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
+              </Button>
+            </motion.div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container relative mx-auto px-4 py-8">
         <div className="mx-auto max-w-4xl space-y-8">
           {/* Break Rules Section */}
-          <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-            <h2 className="mb-6 text-xl font-semibold">Break Rules</h2>
-            <p className="mb-6 text-sm text-neutral-400">
-              Configure automatic break deductions based on hours worked
-            </p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
+          >
+            <div className="mb-6 flex items-center gap-3">
+              <div className="rounded-lg bg-blue-500/10 p-2 ring-1 ring-blue-500/20">
+                <Clock className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold">Break Rules</h2>
+                <p className="text-sm text-neutral-400">
+                  Configure automatic break deductions based on hours worked
+                </p>
+              </div>
+            </div>
 
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="underFive">Under 5 hours</Label>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="underFive" className="text-sm font-medium">
+                    Under 5 hours
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="underFive"
@@ -235,14 +277,19 @@ export default function ManagerSettingsPage() {
                           underFiveHours: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="border-neutral-600 bg-neutral-700"
+                      className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all focus:border-primary/50"
                     />
                     <span className="text-sm text-neutral-400">min</span>
                   </div>
-                </div>
+                </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="fiveToSeven">5-7 hours</Label>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="fiveToSeven" className="text-sm font-medium">
+                    5-7 hours
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="fiveToSeven"
@@ -255,14 +302,19 @@ export default function ManagerSettingsPage() {
                           fiveToSevenHours: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="border-neutral-600 bg-neutral-700"
+                      className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all focus:border-primary/50"
                     />
                     <span className="text-sm text-neutral-400">min</span>
                   </div>
-                </div>
+                </motion.div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="overSeven">Over 7 hours</Label>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="space-y-2"
+                >
+                  <Label htmlFor="overSeven" className="text-sm font-medium">
+                    Over 7 hours
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="overSeven"
@@ -275,28 +327,40 @@ export default function ManagerSettingsPage() {
                           overSevenHours: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="border-neutral-600 bg-neutral-700"
+                      className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all focus:border-primary/50"
                     />
                     <span className="text-sm text-neutral-400">min</span>
                   </div>
-                </div>
+                </motion.div>
               </div>
 
-              <Button
-                onClick={handleSaveBreakRules}
-                disabled={saving}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                {saving ? "Saving..." : "Save Break Rules"}
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={handleSaveBreakRules}
+                  disabled={saving}
+                  className="bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/40"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {saving ? "Saving..." : "Save Break Rules"}
+                </Button>
+              </motion.div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Employees Section - CRUD Management */}
-          <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
+          >
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Employees</h2>
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-purple-500/10 p-2 ring-1 ring-purple-500/20">
+                  <Users className="h-5 w-5 text-purple-400" />
+                </div>
+                <h2 className="text-xl font-semibold">Employees</h2>
+              </div>
               {/* Add Employee Button - Opens dialog in 'add' mode */}
               <EmployeeDialog mode="add" onSuccess={fetchEmployees} />
             </div>
@@ -310,22 +374,36 @@ export default function ManagerSettingsPage() {
                   placeholder="Search employees by name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="border-neutral-600 bg-neutral-700 pl-10"
+                  className="border-neutral-700 bg-neutral-800/50 pl-10 backdrop-blur-sm transition-all focus:border-primary/50"
                 />
               </div>
             )}
 
             {/* Loading State */}
             {loading ? (
-              <div className="py-8 text-center text-neutral-400">
-                Loading employees...
-              </div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-12"
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                >
+                  <Clock className="h-12 w-12 text-primary" />
+                </motion.div>
+                <p className="mt-4 text-neutral-400">Loading employees...</p>
+              </motion.div>
             ) : employees.length === 0 ? (
               /* Empty State */
-              <div className="py-8 text-center text-neutral-400">
-                No employees found. Click &quot;Add Employee&quot; to get
-                started.
-              </div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="rounded-xl border border-neutral-800 bg-neutral-900/50 py-12 text-center text-neutral-400"
+              >
+                <Users className="mx-auto mb-4 h-16 w-16 text-neutral-600" />
+                <p>No employees found. Click &quot;Add Employee&quot; to get started.</p>
+              </motion.div>
             ) : (
               /* Employee List */
               <div className="space-y-3">
@@ -338,10 +416,14 @@ export default function ManagerSettingsPage() {
                       `${emp.first_name} ${emp.last_name}`.toLowerCase();
                     return fullName.includes(query);
                   })
-                  .map((emp) => (
-                    <div
+                  .map((emp, index) => (
+                    <motion.div
                       key={emp.id}
-                      className="flex items-center justify-between rounded-lg border border-neutral-600 bg-neutral-700/50 p-4"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ scale: 1.01, x: 5 }}
+                      className="flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 backdrop-blur-sm transition-all hover:border-primary/30 hover:bg-neutral-900/80"
                     >
                       {/* Employee Info Display */}
                       <div className="flex-1">
@@ -364,16 +446,18 @@ export default function ManagerSettingsPage() {
                           onSuccess={fetchEmployees}
                         />
                         {/* Delete Button - Confirms then deletes employee */}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-neutral-700 bg-neutral-800 hover:border-red-500 hover:bg-red-900/50"
-                          onClick={() => handleDeleteEmployee(emp.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-neutral-700 bg-neutral-800 transition-all hover:border-red-500 hover:bg-red-900/50"
+                            onClick={() => handleDeleteEmployee(emp.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </motion.div>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 {/* No search results message */}
                 {employees.filter((emp) => {
@@ -383,13 +467,17 @@ export default function ManagerSettingsPage() {
                     `${emp.first_name} ${emp.last_name}`.toLowerCase();
                   return fullName.includes(query);
                 }).length === 0 && (
-                  <div className="py-8 text-center text-neutral-400">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="rounded-xl border border-neutral-800 bg-neutral-900/50 py-8 text-center text-neutral-400"
+                  >
                     No employees found matching &quot;{searchQuery}&quot;
-                  </div>
+                  </motion.div>
                 )}
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       </main>
     </div>
