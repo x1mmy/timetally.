@@ -343,18 +343,26 @@ function EmployeeDetailContent() {
       </main>
 
       {/* Edit Timesheet Dialog */}
+      {/* // Show EditTimesheetDialog only when both an editingDay and employee are set */}
       {editingDay && employee && (
         <EditTimesheetDialog
+          // Dialog is open if editingDay is not null
           open={editingDay !== null}
+          // When dialog is closed, clear the editingDay to hide the dialog
           onOpenChange={(open) => {
             if (!open) {
               setEditingDay(null);
             }
           }}
+          // Pass the employee ID for whom the timesheet is being edited
           employeeId={employeeId}
+          // The work date of the timesheet entry being edited
           workDate={editingDay.date}
+          // Current start time (can be null if not set)
           startTime={editingDay.startTime}
+          // Current end time (can be null if not set)
           endTime={editingDay.endTime}
+          // On successful dialog update, close the dialog and reload employee data
           onSuccess={() => {
             setEditingDay(null);
             void loadData();
