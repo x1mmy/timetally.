@@ -6,11 +6,12 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startOfWeek, endOfWeek, format, getDay, addDays, differenceInDays } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
+import { EditTimesheetDialog } from "./components/EditTimesheetDialog";
 
 interface DailyBreakdown {
   date: string;
@@ -21,6 +22,7 @@ interface DailyBreakdown {
   breakMinutes: number;
   totalHours: number;
   pay: number;
+  timesheetId: string | null;
 }
 
 function EmployeeDetailContent() {
@@ -32,6 +34,7 @@ function EmployeeDetailContent() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingDay, setEditingDay] = useState<DailyBreakdown | null>(null);
 
   // Get date range and view mode from URL params or default to current week
   const startDateParam = searchParams.get("startDate");
@@ -120,6 +123,7 @@ function EmployeeDetailContent() {
             breakMinutes,
             totalHours,
             pay: totalHours * hourlyRate,
+            timesheetId: timesheet.id,
           });
         } else {
           breakdown.push({
@@ -131,6 +135,7 @@ function EmployeeDetailContent() {
             breakMinutes: 0,
             totalHours: 0,
             pay: 0,
+            timesheetId: null,
           });
         }
       }
@@ -252,18 +257,28 @@ function EmployeeDetailContent() {
                     </h3>
                   </div>
                   {day.startTime && day.endTime ? (
-                    <div className="text-right">
-                      <p className="text-sm text-neutral-400">
-                        {format(
-                          new Date(`2000-01-01T${day.startTime}`),
-                          "h:mm a",
-                        )}{" "}
-                        -{" "}
-                        {format(
-                          new Date(`2000-01-01T${day.endTime}`),
-                          "h:mm a",
-                        )}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm text-neutral-400">
+                          {format(
+                            new Date(`2000-01-01T${day.startTime}`),
+                            "h:mm a",
+                          )}{" "}
+                          -{" "}
+                          {format(
+                            new Date(`2000-01-01T${day.endTime}`),
+                            "h:mm a",
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditingDay(day)}
+                        className="hover:bg-primary/20 hover:border-primary border-neutral-700 bg-neutral-800"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                     </div>
                   ) : (
                     <p className="text-sm text-neutral-500">No hours logged</p>
@@ -326,6 +341,26 @@ function EmployeeDetailContent() {
           </div>
         </div>
       </main>
+
+      {/* Edit Timesheet Dialog */}
+      {editingDay && employee && (
+        <EditTimesheetDialog
+          open={editingDay !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditingDay(null);
+            }
+          }}
+          employeeId={employeeId}
+          workDate={editingDay.date}
+          startTime={editingDay.startTime}
+          endTime={editingDay.endTime}
+          onSuccess={() => {
+            setEditingDay(null);
+            void loadData();
+          }}
+        />
+      )}
     </div>
   );
 }
