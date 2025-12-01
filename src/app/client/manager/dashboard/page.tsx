@@ -31,11 +31,14 @@ import {
   Clock,
   Calendar,
   Download,
+  TrendingUp,
+  ArrowRight,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
 import { exportPayrollToCSV } from "@/lib/csvExport";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface EmployeeWithPay extends Employee {
   weekdayHours: number;
@@ -310,13 +313,31 @@ function ManagerDashboardContent() {
   const totalHours = employees.reduce((sum, emp) => sum + emp.totalHours, 0);
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white">
+    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+      {/* Animated Background */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-40 top-20 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
+        <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-neutral-700 bg-neutral-800">
+      <motion.header
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 100 }}
+        className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl"
+      >
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <DollarSign className="text-primary h-8 w-8" />
+            <motion.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-3"
+            >
+              <div className="rounded-xl bg-primary/10 p-2 ring-2 ring-primary/20">
+                <DollarSign className="h-8 w-8 text-primary" />
+              </div>
               <div>
                 <h1 className="text-2xl font-bold">
                   Payroll Dashboard<span className="text-primary">.</span>
@@ -326,13 +347,18 @@ function ManagerDashboardContent() {
                   {format(actualEndDate, "MMM dd, yyyy")}
                 </p>
               </div>
-            </div>
+            </motion.div>
 
-            <div className="flex gap-2">
+            <motion.div
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex gap-2"
+            >
               <Button
                 variant="outline"
                 onClick={() => router.push("/client/manager/settings")}
-                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
               >
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
@@ -340,14 +366,14 @@ function ManagerDashboardContent() {
               <Button
                 variant="outline"
                 onClick={handleLogout}
-                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
               >
                 <LogOut className="h-4 w-4" />
               </Button>
-            </div>
+            </motion.div>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
@@ -425,38 +451,69 @@ function ManagerDashboardContent() {
           )}
 
           {/* Summary Stats */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            {/* shadow-xl shadow-blue-500/50 ring-blue-500/40 */}
-            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-              <div className="flex items-center justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="grid grid-cols-1 gap-4 md:grid-cols-3"
+          >
+            {/* Total Payroll */}
+            <motion.div
+              whileHover={{ y: -5 }}
+              className="group relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
+            >
+              <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-primary/10 blur-2xl transition-all group-hover:bg-primary/20" />
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-neutral-400">Total Payroll</p>
-                  <p className="text-3xl font-bold">${totalPay.toFixed(2)}</p>
+                  <p className="mb-2 text-sm font-medium text-neutral-400">Total Payroll</p>
+                  <p className="text-4xl font-bold text-primary">
+                    ${totalPay.toFixed(2)}
+                  </p>
                 </div>
-                <DollarSign className="text-primary h-8 w-8" />
+                <div className="rounded-xl bg-primary/10 p-3 ring-2 ring-primary/20 transition-all group-hover:scale-110 group-hover:ring-primary/40">
+                  <DollarSign className="h-8 w-8 text-primary" />
+                </div>
               </div>
-            </div>
-            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-              <div className="flex items-center justify-between">
+            </motion.div>
+
+            {/* Total Hours */}
+            <motion.div
+              whileHover={{ y: -5 }}
+              transition={{ delay: 0.05 }}
+              className="group relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
+            >
+              <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-blue-500/10 blur-2xl transition-all group-hover:bg-blue-500/20" />
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-neutral-400">Total Hours</p>
-                  <p className="text-3xl font-bold">
+                  <p className="mb-2 text-sm font-medium text-neutral-400">Total Hours</p>
+                  <p className="text-4xl font-bold">
                     {formatHoursAndMinutes(totalHours)}
                   </p>
                 </div>
-                <Clock className="text-primary h-8 w-8" />
-              </div>
-            </div>
-            <div className="hover: hover:border-primary/50 rounded-lg border border-neutral-700 bg-neutral-800 p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-neutral-400">Employees</p>
-                  <p className="text-3xl font-bold">{employees.length}</p>
+                <div className="rounded-xl bg-blue-500/10 p-3 ring-2 ring-blue-500/20 transition-all group-hover:scale-110 group-hover:ring-blue-500/40">
+                  <Clock className="h-8 w-8 text-blue-400" />
                 </div>
-                <Users className="text-primary h-8 w-8" />
               </div>
-            </div>
-          </div>
+            </motion.div>
+
+            {/* Employees Count */}
+            <motion.div
+              whileHover={{ y: -5 }}
+              transition={{ delay: 0.1 }}
+              className="group relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
+            >
+              <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-purple-500/10 blur-2xl transition-all group-hover:bg-purple-500/20" />
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <p className="mb-2 text-sm font-medium text-neutral-400">Employees</p>
+                  <p className="text-4xl font-bold">{employees.length}</p>
+                </div>
+                <div className="rounded-xl bg-purple-500/10 p-3 ring-2 ring-purple-500/20 transition-all group-hover:scale-110 group-hover:ring-purple-500/40">
+                  <Users className="h-8 w-8 text-purple-400" />
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
 
           {/* Search Bar and Export Button */}
           <div className="flex flex-col gap-4 sm:flex-row">
@@ -481,91 +538,139 @@ function ManagerDashboardContent() {
 
           {/* Employee Cards */}
           {loading ? (
-            <div className="py-12 text-center text-neutral-400">
-              Loading employees...
-            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-12"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+              >
+                <Clock className="h-12 w-12 text-primary" />
+              </motion.div>
+              <p className="mt-4 text-neutral-400">Loading employees...</p>
+            </motion.div>
           ) : filteredEmployees.length === 0 ? (
-            <div className="py-12 text-center text-neutral-400">
-              {searchQuery
-                ? "No employees found matching your search"
-                : "No employees yet. Add your first employee to get started."}
-            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-12 text-center text-neutral-400 backdrop-blur-sm"
+            >
+              <Users className="mx-auto mb-4 h-16 w-16 text-neutral-600" />
+              <p className="text-lg">
+                {searchQuery
+                  ? "No employees found matching your search"
+                  : "No employees yet. Add your first employee to get started."}
+              </p>
+            </motion.div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {filteredEmployees.map((emp) => {
-                const params = new URLSearchParams({
-                  viewMode,
-                  startDate: format(actualStartDate, "yyyy-MM-dd"),
-                  endDate: format(actualEndDate, "yyyy-MM-dd"),
-                });
-                return (
-                  <div
-                    key={emp.id}
-                    onClick={() =>
-                      router.push(
-                        `/client/manager/employee/${emp.id}?${params.toString()}`,
-                      )
-                    }
-                    className="hover:border-primary/50 cursor-pointer rounded-lg border border-neutral-700 bg-neutral-800 p-6 transition-colors"
-                  >
-                  {/* Employee Header with Total Pay */}
-                  <div className="mb-3 flex items-start justify-between">
-                    <div>
-                      <h3 className="mb-1 text-xl font-semibold">
-                        {emp.first_name} {emp.last_name}
-                      </h3>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-primary text-3xl font-bold">
-                        ${emp.totalPay.toFixed(2)}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <AnimatePresence mode="popLayout">
+                {filteredEmployees.map((emp, index) => {
+                  const params = new URLSearchParams({
+                    viewMode,
+                    startDate: format(actualStartDate, "yyyy-MM-dd"),
+                    endDate: format(actualEndDate, "yyyy-MM-dd"),
+                  });
+                  return (
+                    <motion.div
+                      key={emp.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ delay: index * 0.05 }}
+                      whileHover={{ y: -5 }}
+                      onClick={() =>
+                        router.push(
+                          `/client/manager/employee/${emp.id}?${params.toString()}`,
+                        )
+                      }
+                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
+                    >
+                      {/* Gradient overlay */}
+                      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                        <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent" />
                       </div>
-                      <div className="text-xs text-neutral-500">
-                        {formatHoursAndMinutes(emp.rawHours)} →{" "}
-                        {formatHoursAndMinutes(emp.totalHours)}
-                      </div>
-                      <div className="text-xs text-neutral-500">
-                        ({emp.breakMinutes} min break)
-                      </div>
-                    </div>
-                  </div>
 
-                  {/* Pay Rates */}
-                  <div className="mb-4 text-sm text-neutral-400">
-                    Weekday: ${emp.weekday_rate.toFixed(2)}/hr | Sat: $
-                    {emp.saturday_rate.toFixed(2)}/hr | Sun: $
-                    {emp.sunday_rate.toFixed(2)}/hr
-                  </div>
+                      {/* Employee Header with Total Pay */}
+                      <div className="relative mb-4 flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="mb-1 text-xl font-bold">
+                            {emp.first_name} {emp.last_name}
+                          </h3>
+                          <p className="text-sm text-neutral-400">
+                            Weekday: ${emp.weekday_rate.toFixed(2)}/hr | Sat: $
+                            {emp.saturday_rate.toFixed(2)}/hr | Sun: $
+                            {emp.sunday_rate.toFixed(2)}/hr
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="mb-1 text-3xl font-bold text-primary">
+                            ${emp.totalPay.toFixed(2)}
+                          </div>
+                          <div className="text-xs text-neutral-500">
+                            {formatHoursAndMinutes(emp.rawHours)} →{" "}
+                            {formatHoursAndMinutes(emp.totalHours)}
+                          </div>
+                          <div className="text-xs text-neutral-500">
+                            ({emp.breakMinutes} min break)
+                          </div>
+                        </div>
+                      </div>
 
-                  {/* Day Boxes */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-blue-500/40 bg-blue-500/20 p-4 text-center">
-                      <div className="mb-2 text-sm text-neutral-400">
-                        Weekday
+                      {/* Day Boxes */}
+                      <div className="relative grid grid-cols-3 gap-3">
+                        <motion.div
+                          whileHover={{ y: -3 }}
+                          className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
+                        >
+                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
+                            Weekday
+                          </div>
+                          <div className="text-xl font-bold">
+                            {formatHoursAndMinutes(emp.weekdayHours)}
+                          </div>
+                        </motion.div>
+                        <motion.div
+                          whileHover={{ y: -3 }}
+                          className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-purple-500/50 hover:bg-purple-500/20"
+                        >
+                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
+                            Saturday
+                          </div>
+                          <div className="text-xl font-bold">
+                            {formatHoursAndMinutes(emp.saturdayHours)}
+                          </div>
+                        </motion.div>
+                        <motion.div
+                          whileHover={{ y: -3 }}
+                          className="rounded-xl border border-pink-500/30 bg-pink-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-pink-500/50 hover:bg-pink-500/20"
+                        >
+                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
+                            Sunday
+                          </div>
+                          <div className="text-xl font-bold">
+                            {formatHoursAndMinutes(emp.sundayHours)}
+                          </div>
+                        </motion.div>
                       </div>
-                      <div className="text-xl font-semibold">
-                        {formatHoursAndMinutes(emp.weekdayHours)}
+
+                      {/* View Details Indicator */}
+                      <div className="relative mt-4 flex items-center justify-end gap-2 text-sm text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                        <span>View Details</span>
+                        <motion.div
+                          animate={{ x: [0, 5, 0] }}
+                          transition={{ repeat: Infinity, duration: 1.5 }}
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </motion.div>
                       </div>
-                    </div>
-                    <div className="rounded-lg border border-blue-500/40 bg-blue-500/20 p-4 text-center">
-                      <div className="mb-2 text-sm text-neutral-400">
-                        Saturday
-                      </div>
-                      <div className="text-xl font-semibold">
-                        {formatHoursAndMinutes(emp.saturdayHours)}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-blue-500/40 bg-blue-500/20 p-4 text-center">
-                      <div className="mb-2 text-sm text-neutral-400">
-                        Sunday
-                      </div>
-                      <div className="text-xl font-semibold">
-                        {formatHoursAndMinutes(emp.sundayHours)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
         </div>
