@@ -16,7 +16,7 @@
 
 import { useState, useEffect } from "react";
 import { TimePickerMobile } from "./TimePickerMobile";
-import { TimePickerDesktop } from "./TimePickerDesktop";
+import { TimePickerDesktopSimple } from "./TimePickerDesktopSimple";
 
 interface TimePickerProps {
   /** Current time value in 24-hour HH:MM format */
@@ -72,7 +72,7 @@ export function TimePicker({
           placeholder={placeholder}
         />
       ) : (
-        <TimePickerDesktop
+        <TimePickerDesktopSimple
           value={value}
           onChange={onChange}
           placeholder={placeholder}
