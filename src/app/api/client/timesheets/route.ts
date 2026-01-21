@@ -119,15 +119,24 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       // Update existing timesheet - preserve existing values if not provided
-      const updateData: {
-        start_time: string | null;
-        end_time: string | null;
-        notes: string | null;
-      } = {
-        start_time: startTime ?? existing.start_time,
-        end_time: endTime ?? existing.end_time,
+      const newStartTime = startTime ?? existing.start_time;
+      const newEndTime = endTime ?? existing.end_time;
+
+      // Check if times are changing - if so, reset break_minutes to null
+      // so the database trigger will recalculate it based on new shift duration
+      const timesChanged =
+        newStartTime !== existing.start_time || newEndTime !== existing.end_time;
+
+      const updateData: Record<string, string | number | null> = {
+        start_time: newStartTime,
+        end_time: newEndTime,
         notes: notes ?? null,
       };
+
+      // Reset break_minutes when times change so trigger recalculates it
+      if (timesChanged) {
+        updateData.break_minutes = null;
+      }
 
       const { data: timesheet, error } = await supabase
         .from("timesheets")
