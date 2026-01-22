@@ -17,7 +17,7 @@
  */
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WeekNavigator } from "@/components/WeekNavigator";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
 import { exportPayrollToCSV, printPayrollCSV } from "@/lib/csvExport";
 import { motion, AnimatePresence } from "framer-motion";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface EmployeeWithPay extends Employee {
   weekdayHours: number;
@@ -63,8 +64,9 @@ function ManagerDashboardContent() {
   const [currentWeekStart, setCurrentWeekStart] = useState(
     startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
-  const [employees, setEmployees] = useState<EmployeeWithPay[]>([]);
-  const [timesheets, setTimesheets] = useState<TimesheetWithEmployee[]>([]);
+  // Raw data from API
+  const [rawEmployees, setRawEmployees] = useState<Employee[]>([]);
+  const [rawTimesheets, setRawTimesheets] = useState<TimesheetWithEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -103,76 +105,65 @@ function ManagerDashboardContent() {
     return "weekday";
   };
 
-  /**
-   * Fetch employees
-   */
-  const fetchEmployees = async () => {
-    try {
-      const response = await fetch("/api/client/employees");
-      const data = await response.json();
-
-      if (response.ok) {
-        return data?.employees ?? [];
-      }
-      return [];
-    } catch (error) {
-      console.error("Error fetching employees:", error);
-      return [];
-    }
-  };
+  // Memoize date strings to use as stable dependencies
+  const startDateStr = format(actualStartDate, "yyyy-MM-dd");
+  const endDateStr = format(actualEndDate, "yyyy-MM-dd");
 
   /**
-   * Fetch timesheets for current date range
+   * Load all data - fetches employees and timesheets
    */
-  const fetchTimesheets = async () => {
-    try {
-      const startDate = format(actualStartDate, "yyyy-MM-dd");
-      const endDate = format(actualEndDate, "yyyy-MM-dd");
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
 
-      const response = await fetch(
-        `/api/client/timesheets?startDate=${startDate}&endDate=${endDate}`,
-      );
-      const data = await response.json();
+      const [employeesData, timesheetsData] = await Promise.all([
+        // Fetch employees
+        fetch("/api/client/employees")
+          .then(res => res.json() as Promise<{ employees?: Employee[] }>)
+          .then(data => data?.employees ?? [])
+          .catch((error) => {
+            console.error("Error fetching employees:", error);
+            return [] as Employee[];
+          }),
+        // Fetch timesheets
+        fetch(`/api/client/timesheets?startDate=${startDateStr}&endDate=${endDateStr}`)
+          .then(res => res.json() as Promise<{ timesheets?: TimesheetWithEmployee[] }>)
+          .then(data => data?.timesheets ?? [])
+          .catch((error) => {
+            console.error("Error fetching timesheets:", error);
+            return [] as TimesheetWithEmployee[];
+          }),
+      ]);
 
-      if (response.ok) {
-        return data?.timesheets ?? [];
-      }
-      return [];
-    } catch (error) {
-      console.error("Error fetching timesheets:", error);
-      return [];
-    }
-  };
-
-  /**
-   * Load all data
-   */
-  const loadData = async () => {
-    setLoading(true);
-    const [employeesData, timesheetsData] = await Promise.all([
-      fetchEmployees(),
-      fetchTimesheets(),
-    ]);
-
-    // Calculate hours by day type for each employee
-    type PayDataEntry = {
-      weekday: number;
-      saturday: number;
-      sunday: number;
-      rawHours: number;
-      breakMinutes: number;
+      setRawEmployees(employeesData);
+      setRawTimesheets(timesheetsData);
+      setLoading(false);
     };
-    const payData = timesheetsData.reduce(
+
+    void loadData();
+  }, [startDateStr, endDateStr]);
+
+  /**
+   * Memoized: Calculate pay data from timesheets
+   */
+  type PayDataEntry = {
+    weekday: number;
+    saturday: number;
+    sunday: number;
+    rawHours: number;
+    breakMinutes: number;
+  };
+
+  const payData = useMemo(() => {
+    return rawTimesheets.reduce(
       (acc: Record<string, PayDataEntry>, ts: TimesheetWithEmployee) => {
-        if (!acc[ts.employee_id]) {
-          acc[ts.employee_id] = {
-            weekday: 0,
-            saturday: 0,
-            sunday: 0,
-            rawHours: 0,
-            breakMinutes: 0,
-          };
-        }
+        acc[ts.employee_id] ??= {
+          weekday: 0,
+          saturday: 0,
+          sunday: 0,
+          rawHours: 0,
+          breakMinutes: 0,
+        };
 
         const entry = acc[ts.employee_id]!;
         const dayType = getDayType(ts.work_date);
@@ -194,9 +185,13 @@ function ManagerDashboardContent() {
       },
       {},
     );
+  }, [rawTimesheets]);
 
-    // Merge employees with pay data
-    const employeesWithPay: EmployeeWithPay[] = employeesData.map(
+  /**
+   * Memoized: Merge employees with pay data and sort
+   */
+  const employees = useMemo(() => {
+    const employeesWithPay: EmployeeWithPay[] = rawEmployees.map(
       (emp: Employee) => {
         const empData = payData[emp.id];
         const weekdayHours = empData?.weekday ?? 0;
@@ -224,18 +219,8 @@ function ManagerDashboardContent() {
     );
 
     // Sort by total pay (descending)
-    employeesWithPay.sort((a, b) => b.totalPay - a.totalPay);
-
-    setEmployees(employeesWithPay);
-    setTimesheets(timesheetsData);
-    setLoading(false);
-  };
-
-  // Load data on mount and when date range changes
-  useEffect(() => {
-    void loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWeekStart, viewMode, customStartDate, customEndDate]);
+    return employeesWithPay.sort((a, b) => b.totalPay - a.totalPay);
+  }, [rawEmployees, payData]);
 
   // Update URL when view mode or date range changes
   // Only update if values actually changed to prevent infinite loop
@@ -269,15 +254,15 @@ function ManagerDashboardContent() {
   }, [viewMode, currentWeekStart, customStartDate, customEndDate]);
 
   /**
-   * Filter employees by search query
+   * Memoized: Filter employees by search query
    */
-  const filteredEmployees = employees.filter((emp) => {
+  const filteredEmployees = useMemo(() => {
     const searchLower = searchQuery.toLowerCase();
-    return (
+    return employees.filter((emp) =>
       emp.first_name.toLowerCase().includes(searchLower) ||
       emp.last_name.toLowerCase().includes(searchLower)
     );
-  });
+  }, [employees, searchQuery]);
 
   /**
    * Handle logout
@@ -285,7 +270,7 @@ function ManagerDashboardContent() {
   const handleLogout = async () => {
     try {
       document.cookie = "manager_session=; Max-Age=0; path=/";
-      router.push("/client/manager/login");
+      router.push("/client");
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -327,9 +312,11 @@ function ManagerDashboardContent() {
     });
   };
 
-  // Calculate summary stats
-  const totalPay = employees.reduce((sum, emp) => sum + emp.totalPay, 0);
-  const totalHours = employees.reduce((sum, emp) => sum + emp.totalHours, 0);
+  // Memoized: Calculate summary stats
+  const { totalPay, totalHours } = useMemo(() => ({
+    totalPay: employees.reduce((sum, emp) => sum + emp.totalPay, 0),
+    totalHours: employees.reduce((sum, emp) => sum + emp.totalHours, 0),
+  }), [employees]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
@@ -447,22 +434,18 @@ function ManagerDashboardContent() {
                   <label className="mb-2 block text-sm text-neutral-400">
                     Start Date
                   </label>
-                  <Input
-                    type="date"
-                    value={format(customStartDate, "yyyy-MM-dd")}
-                    onChange={(e) => setCustomStartDate(new Date(e.target.value))}
-                    className="border-neutral-700 bg-neutral-900"
+                  <DatePicker
+                    value={customStartDate}
+                    onChange={setCustomStartDate}
                   />
                 </div>
                 <div>
                   <label className="mb-2 block text-sm text-neutral-400">
                     End Date
                   </label>
-                  <Input
-                    type="date"
-                    value={format(customEndDate, "yyyy-MM-dd")}
-                    onChange={(e) => setCustomEndDate(new Date(e.target.value))}
-                    className="border-neutral-700 bg-neutral-900"
+                  <DatePicker
+                    value={customEndDate}
+                    onChange={setCustomEndDate}
                   />
                 </div>
               </div>
