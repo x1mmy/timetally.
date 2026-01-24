@@ -43,7 +43,9 @@ export interface Employee {
   weekday_rate: number; // Rate for Monday-Friday (hourly or daily based on pay_type)
   saturday_rate: number; // Rate for Saturday (hourly or daily based on pay_type)
   sunday_rate: number; // Rate for Sunday (hourly or daily based on pay_type)
+  public_holiday_rate: number; // Rate for NSW public holidays
   pay_type: "hourly" | "day_rate"; // How the employee is paid
+  apply_break_rules: boolean; // Whether break time rules apply to this employee
   status: "active" | "inactive";
   created_at: string;
   updated_at: string;
@@ -140,7 +142,9 @@ export interface CreateEmployeeInput {
   weekdayRate: number;
   saturdayRate: number;
   sundayRate: number;
+  publicHolidayRate: number; // Rate for NSW public holidays
   payType?: "hourly" | "day_rate"; // Defaults to 'hourly' if not provided
+  applyBreakRules?: boolean; // Defaults to true if not provided
 }
 
 export interface UpdateEmployeeInput {
@@ -150,7 +154,9 @@ export interface UpdateEmployeeInput {
   weekdayRate?: number;
   saturdayRate?: number;
   sundayRate?: number;
+  publicHolidayRate?: number; // Rate for NSW public holidays
   payType?: "hourly" | "day_rate";
+  applyBreakRules?: boolean; // Whether break time rules apply
   status?: "active" | "inactive";
 }
 

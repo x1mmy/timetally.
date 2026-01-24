@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Edit, Loader2, Clock, Calendar } from "lucide-react";
+import { UserPlus, Edit, Loader2, Clock, Calendar, Coffee } from "lucide-react";
 import type { Employee } from "@/types/database";
 
 interface EmployeeDialogProps {
@@ -65,9 +65,11 @@ export function EmployeeDialog({
   const [lastName, setLastName] = useState("");
   const [pin, setPin] = useState("");
   const [payType, setPayType] = useState<"hourly" | "day_rate">("hourly");
+  const [applyBreakRules, setApplyBreakRules] = useState(true);
   const [weekdayRate, setWeekdayRate] = useState("25.00");
   const [saturdayRate, setSaturdayRate] = useState("30.00");
   const [sundayRate, setSundayRate] = useState("35.00");
+  const [publicHolidayRate, setPublicHolidayRate] = useState("50.00");
 
   /**
    * Initialize or reset form based on mode and dialog state
@@ -81,18 +83,22 @@ export function EmployeeDialog({
       setLastName(employee.last_name);
       setPin(employee.pin);
       setPayType((employee.pay_type as "hourly" | "day_rate" | undefined) ?? "hourly");
+      setApplyBreakRules((employee.apply_break_rules as boolean | undefined) ?? true);
       setWeekdayRate(employee.weekday_rate.toFixed(2));
       setSaturdayRate(employee.saturday_rate.toFixed(2));
       setSundayRate(employee.sunday_rate.toFixed(2));
+      setPublicHolidayRate(((employee.public_holiday_rate as number | undefined) ?? employee.weekday_rate * 2).toFixed(2));
     } else if (mode === "add") {
       // Reset to default values when opening in add mode
       setFirstName("");
       setLastName("");
       setPin("");
       setPayType("hourly");
+      setApplyBreakRules(true);
       setWeekdayRate("25.00");
       setSaturdayRate("30.00");
       setSundayRate("35.00");
+      setPublicHolidayRate("50.00");
     }
   }, [mode, employee, open]);
 
@@ -126,6 +132,7 @@ export function EmployeeDialog({
     const weekdayRateNum = parseFloat(weekdayRate);
     const saturdayRateNum = parseFloat(saturdayRate);
     const sundayRateNum = parseFloat(sundayRate);
+    const publicHolidayRateNum = parseFloat(publicHolidayRate);
 
     if (isNaN(weekdayRateNum) || weekdayRateNum < 0) {
       setError("Weekday rate must be a valid positive number");
@@ -139,6 +146,10 @@ export function EmployeeDialog({
       setError("Sunday rate must be a valid positive number");
       return;
     }
+    if (isNaN(publicHolidayRateNum) || publicHolidayRateNum < 0) {
+      setError("Public holiday rate must be a valid positive number");
+      return;
+    }
 
     setLoading(true);
 
@@ -149,9 +160,11 @@ export function EmployeeDialog({
         lastName: lastName.trim(),
         pin,
         payType,
+        applyBreakRules,
         weekdayRate: weekdayRateNum,
         saturdayRate: saturdayRateNum,
         sundayRate: sundayRateNum,
+        publicHolidayRate: publicHolidayRateNum,
       };
 
       let response: Response;
@@ -195,9 +208,11 @@ export function EmployeeDialog({
         setLastName("");
         setPin("");
         setPayType("hourly");
+        setApplyBreakRules(true);
         setWeekdayRate("25.00");
         setSaturdayRate("30.00");
         setSundayRate("35.00");
+        setPublicHolidayRate("50.00");
       }
 
       // Call success callback to refresh employee list
@@ -343,6 +358,41 @@ export function EmployeeDialog({
               </p>
             </div>
 
+            {/* Break Rules Toggle */}
+            <div className="grid gap-2">
+              <Label>Break Time Rules</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setApplyBreakRules(true)}
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                    applyBreakRules
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                  }`}
+                >
+                  <Coffee className="h-4 w-4" />
+                  Apply Breaks
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApplyBreakRules(false)}
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                    !applyBreakRules
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                  }`}
+                >
+                  No Breaks
+                </button>
+              </div>
+              <p className="text-xs text-neutral-400">
+                {applyBreakRules
+                  ? "Break time will be deducted based on shift length"
+                  : "No break time deductions applied"}
+              </p>
+            </div>
+
             {/* Pay Rates */}
             <div className="grid gap-2">
               <Label className="text-base font-semibold">
@@ -404,6 +454,26 @@ export function EmployeeDialog({
                       min="0"
                       value={sundayRate}
                       onChange={(e) => setSundayRate(e.target.value)}
+                      required
+                      className="border-neutral-600 bg-neutral-700"
+                    />
+                  </div>
+                </div>
+
+                {/* Public Holiday Rate */}
+                <div className="grid grid-cols-2 items-center gap-2">
+                  <Label htmlFor="publicHolidayRate" className="text-sm font-normal">
+                    Public Holiday
+                  </Label>
+                  <div className="flex items-center">
+                    <span className="mr-2 text-neutral-400">$</span>
+                    <Input
+                      id="publicHolidayRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={publicHolidayRate}
+                      onChange={(e) => setPublicHolidayRate(e.target.value)}
                       required
                       className="border-neutral-600 bg-neutral-700"
                     />
