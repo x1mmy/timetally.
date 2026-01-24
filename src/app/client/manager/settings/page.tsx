@@ -430,7 +430,7 @@ export default function ManagerSettingsPage() {
                         <h3 className="font-semibold">
                           {emp.first_name} {emp.last_name}
                         </h3>
-                        <div className="mt-1 flex gap-4 text-sm text-neutral-400">
+                        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-400">
                           <span>
                             Weekday: ${emp.weekday_rate}
                             {emp.pay_type === "day_rate" ? "/day" : "/h"}
@@ -443,6 +443,13 @@ export default function ManagerSettingsPage() {
                             Sunday: ${emp.sunday_rate}
                             {emp.pay_type === "day_rate" ? "/day" : "/h"}
                           </span>
+                          <span>
+                            PH: ${(emp.public_holiday_rate as number | undefined) ?? emp.weekday_rate * 2}
+                            {emp.pay_type === "day_rate" ? "/day" : "/h"}
+                          </span>
+                          {!(emp.apply_break_rules as boolean | undefined) && (
+                            <span className="text-amber-400">No breaks</span>
+                          )}
                         </div>
                       </div>
 

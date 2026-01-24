@@ -26,7 +26,9 @@ import type { UpdateEmployeeInput } from "@/types/database";
  * - weekdayRate?: number - Rate for Monday-Friday (must be >= 0)
  * - saturdayRate?: number - Rate for Saturday (must be >= 0)
  * - sundayRate?: number - Rate for Sunday (must be >= 0)
+ * - publicHolidayRate?: number - Rate for NSW public holidays (must be >= 0)
  * - payType?: 'hourly' | 'day_rate' - How employee is paid
+ * - applyBreakRules?: boolean - Whether break time rules apply
  * - status?: 'active' | 'inactive' - Employee status
  *
  * Returns: { employee: Employee } - Updated employee object
@@ -142,9 +144,26 @@ export async function PUT(
       updates.sunday_rate = body.sundayRate;
     }
 
+    // Update public holiday pay rate if provided
+    if (body.publicHolidayRate !== undefined) {
+      if (body.publicHolidayRate < 0) {
+        return NextResponse.json(
+          { error: "Public holiday rate must be positive" },
+          { status: 400 },
+        );
+      }
+      updates.public_holiday_rate = body.publicHolidayRate;
+    }
+
     // Update employee status if provided (active/inactive)
     if (body.status !== undefined) {
       updates.status = body.status;
+    }
+
+    // Update apply_break_rules if provided
+    // When toggled, existing timesheets will be recalculated by the database trigger
+    if (body.applyBreakRules !== undefined) {
+      updates.apply_break_rules = body.applyBreakRules;
     }
 
     // Update pay type if provided (hourly/day_rate)
@@ -185,6 +204,15 @@ export async function PUT(
         { error: "Failed to update employee" },
         { status: 500 },
       );
+    }
+
+    // If apply_break_rules was changed, recalculate all existing timesheets
+    // by setting break_minutes to NULL (triggers recalculation by DB trigger)
+    if (body.applyBreakRules !== undefined) {
+      await supabase
+        .from("timesheets")
+        .update({ break_minutes: null })
+        .eq("employee_id", employeeId);
     }
 
     // Return updated employee data
