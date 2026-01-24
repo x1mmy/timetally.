@@ -113,7 +113,12 @@ function EmployeeDetailContent() {
 
           const totalHours = parseFloat(timesheet.total_hours.toString());
           const breakMinutes = timesheet.break_minutes ?? 0;
-          const hourlyRate = getHourlyRate(dateString, emp);
+          const rate = getHourlyRate(dateString, emp);
+
+          // For day_rate employees, pay is the rate (1 day = 1 rate)
+          // For hourly employees, pay is hours * rate
+          const pay =
+            emp.pay_type === "day_rate" ? rate : totalHours * rate;
 
           breakdown.push({
             date: dateString,
@@ -123,7 +128,7 @@ function EmployeeDetailContent() {
             rawHours,
             breakMinutes,
             totalHours,
-            pay: totalHours * hourlyRate,
+            pay,
             timesheetId: timesheet.id,
           });
         } else {
@@ -251,7 +256,8 @@ function EmployeeDetailContent() {
             >
               <p className="mb-1 text-xs font-medium text-neutral-400">Weekday Rate</p>
               <p className="text-lg font-bold md:text-xl">
-                ${employee.weekday_rate.toFixed(2)}/hr
+                ${employee.weekday_rate.toFixed(2)}
+                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
               </p>
             </motion.div>
             <motion.div
@@ -260,7 +266,8 @@ function EmployeeDetailContent() {
             >
               <p className="mb-1 text-xs font-medium text-neutral-400">Saturday Rate</p>
               <p className="text-lg font-bold md:text-xl">
-                ${employee.saturday_rate.toFixed(2)}/hr
+                ${employee.saturday_rate.toFixed(2)}
+                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
               </p>
             </motion.div>
             <motion.div
@@ -269,7 +276,8 @@ function EmployeeDetailContent() {
             >
               <p className="mb-1 text-xs font-medium text-neutral-400">Sunday Rate</p>
               <p className="text-lg font-bold md:text-xl">
-                ${employee.sunday_rate.toFixed(2)}/hr
+                ${employee.sunday_rate.toFixed(2)}
+                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
               </p>
             </motion.div>
             <motion.div

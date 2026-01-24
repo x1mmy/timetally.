@@ -431,9 +431,18 @@ export default function ManagerSettingsPage() {
                           {emp.first_name} {emp.last_name}
                         </h3>
                         <div className="mt-1 flex gap-4 text-sm text-neutral-400">
-                          <span>Weekday: ${emp.weekday_rate}/h</span>
-                          <span>Saturday: ${emp.saturday_rate}/h</span>
-                          <span>Sunday: ${emp.sunday_rate}/h</span>
+                          <span>
+                            Weekday: ${emp.weekday_rate}
+                            {emp.pay_type === "day_rate" ? "/day" : "/h"}
+                          </span>
+                          <span>
+                            Saturday: ${emp.saturday_rate}
+                            {emp.pay_type === "day_rate" ? "/day" : "/h"}
+                          </span>
+                          <span>
+                            Sunday: ${emp.sunday_rate}
+                            {emp.pay_type === "day_rate" ? "/day" : "/h"}
+                          </span>
                         </div>
                       </div>
 

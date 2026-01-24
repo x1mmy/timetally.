@@ -40,9 +40,10 @@ export interface Employee {
   first_name: string;
   last_name: string;
   pin: string; // 4-digit PIN (plain text, client-isolated)
-  weekday_rate: number; // Hourly rate for Monday-Friday
-  saturday_rate: number; // Hourly rate for Saturday
-  sunday_rate: number; // Hourly rate for Sunday
+  weekday_rate: number; // Rate for Monday-Friday (hourly or daily based on pay_type)
+  saturday_rate: number; // Rate for Saturday (hourly or daily based on pay_type)
+  sunday_rate: number; // Rate for Sunday (hourly or daily based on pay_type)
+  pay_type: "hourly" | "day_rate"; // How the employee is paid
   status: "active" | "inactive";
   created_at: string;
   updated_at: string;
@@ -139,6 +140,7 @@ export interface CreateEmployeeInput {
   weekdayRate: number;
   saturdayRate: number;
   sundayRate: number;
+  payType?: "hourly" | "day_rate"; // Defaults to 'hourly' if not provided
 }
 
 export interface UpdateEmployeeInput {
@@ -148,6 +150,7 @@ export interface UpdateEmployeeInput {
   weekdayRate?: number;
   saturdayRate?: number;
   sundayRate?: number;
+  payType?: "hourly" | "day_rate";
   status?: "active" | "inactive";
 }
 
