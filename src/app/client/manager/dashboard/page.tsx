@@ -31,7 +31,6 @@ import {
   Clock,
   Calendar,
   Download,
-  TrendingUp,
   ArrowRight,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
@@ -144,11 +143,15 @@ function ManagerDashboardContent() {
 
   /**
    * Memoized: Calculate pay data from timesheets
+   * Tracks both hours worked AND unique days worked (for day rate employees)
    */
   type PayDataEntry = {
     weekday: number;
     saturday: number;
     sunday: number;
+    weekdayDates: Set<string>;
+    saturdayDates: Set<string>;
+    sundayDates: Set<string>;
     rawHours: number;
     breakMinutes: number;
   };
@@ -160,6 +163,9 @@ function ManagerDashboardContent() {
           weekday: 0,
           saturday: 0,
           sunday: 0,
+          weekdayDates: new Set<string>(),
+          saturdayDates: new Set<string>(),
+          sundayDates: new Set<string>(),
           rawHours: 0,
           breakMinutes: 0,
         };
@@ -177,9 +183,20 @@ function ManagerDashboardContent() {
           rawHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
         }
 
+        // Track hours
         entry[dayType] += hours;
         entry.rawHours += rawHours;
         entry.breakMinutes += breakMins;
+
+        // Track unique days worked (for day rate calculation)
+        if (dayType === "weekday") {
+          entry.weekdayDates.add(ts.work_date);
+        } else if (dayType === "saturday") {
+          entry.saturdayDates.add(ts.work_date);
+        } else {
+          entry.sundayDates.add(ts.work_date);
+        }
+
         return acc;
       },
       {},
@@ -199,10 +216,20 @@ function ManagerDashboardContent() {
         const rawHours = empData?.rawHours ?? 0;
         const breakMinutes = empData?.breakMinutes ?? 0;
 
+        // Count unique days worked (for day rate employees)
+        const weekdayDays = empData?.weekdayDates?.size ?? 0;
+        const saturdayDays = empData?.saturdayDates?.size ?? 0;
+        const sundayDays = empData?.sundayDates?.size ?? 0;
+
+        // Calculate pay based on pay_type
         const totalPay =
-          weekdayHours * emp.weekday_rate +
-          saturdayHours * emp.saturday_rate +
-          sundayHours * emp.sunday_rate;
+          emp.pay_type === "day_rate"
+            ? weekdayDays * emp.weekday_rate +
+              saturdayDays * emp.saturday_rate +
+              sundayDays * emp.sunday_rate
+            : weekdayHours * emp.weekday_rate +
+              saturdayHours * emp.saturday_rate +
+              sundayHours * emp.sunday_rate;
 
         return {
           ...emp,
@@ -584,9 +611,12 @@ function ManagerDashboardContent() {
                             {emp.first_name} {emp.last_name}
                           </h3>
                           <p className="text-sm text-neutral-400">
-                            Weekday: ${emp.weekday_rate.toFixed(2)}/hr | Sat: $
-                            {emp.saturday_rate.toFixed(2)}/hr | Sun: $
-                            {emp.sunday_rate.toFixed(2)}/hr
+                            Weekday: ${emp.weekday_rate.toFixed(2)}
+                            {emp.pay_type === "day_rate" ? "/day" : "/hr"} | Sat: $
+                            {emp.saturday_rate.toFixed(2)}
+                            {emp.pay_type === "day_rate" ? "/day" : "/hr"} | Sun: $
+                            {emp.sunday_rate.toFixed(2)}
+                            {emp.pay_type === "day_rate" ? "/day" : "/hr"}
                           </p>
                         </div>
                         <div className="text-right">

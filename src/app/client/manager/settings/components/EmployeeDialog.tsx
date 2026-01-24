@@ -10,6 +10,7 @@
  * - Automatic form population in edit mode
  * - Loading states and error handling
  * - Responsive design with Tailwind CSS
+ * - Support for hourly and day rate pay types
  *
  * Props:
  * @param mode - 'add' for creating new employees, 'edit' for updating existing
@@ -37,7 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Edit, Loader2 } from "lucide-react";
+import { UserPlus, Edit, Loader2, Clock, Calendar } from "lucide-react";
 import type { Employee } from "@/types/database";
 
 interface EmployeeDialogProps {
@@ -63,6 +64,7 @@ export function EmployeeDialog({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [pin, setPin] = useState("");
+  const [payType, setPayType] = useState<"hourly" | "day_rate">("hourly");
   const [weekdayRate, setWeekdayRate] = useState("25.00");
   const [saturdayRate, setSaturdayRate] = useState("30.00");
   const [sundayRate, setSundayRate] = useState("35.00");
@@ -78,6 +80,7 @@ export function EmployeeDialog({
       setFirstName(employee.first_name);
       setLastName(employee.last_name);
       setPin(employee.pin);
+      setPayType((employee.pay_type as "hourly" | "day_rate" | undefined) ?? "hourly");
       setWeekdayRate(employee.weekday_rate.toFixed(2));
       setSaturdayRate(employee.saturday_rate.toFixed(2));
       setSundayRate(employee.sunday_rate.toFixed(2));
@@ -86,6 +89,7 @@ export function EmployeeDialog({
       setFirstName("");
       setLastName("");
       setPin("");
+      setPayType("hourly");
       setWeekdayRate("25.00");
       setSaturdayRate("30.00");
       setSundayRate("35.00");
@@ -144,6 +148,7 @@ export function EmployeeDialog({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         pin,
+        payType,
         weekdayRate: weekdayRateNum,
         saturdayRate: saturdayRateNum,
         sundayRate: sundayRateNum,
@@ -189,6 +194,7 @@ export function EmployeeDialog({
         setFirstName("");
         setLastName("");
         setPin("");
+        setPayType("hourly");
         setWeekdayRate("25.00");
         setSaturdayRate("30.00");
         setSundayRate("35.00");
@@ -214,6 +220,8 @@ export function EmployeeDialog({
       setPin(value);
     }
   };
+
+  const rateLabel = payType === "hourly" ? "per hour" : "per day";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -299,10 +307,46 @@ export function EmployeeDialog({
               </p>
             </div>
 
+            {/* Pay Type Selector */}
+            <div className="grid gap-2">
+              <Label>Pay Type</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPayType("hourly")}
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                    payType === "hourly"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                  }`}
+                >
+                  <Clock className="h-4 w-4" />
+                  Hourly Rate
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayType("day_rate")}
+                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                    payType === "day_rate"
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                  }`}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Day Rate
+                </button>
+              </div>
+              <p className="text-xs text-neutral-400">
+                {payType === "hourly"
+                  ? "Paid based on hours worked"
+                  : "Paid a flat rate per day worked"}
+              </p>
+            </div>
+
             {/* Pay Rates */}
             <div className="grid gap-2">
               <Label className="text-base font-semibold">
-                Pay Rates (per hour)
+                Pay Rates ({rateLabel})
               </Label>
 
               <div className="grid gap-3">
