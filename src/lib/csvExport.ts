@@ -6,7 +6,7 @@
  * - Xero Payroll AU (via UpSheets or similar tools)
  * - QuickBooks Online Payroll AU
  *
- * Format follows the universal structure with separate rows per pay type.
+ * Format uses a single row per employee with separate columns for each pay type.
  * See: Australian Payroll CSV Import Format Guide
  */
 
@@ -59,8 +59,8 @@ function generateEmployeeID(index: number): string {
 /**
  * Exports payroll data to CSV in universal format
  *
- * Creates separate rows for each pay type (Ordinary Hours, Saturday Rate, Sunday Rate)
- * following the structure required by MYOB, Xero, and QuickBooks.
+ * Creates a single row per employee with separate columns for each pay type
+ * (Ordinary Hours, Saturday Rate, Sunday Rate).
  */
 export function exportPayrollToCSV({
   employees,
@@ -68,14 +68,15 @@ export function exportPayrollToCSV({
 }: ExportOptions): void {
   const lines: string[] = [];
 
-  // Column headers - Universal format
+  // Column headers - One row per employee format
   const headers = [
     "EmployeeID",
     "FirstName",
     "LastName",
     "Date",
-    "Hours",
-    "PayType",
+    "Ordinary Hours",
+    "Saturday Hours",
+    "Sunday Hours",
     "Location",
     "Notes",
   ];
@@ -84,55 +85,24 @@ export function exportPayrollToCSV({
   // Format week-ending date once
   const formattedDate = formatDateAU(weekEndingDate);
 
-  // Generate timesheet rows - separate row per pay type per employee
+  // Generate timesheet rows - one row per employee with all pay types
   employees.forEach((employee, index) => {
     const employeeID = generateEmployeeID(index);
     const { firstName, lastName, weekdayHours, saturdayHours, sundayHours } = employee;
 
-    // Add row for Ordinary Hours (weekday) if hours > 0
-    if (weekdayHours > 0) {
-      const row = [
-        employeeID,
-        firstName,
-        lastName,
-        formattedDate,
-        weekdayHours.toFixed(2), // Decimal format (e.g., 38.50)
-        "Ordinary Hours",
-        "", // Location (blank - can be filled manually)
-        "", // Notes (blank)
-      ];
-      lines.push(row.map(escapeCSVField).join(","));
-    }
-
-    // Add row for Saturday Rate if hours > 0
-    if (saturdayHours > 0) {
-      const row = [
-        employeeID,
-        firstName,
-        lastName,
-        formattedDate,
-        saturdayHours.toFixed(2),
-        "Saturday Rate",
-        "",
-        "",
-      ];
-      lines.push(row.map(escapeCSVField).join(","));
-    }
-
-    // Add row for Sunday Rate if hours > 0
-    if (sundayHours > 0) {
-      const row = [
-        employeeID,
-        firstName,
-        lastName,
-        formattedDate,
-        sundayHours.toFixed(2),
-        "Sunday Rate",
-        "",
-        "",
-      ];
-      lines.push(row.map(escapeCSVField).join(","));
-    }
+    // Create single row with all pay types as separate columns
+    const row = [
+      employeeID,
+      firstName,
+      lastName,
+      formattedDate,
+      weekdayHours.toFixed(2),  // Ordinary Hours (always shown, even if 0)
+      saturdayHours.toFixed(2), // Saturday Hours (always shown, even if 0)
+      sundayHours.toFixed(2),   // Sunday Hours (always shown, even if 0)
+      "",                       // Location (blank - can be filled manually)
+      "",                       // Notes (blank)
+    ];
+    lines.push(row.map(escapeCSVField).join(","));
   });
 
   // Create CSV content
