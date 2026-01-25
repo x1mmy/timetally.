@@ -16,6 +16,10 @@ interface EmployeePayrollData {
   weekdayHours: number;
   saturdayHours: number;
   sundayHours: number;
+  totalHours: number;
+  payType: "hourly" | "day_rate";
+  breakMinutes: number;
+  applyBreakRules: boolean;
 }
 
 interface ExportOptions {
@@ -77,6 +81,9 @@ export function exportPayrollToCSV({
     "Ordinary Hours",
     "Saturday Hours",
     "Sunday Hours",
+    "Total Hours",
+    "Pay Style",
+    "Breaks Taken",
     "Location",
     "Notes",
   ];
@@ -88,7 +95,25 @@ export function exportPayrollToCSV({
   // Generate timesheet rows - one row per employee with all pay types
   employees.forEach((employee, index) => {
     const employeeID = generateEmployeeID(index);
-    const { firstName, lastName, weekdayHours, saturdayHours, sundayHours } = employee;
+    const {
+      firstName,
+      lastName,
+      weekdayHours,
+      saturdayHours,
+      sundayHours,
+      totalHours,
+      payType,
+      breakMinutes,
+      applyBreakRules
+    } = employee;
+
+    // Format pay style for display
+    const payStyleDisplay = payType === "day_rate" ? "Day Rate" : "Hourly";
+
+    // Format breaks - if no break rules apply, show "No breaks"
+    const breaksDisplay = !applyBreakRules
+      ? "No breaks"
+      : `${breakMinutes} minutes`;
 
     // Create single row with all pay types as separate columns
     const row = [
@@ -99,6 +124,9 @@ export function exportPayrollToCSV({
       weekdayHours.toFixed(2),  // Ordinary Hours (always shown, even if 0)
       saturdayHours.toFixed(2), // Saturday Hours (always shown, even if 0)
       sundayHours.toFixed(2),   // Sunday Hours (always shown, even if 0)
+      totalHours.toFixed(2),    // Total Hours
+      payStyleDisplay,          // Pay Style (Hourly or Day Rate)
+      breaksDisplay,            // Breaks Taken
       "",                       // Location (blank - can be filled manually)
       "",                       // Notes (blank)
     ];
@@ -203,6 +231,9 @@ export function printPayrollCSV({
             <th class="numeric">Ordinary Hours</th>
             <th class="numeric">Saturday Hours</th>
             <th class="numeric">Sunday Hours</th>
+            <th class="numeric">Total Hours</th>
+            <th>Pay Style</th>
+            <th>Breaks Taken</th>
             <th>Location</th>
             <th>Notes</th>
           </tr>
@@ -213,7 +244,25 @@ export function printPayrollCSV({
   // Add employee rows
   employees.forEach((employee, index) => {
     const employeeID = generateEmployeeID(index);
-    const { firstName, lastName, weekdayHours, saturdayHours, sundayHours } = employee;
+    const {
+      firstName,
+      lastName,
+      weekdayHours,
+      saturdayHours,
+      sundayHours,
+      totalHours,
+      payType,
+      breakMinutes,
+      applyBreakRules
+    } = employee;
+
+    // Format pay style for display
+    const payStyleDisplay = payType === "day_rate" ? "Day Rate" : "Hourly";
+
+    // Format breaks - if no break rules apply, show "No breaks"
+    const breaksDisplay = !applyBreakRules
+      ? "No breaks"
+      : `${breakMinutes} minutes`;
 
     tableHTML += `
           <tr>
@@ -224,6 +273,9 @@ export function printPayrollCSV({
             <td class="numeric">${weekdayHours.toFixed(2)}</td>
             <td class="numeric">${saturdayHours.toFixed(2)}</td>
             <td class="numeric">${sundayHours.toFixed(2)}</td>
+            <td class="numeric">${totalHours.toFixed(2)}</td>
+            <td>${payStyleDisplay}</td>
+            <td>${breaksDisplay}</td>
             <td></td>
             <td></td>
           </tr>

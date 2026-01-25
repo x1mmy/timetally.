@@ -331,6 +331,10 @@ function ManagerDashboardContent() {
       weekdayHours: emp.weekdayHours,
       saturdayHours: emp.saturdayHours,
       sundayHours: emp.sundayHours,
+      totalHours: emp.totalHours,
+      payType: emp.pay_type,
+      breakMinutes: emp.breakMinutes,
+      applyBreakRules: emp.apply_break_rules,
     }));
 
     exportPayrollToCSV({
@@ -349,6 +353,10 @@ function ManagerDashboardContent() {
       weekdayHours: emp.weekdayHours,
       saturdayHours: emp.saturdayHours,
       sundayHours: emp.sundayHours,
+      totalHours: emp.totalHours,
+      payType: emp.pay_type,
+      breakMinutes: emp.breakMinutes,
+      applyBreakRules: emp.apply_break_rules,
     }));
 
     printPayrollCSV({
