@@ -13,6 +13,7 @@ import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
 import { EditTimesheetDialog } from "./components/EditTimesheetDialog";
 import { motion } from "framer-motion";
+import { isPublicHoliday, getHolidayName } from "@/lib/holidays";
 
 interface DailyBreakdown {
   date: string;
@@ -50,9 +51,15 @@ function EmployeeDetailContent() {
     : endOfWeek(currentWeekStart, { weekStartsOn: 1 });
 
   /**
-   * Get hourly rate based on day of week
+   * Get hourly rate based on day of week or public holiday
+   * Public holidays take precedence over day-of-week
    */
   const getHourlyRate = (dateString: string, emp: Employee): number => {
+    // Check public holiday first (takes precedence)
+    if (isPublicHoliday(dateString)) {
+      return (emp.public_holiday_rate as number | undefined) ?? emp.weekday_rate * 2;
+    }
+
     const date = new Date(dateString);
     const dayOfWeek = getDay(date);
 
@@ -113,7 +120,12 @@ function EmployeeDetailContent() {
 
           const totalHours = parseFloat(timesheet.total_hours.toString());
           const breakMinutes = timesheet.break_minutes ?? 0;
-          const hourlyRate = getHourlyRate(dateString, emp);
+          const rate = getHourlyRate(dateString, emp);
+
+          // For day_rate employees, pay is the rate (1 day = 1 rate)
+          // For hourly employees, pay is hours * rate
+          const pay =
+            emp.pay_type === "day_rate" ? rate : totalHours * rate;
 
           breakdown.push({
             date: dateString,
@@ -123,7 +135,7 @@ function EmployeeDetailContent() {
             rawHours,
             breakMinutes,
             totalHours,
-            pay: totalHours * hourlyRate,
+            pay,
             timesheetId: timesheet.id,
           });
         } else {
@@ -251,7 +263,8 @@ function EmployeeDetailContent() {
             >
               <p className="mb-1 text-xs font-medium text-neutral-400">Weekday Rate</p>
               <p className="text-lg font-bold md:text-xl">
-                ${employee.weekday_rate.toFixed(2)}/hr
+                ${employee.weekday_rate.toFixed(2)}
+                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
               </p>
             </motion.div>
             <motion.div
@@ -260,7 +273,8 @@ function EmployeeDetailContent() {
             >
               <p className="mb-1 text-xs font-medium text-neutral-400">Saturday Rate</p>
               <p className="text-lg font-bold md:text-xl">
-                ${employee.saturday_rate.toFixed(2)}/hr
+                ${employee.saturday_rate.toFixed(2)}
+                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
               </p>
             </motion.div>
             <motion.div
@@ -269,7 +283,8 @@ function EmployeeDetailContent() {
             >
               <p className="mb-1 text-xs font-medium text-neutral-400">Sunday Rate</p>
               <p className="text-lg font-bold md:text-xl">
-                ${employee.sunday_rate.toFixed(2)}/hr
+                ${employee.sunday_rate.toFixed(2)}
+                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
               </p>
             </motion.div>
             <motion.div
@@ -323,9 +338,17 @@ function EmployeeDetailContent() {
                         </span>
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold">
-                          {day.dayName}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold">
+                            {day.dayName}
+                          </h3>
+                          {getHolidayName(day.date) && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400 ring-1 ring-amber-500/30">
+                              <span className="text-[10px]">🎉</span>
+                              {getHolidayName(day.date)}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-neutral-400">
                           {format(new Date(day.date), "MMMM d, yyyy")}
                         </p>
@@ -386,9 +409,17 @@ function EmployeeDetailContent() {
                           {formatHoursAndMinutes(day.totalHours)}
                         </p>
                       </div>
-                      <div className="rounded-lg bg-primary/10 p-3 ring-1 ring-primary/20">
-                        <p className="mb-1 text-xs text-neutral-400">Pay</p>
-                        <p className="font-semibold text-primary">
+                      <div className={`rounded-lg p-3 ring-1 ${
+                        isPublicHoliday(day.date)
+                          ? "bg-amber-500/10 ring-amber-500/20"
+                          : "bg-primary/10 ring-primary/20"
+                      }`}>
+                        <p className="mb-1 text-xs text-neutral-400">
+                          {isPublicHoliday(day.date) ? "Pay (PH Rate)" : "Pay"}
+                        </p>
+                        <p className={`font-semibold ${
+                          isPublicHoliday(day.date) ? "text-amber-400" : "text-primary"
+                        }`}>
                           ${day.pay.toFixed(2)}
                         </p>
                       </div>

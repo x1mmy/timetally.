@@ -62,9 +62,12 @@ export async function GET(request: NextRequest) {
  * - firstName: string - Employee's first name (required)
  * - lastName: string - Employee's last name (required)
  * - pin: string - 4-digit PIN for clock in/out (required, must be unique)
- * - weekdayRate: number - Hourly rate for Monday-Friday (required, must be >= 0)
- * - saturdayRate: number - Hourly rate for Saturday (required, must be >= 0)
- * - sundayRate: number - Hourly rate for Sunday (required, must be >= 0)
+ * - weekdayRate: number - Rate for Monday-Friday (required, must be >= 0)
+ * - saturdayRate: number - Rate for Saturday (required, must be >= 0)
+ * - sundayRate: number - Rate for Sunday (required, must be >= 0)
+ * - publicHolidayRate: number - Rate for NSW public holidays (required, must be >= 0)
+ * - payType: 'hourly' | 'day_rate' - How employee is paid (optional, defaults to 'hourly')
+ * - applyBreakRules: boolean - Whether break rules apply (optional, defaults to true)
  *
  * Returns: { employee: Employee } - Created employee object (status 201)
  *
@@ -76,8 +79,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseAdmin();
-    const { firstName, lastName, pin, weekdayRate, saturdayRate, sundayRate } =
-      await request.json();
+    const {
+      firstName,
+      lastName,
+      pin,
+      weekdayRate,
+      saturdayRate,
+      sundayRate,
+      publicHolidayRate,
+      payType,
+      applyBreakRules,
+    } = await request.json();
 
     // Validate all required fields are present
     if (
@@ -86,7 +98,8 @@ export async function POST(request: NextRequest) {
       !pin ||
       weekdayRate === undefined ||
       saturdayRate === undefined ||
-      sundayRate === undefined
+      sundayRate === undefined ||
+      publicHolidayRate === undefined
     ) {
       return NextResponse.json(
         { error: "All fields are required" },
@@ -103,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate pay rates are non-negative numbers
-    if (weekdayRate < 0 || saturdayRate < 0 || sundayRate < 0) {
+    if (weekdayRate < 0 || saturdayRate < 0 || sundayRate < 0 || publicHolidayRate < 0) {
       return NextResponse.json(
         { error: "Pay rates must be positive numbers" },
         { status: 400 },
@@ -140,6 +153,9 @@ export async function POST(request: NextRequest) {
         weekday_rate: weekdayRate,
         saturday_rate: saturdayRate,
         sunday_rate: sundayRate,
+        public_holiday_rate: publicHolidayRate,
+        pay_type: payType ?? "hourly",
+        apply_break_rules: applyBreakRules ?? true,
       })
       .select()
       .single();

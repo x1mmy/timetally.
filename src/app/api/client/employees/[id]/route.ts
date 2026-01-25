@@ -9,7 +9,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabase/server";
+import { createSupabaseAdmin } from "@/lib/supabase/server";
+import { getSubdomainFromRequest } from "@/lib/subdomain";
 import type { UpdateEmployeeInput } from "@/types/database";
 
 /**
@@ -22,9 +23,12 @@ import type { UpdateEmployeeInput } from "@/types/database";
  * - firstName?: string - Employee's first name
  * - lastName?: string - Employee's last name
  * - pin?: string - 4-digit PIN (must be unique within client)
- * - weekdayRate?: number - Hourly rate for Monday-Friday (must be >= 0)
- * - saturdayRate?: number - Hourly rate for Saturday (must be >= 0)
- * - sundayRate?: number - Hourly rate for Sunday (must be >= 0)
+ * - weekdayRate?: number - Rate for Monday-Friday (must be >= 0)
+ * - saturdayRate?: number - Rate for Saturday (must be >= 0)
+ * - sundayRate?: number - Rate for Sunday (must be >= 0)
+ * - publicHolidayRate?: number - Rate for NSW public holidays (must be >= 0)
+ * - payType?: 'hourly' | 'day_rate' - How employee is paid
+ * - applyBreakRules?: boolean - Whether break time rules apply
  * - status?: 'active' | 'inactive' - Employee status
  *
  * Returns: { employee: Employee } - Updated employee object
@@ -39,17 +43,24 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const supabase = await createSupabaseServer();
+    const supabase = createSupabaseAdmin();
     const { id: employeeId } = await params;
 
-    // Verify user authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Validate subdomain (client must exist)
+    const subdomain = getSubdomainFromRequest(request);
+    if (!subdomain) {
+      return NextResponse.json({ error: "Invalid subdomain" }, { status: 400 });
+    }
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Verify client exists
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("subdomain", subdomain)
+      .single();
+
+    if (!client) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
     // Parse request body with UpdateEmployeeInput type
@@ -84,6 +95,7 @@ export async function PUT(
       const { data: existingEmployee } = await supabase
         .from("employees")
         .select("id")
+        .eq("client_id", client.id)
         .eq("pin", body.pin)
         .neq("id", employeeId) // Exclude current employee from check
         .maybeSingle();
@@ -132,9 +144,37 @@ export async function PUT(
       updates.sunday_rate = body.sundayRate;
     }
 
+    // Update public holiday pay rate if provided
+    if (body.publicHolidayRate !== undefined) {
+      if (body.publicHolidayRate < 0) {
+        return NextResponse.json(
+          { error: "Public holiday rate must be positive" },
+          { status: 400 },
+        );
+      }
+      updates.public_holiday_rate = body.publicHolidayRate;
+    }
+
     // Update employee status if provided (active/inactive)
     if (body.status !== undefined) {
       updates.status = body.status;
+    }
+
+    // Update apply_break_rules if provided
+    // When toggled, existing timesheets will be recalculated by the database trigger
+    if (body.applyBreakRules !== undefined) {
+      updates.apply_break_rules = body.applyBreakRules;
+    }
+
+    // Update pay type if provided (hourly/day_rate)
+    if (body.payType !== undefined) {
+      if (!["hourly", "day_rate"].includes(body.payType)) {
+        return NextResponse.json(
+          { error: "Pay type must be 'hourly' or 'day_rate'" },
+          { status: 400 },
+        );
+      }
+      updates.pay_type = body.payType;
     }
 
     // Execute the update query in the database
@@ -164,6 +204,15 @@ export async function PUT(
         { error: "Failed to update employee" },
         { status: 500 },
       );
+    }
+
+    // If apply_break_rules was changed, recalculate all existing timesheets
+    // by setting break_minutes to NULL (triggers recalculation by DB trigger)
+    if (body.applyBreakRules !== undefined) {
+      await supabase
+        .from("timesheets")
+        .update({ break_minutes: null })
+        .eq("employee_id", employeeId);
     }
 
     // Return updated employee data
@@ -197,25 +246,33 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const supabase = await createSupabaseServer();
+    const supabase = createSupabaseAdmin();
     const { id: employeeId } = await params;
 
-    // Verify user authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Validate subdomain (client must exist)
+    const subdomain = getSubdomainFromRequest(request);
+    if (!subdomain) {
+      return NextResponse.json({ error: "Invalid subdomain" }, { status: 400 });
     }
 
-    // Execute deletion in database
+    // Verify client exists
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("subdomain", subdomain)
+      .single();
+
+    if (!client) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    // Execute deletion in database (only for employees belonging to this client)
     // Note: Related records (timesheets) may cascade delete based on FK constraints
     const { error } = await supabase
       .from("employees")
       .delete()
-      .eq("id", employeeId);
+      .eq("id", employeeId)
+      .eq("client_id", client.id);
 
     if (error) {
       console.error("Error deleting employee:", error);

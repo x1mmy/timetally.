@@ -1,6 +1,19 @@
 /**
  * AddEmployeeDialog Component
- * Dialog form for adding new employees
+ *
+ * Dialog form for adding new employees from the manager dashboard.
+ *
+ * Features:
+ * - Pay type selection (hourly vs day rate) with visual toggle buttons
+ * - Dynamic rate labels that update based on pay type selection
+ * - Form validation for required fields and PIN format
+ * - Default pay rates: Weekday $25, Saturday $30, Sunday $35
+ *
+ * Pay Types:
+ * - Hourly: Employee is paid based on hours worked (rate × hours)
+ * - Day Rate: Employee is paid a flat rate per day worked (regardless of hours)
+ *
+ * @param onSuccess - Callback fired after successful employee creation
  */
 "use client";
 
@@ -15,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus } from "lucide-react";
+import { UserPlus, Clock, Calendar, Coffee } from "lucide-react";
 
 interface AddEmployeeDialogProps {
   onSuccess?: () => void;
@@ -29,17 +42,23 @@ export function AddEmployeeDialog({ onSuccess }: AddEmployeeDialogProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [pin, setPin] = useState("");
+  const [payType, setPayType] = useState<"hourly" | "day_rate">("hourly");
+  const [applyBreakRules, setApplyBreakRules] = useState(true);
   const [weekdayRate, setWeekdayRate] = useState("25.00");
   const [saturdayRate, setSaturdayRate] = useState("30.00");
   const [sundayRate, setSundayRate] = useState("35.00");
+  const [publicHolidayRate, setPublicHolidayRate] = useState("50.00");
 
   const resetForm = () => {
     setFirstName("");
     setLastName("");
     setPin("");
+    setPayType("hourly");
+    setApplyBreakRules(true);
     setWeekdayRate("25.00");
     setSaturdayRate("30.00");
     setSundayRate("35.00");
+    setPublicHolidayRate("50.00");
     setError("");
   };
 
@@ -56,9 +75,12 @@ export function AddEmployeeDialog({ onSuccess }: AddEmployeeDialogProps) {
           firstName,
           lastName,
           pin,
+          payType,
+          applyBreakRules,
           weekdayRate: parseFloat(weekdayRate),
           saturdayRate: parseFloat(saturdayRate),
           sundayRate: parseFloat(sundayRate),
+          publicHolidayRate: parseFloat(publicHolidayRate),
         }),
       });
 
@@ -78,6 +100,8 @@ export function AddEmployeeDialog({ onSuccess }: AddEmployeeDialogProps) {
       setLoading(false);
     }
   };
+
+  const rateLabel = payType === "hourly" ? "/hour" : "/day";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -136,9 +160,82 @@ export function AddEmployeeDialog({ onSuccess }: AddEmployeeDialogProps) {
             />
           </div>
 
+          {/* Pay Type Selector */}
+          <div className="space-y-2">
+            <Label>Pay Type *</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setPayType("hourly")}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                  payType === "hourly"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                }`}
+              >
+                <Clock className="h-4 w-4" />
+                Hourly Rate
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayType("day_rate")}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                  payType === "day_rate"
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                }`}
+              >
+                <Calendar className="h-4 w-4" />
+                Day Rate
+              </button>
+            </div>
+            <p className="text-xs text-neutral-400">
+              {payType === "hourly"
+                ? "Employee is paid based on hours worked"
+                : "Employee is paid a flat rate per day worked"}
+            </p>
+          </div>
+
+          {/* Break Rules Toggle */}
+          <div className="space-y-2">
+            <Label>Break Time Rules</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setApplyBreakRules(true)}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                  applyBreakRules
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                }`}
+              >
+                <Coffee className="h-4 w-4" />
+                Apply Breaks
+              </button>
+              <button
+                type="button"
+                onClick={() => setApplyBreakRules(false)}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
+                  !applyBreakRules
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
+                }`}
+              >
+                No Breaks
+              </button>
+            </div>
+            <p className="text-xs text-neutral-400">
+              {applyBreakRules
+                ? "Break time will be deducted based on shift length"
+                : "No break time deductions applied"}
+            </p>
+          </div>
+
           <div className="space-y-3">
-            <Label className="text-sm font-medium">Pay Rates ($/hour)</Label>
-            <div className="grid grid-cols-3 gap-3">
+            <Label className="text-sm font-medium">
+              Pay Rates (${rateLabel})
+            </Label>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label
                   htmlFor="weekdayRate"
@@ -191,6 +288,25 @@ export function AddEmployeeDialog({ onSuccess }: AddEmployeeDialogProps) {
                   min="0"
                   value={sundayRate}
                   onChange={(e) => setSundayRate(e.target.value)}
+                  className="border-neutral-600 bg-neutral-700"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="publicHolidayRate"
+                  className="text-xs text-neutral-400"
+                >
+                  Public Holiday
+                </Label>
+                <Input
+                  id="publicHolidayRate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={publicHolidayRate}
+                  onChange={(e) => setPublicHolidayRate(e.target.value)}
                   className="border-neutral-600 bg-neutral-700"
                   required
                 />
