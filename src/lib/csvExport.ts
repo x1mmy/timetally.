@@ -127,3 +127,141 @@ export function exportPayrollToCSV({
   // Clean up URL object
   URL.revokeObjectURL(url);
 }
+
+/**
+ * Prints payroll data as a formatted table
+ *
+ * Opens a print dialog with the payroll data displayed in a clean,
+ * printer-friendly table format.
+ */
+export function printPayrollCSV({
+  employees,
+  weekEndingDate,
+}: ExportOptions): void {
+  const formattedDate = formatDateAU(weekEndingDate);
+
+  // Build HTML table
+  let tableHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Payroll Timesheets - ${formattedDate}</title>
+      <style>
+        @media print {
+          @page {
+            margin: 1cm;
+            size: auto;
+          }
+          body {
+            margin: 0;
+          }
+          /* Hide browser-generated headers and footers */
+          @page {
+            margin-top: 1cm;
+            margin-bottom: 1cm;
+          }
+        }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+        }
+        h1 {
+          font-size: 18px;
+          margin-bottom: 10px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th, td {
+          border: 1px solid #333;
+          padding: 8px;
+          text-align: left;
+        }
+        th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .numeric {
+          text-align: right;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Payroll Timesheets - Week Ending ${formattedDate}</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Date</th>
+            <th class="numeric">Ordinary Hours</th>
+            <th class="numeric">Saturday Hours</th>
+            <th class="numeric">Sunday Hours</th>
+            <th>Location</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  // Add employee rows
+  employees.forEach((employee, index) => {
+    const employeeID = generateEmployeeID(index);
+    const { firstName, lastName, weekdayHours, saturdayHours, sundayHours } = employee;
+
+    tableHTML += `
+          <tr>
+            <td>${employeeID}</td>
+            <td>${firstName}</td>
+            <td>${lastName}</td>
+            <td>${formattedDate}</td>
+            <td class="numeric">${weekdayHours.toFixed(2)}</td>
+            <td class="numeric">${saturdayHours.toFixed(2)}</td>
+            <td class="numeric">${sundayHours.toFixed(2)}</td>
+            <td></td>
+            <td></td>
+          </tr>
+    `;
+  });
+
+  tableHTML += `
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  // Create a hidden iframe for printing
+  const printWindow = document.createElement('iframe');
+  printWindow.style.position = 'fixed';
+  printWindow.style.right = '0';
+  printWindow.style.bottom = '0';
+  printWindow.style.width = '0';
+  printWindow.style.height = '0';
+  printWindow.style.border = 'none';
+  document.body.appendChild(printWindow);
+
+  // Write content and trigger print
+  const doc = printWindow.contentWindow?.document;
+  if (doc) {
+    doc.open();
+    doc.write(tableHTML);
+    doc.close();
+
+    // Wait for content to load, then print
+    printWindow.contentWindow?.focus();
+    setTimeout(() => {
+      printWindow.contentWindow?.print();
+      // Clean up after printing
+      setTimeout(() => {
+        document.body.removeChild(printWindow);
+      }, 100);
+    }, 250);
+  }
+}

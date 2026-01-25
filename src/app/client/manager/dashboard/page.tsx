@@ -33,11 +33,12 @@ import {
   Download,
   TrendingUp,
   ArrowRight,
+  Printer,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
-import { exportPayrollToCSV } from "@/lib/csvExport";
+import { exportPayrollToCSV, printPayrollCSV } from "@/lib/csvExport";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface EmployeeWithPay extends Employee {
@@ -308,6 +309,24 @@ function ManagerDashboardContent() {
     });
   };
 
+  /**
+   * Handle print payroll
+   */
+  const handlePrintCSV = () => {
+    const employeeData = filteredEmployees.map((emp) => ({
+      firstName: emp.first_name,
+      lastName: emp.last_name,
+      weekdayHours: emp.weekdayHours,
+      saturdayHours: emp.saturdayHours,
+      sundayHours: emp.sundayHours,
+    }));
+
+    printPayrollCSV({
+      employees: employeeData,
+      weekEndingDate: actualEndDate, // Use end date as week-ending date
+    });
+  };
+
   // Calculate summary stats
   const totalPay = employees.reduce((sum, emp) => sum + emp.totalPay, 0);
   const totalHours = employees.reduce((sum, emp) => sum + emp.totalHours, 0);
@@ -515,7 +534,7 @@ function ManagerDashboardContent() {
             </motion.div>
           </motion.div>
 
-          {/* Search Bar and Export Button */}
+          {/* Search Bar and Export Buttons */}
           <div className="flex flex-col gap-4 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
@@ -526,14 +545,25 @@ function ManagerDashboardContent() {
                 className="border-neutral-700 bg-neutral-800 pl-10"
               />
             </div>
-            <Button
-              onClick={handleExportCSV}
-              className="bg-primary hover:bg-primary/90 text-white"
-              disabled={filteredEmployees.length === 0}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export to CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handlePrintCSV}
+                variant="outline"
+                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
+                disabled={filteredEmployees.length === 0}
+              >
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </Button>
+              <Button
+                onClick={handleExportCSV}
+                className="bg-primary hover:bg-primary/90 text-white"
+                disabled={filteredEmployees.length === 0}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export to CSV
+              </Button>
+            </div>
           </div>
 
           {/* Employee Cards */}
