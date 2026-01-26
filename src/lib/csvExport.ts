@@ -6,7 +6,7 @@
  * - Xero Payroll AU (via UpSheets or similar tools)
  * - QuickBooks Online Payroll AU
  *
- * Format follows the universal structure with separate rows per pay type.
+ * Format uses a single row per employee with separate columns for each pay type.
  * See: Australian Payroll CSV Import Format Guide
  */
 
@@ -16,6 +16,10 @@ interface EmployeePayrollData {
   weekdayHours: number;
   saturdayHours: number;
   sundayHours: number;
+  totalHours: number;
+  payType: "hourly" | "day_rate";
+  breakMinutes: number;
+  applyBreakRules: boolean;
 }
 
 interface ExportOptions {
@@ -59,8 +63,8 @@ function generateEmployeeID(index: number): string {
 /**
  * Exports payroll data to CSV in universal format
  *
- * Creates separate rows for each pay type (Ordinary Hours, Saturday Rate, Sunday Rate)
- * following the structure required by MYOB, Xero, and QuickBooks.
+ * Creates a single row per employee with separate columns for each pay type
+ * (Ordinary Hours, Saturday Rate, Sunday Rate).
  */
 export function exportPayrollToCSV({
   employees,
@@ -68,14 +72,18 @@ export function exportPayrollToCSV({
 }: ExportOptions): void {
   const lines: string[] = [];
 
-  // Column headers - Universal format
+  // Column headers - One row per employee format
   const headers = [
     "EmployeeID",
     "FirstName",
     "LastName",
     "Date",
-    "Hours",
-    "PayType",
+    "Ordinary Hours",
+    "Saturday Hours",
+    "Sunday Hours",
+    "Total Hours",
+    "Pay Style",
+    "Breaks Taken",
     "Location",
     "Notes",
   ];
@@ -84,55 +92,45 @@ export function exportPayrollToCSV({
   // Format week-ending date once
   const formattedDate = formatDateAU(weekEndingDate);
 
-  // Generate timesheet rows - separate row per pay type per employee
+  // Generate timesheet rows - one row per employee with all pay types
   employees.forEach((employee, index) => {
     const employeeID = generateEmployeeID(index);
-    const { firstName, lastName, weekdayHours, saturdayHours, sundayHours } = employee;
+    const {
+      firstName,
+      lastName,
+      weekdayHours,
+      saturdayHours,
+      sundayHours,
+      totalHours,
+      payType,
+      breakMinutes,
+      applyBreakRules
+    } = employee;
 
-    // Add row for Ordinary Hours (weekday) if hours > 0
-    if (weekdayHours > 0) {
-      const row = [
-        employeeID,
-        firstName,
-        lastName,
-        formattedDate,
-        weekdayHours.toFixed(2), // Decimal format (e.g., 38.50)
-        "Ordinary Hours",
-        "", // Location (blank - can be filled manually)
-        "", // Notes (blank)
-      ];
-      lines.push(row.map(escapeCSVField).join(","));
-    }
+    // Format pay style for display
+    const payStyleDisplay = payType === "day_rate" ? "Day Rate" : "Hourly";
 
-    // Add row for Saturday Rate if hours > 0
-    if (saturdayHours > 0) {
-      const row = [
-        employeeID,
-        firstName,
-        lastName,
-        formattedDate,
-        saturdayHours.toFixed(2),
-        "Saturday Rate",
-        "",
-        "",
-      ];
-      lines.push(row.map(escapeCSVField).join(","));
-    }
+    // Format breaks - if no break rules apply, show "No breaks"
+    const breaksDisplay = !applyBreakRules
+      ? "No breaks"
+      : `${breakMinutes} minutes`;
 
-    // Add row for Sunday Rate if hours > 0
-    if (sundayHours > 0) {
-      const row = [
-        employeeID,
-        firstName,
-        lastName,
-        formattedDate,
-        sundayHours.toFixed(2),
-        "Sunday Rate",
-        "",
-        "",
-      ];
-      lines.push(row.map(escapeCSVField).join(","));
-    }
+    // Create single row with all pay types as separate columns
+    const row = [
+      employeeID,
+      firstName,
+      lastName,
+      formattedDate,
+      weekdayHours.toFixed(2),  // Ordinary Hours (always shown, even if 0)
+      saturdayHours.toFixed(2), // Saturday Hours (always shown, even if 0)
+      sundayHours.toFixed(2),   // Sunday Hours (always shown, even if 0)
+      totalHours.toFixed(2),    // Total Hours
+      payStyleDisplay,          // Pay Style (Hourly or Day Rate)
+      breaksDisplay,            // Breaks Taken
+      "",                       // Location (blank - can be filled manually)
+      "",                       // Notes (blank)
+    ];
+    lines.push(row.map(escapeCSVField).join(","));
   });
 
   // Create CSV content
@@ -156,4 +154,166 @@ export function exportPayrollToCSV({
 
   // Clean up URL object
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Prints payroll data as a formatted table
+ *
+ * Opens a print dialog with the payroll data displayed in a clean,
+ * printer-friendly table format.
+ */
+export function printPayrollCSV({
+  employees,
+  weekEndingDate,
+}: ExportOptions): void {
+  const formattedDate = formatDateAU(weekEndingDate);
+
+  // Build HTML table
+  let tableHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Payroll Timesheets - ${formattedDate}</title>
+      <style>
+        @media print {
+          @page {
+            margin: 1cm;
+            size: auto;
+          }
+          body {
+            margin: 0;
+          }
+          /* Hide browser-generated headers and footers */
+          @page {
+            margin-top: 1cm;
+            margin-bottom: 1cm;
+          }
+        }
+        body {
+          font-family: Arial, sans-serif;
+          padding: 20px;
+        }
+        h1 {
+          font-size: 18px;
+          margin-bottom: 10px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 20px;
+        }
+        th, td {
+          border: 1px solid #333;
+          padding: 8px;
+          text-align: left;
+        }
+        th {
+          background-color: #f0f0f0;
+          font-weight: bold;
+        }
+        tr:nth-child(even) {
+          background-color: #f9f9f9;
+        }
+        .numeric {
+          text-align: right;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>Payroll Timesheets - Week Ending ${formattedDate}</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Employee ID</th>
+            <th>First Name</th>
+            <th>Last Name</th>
+            <th>Date</th>
+            <th class="numeric">Ordinary Hours</th>
+            <th class="numeric">Saturday Hours</th>
+            <th class="numeric">Sunday Hours</th>
+            <th class="numeric">Total Hours</th>
+            <th>Pay Style</th>
+            <th>Breaks Taken</th>
+            <th>Location</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  // Add employee rows
+  employees.forEach((employee, index) => {
+    const employeeID = generateEmployeeID(index);
+    const {
+      firstName,
+      lastName,
+      weekdayHours,
+      saturdayHours,
+      sundayHours,
+      totalHours,
+      payType,
+      breakMinutes,
+      applyBreakRules
+    } = employee;
+
+    // Format pay style for display
+    const payStyleDisplay = payType === "day_rate" ? "Day Rate" : "Hourly";
+
+    // Format breaks - if no break rules apply, show "No breaks"
+    const breaksDisplay = !applyBreakRules
+      ? "No breaks"
+      : `${breakMinutes} minutes`;
+
+    tableHTML += `
+          <tr>
+            <td>${employeeID}</td>
+            <td>${firstName}</td>
+            <td>${lastName}</td>
+            <td>${formattedDate}</td>
+            <td class="numeric">${weekdayHours.toFixed(2)}</td>
+            <td class="numeric">${saturdayHours.toFixed(2)}</td>
+            <td class="numeric">${sundayHours.toFixed(2)}</td>
+            <td class="numeric">${totalHours.toFixed(2)}</td>
+            <td>${payStyleDisplay}</td>
+            <td>${breaksDisplay}</td>
+            <td></td>
+            <td></td>
+          </tr>
+    `;
+  });
+
+  tableHTML += `
+        </tbody>
+      </table>
+    </body>
+    </html>
+  `;
+
+  // Create a hidden iframe for printing
+  const printWindow = document.createElement('iframe');
+  printWindow.style.position = 'fixed';
+  printWindow.style.right = '0';
+  printWindow.style.bottom = '0';
+  printWindow.style.width = '0';
+  printWindow.style.height = '0';
+  printWindow.style.border = 'none';
+  document.body.appendChild(printWindow);
+
+  // Write content and trigger print
+  const doc = printWindow.contentWindow?.document;
+  if (doc) {
+    doc.open();
+    doc.write(tableHTML);
+    doc.close();
+
+    // Wait for content to load, then print
+    printWindow.contentWindow?.focus();
+    setTimeout(() => {
+      printWindow.contentWindow?.print();
+      // Clean up after printing
+      setTimeout(() => {
+        document.body.removeChild(printWindow);
+      }, 100);
+    }, 250);
+  }
 }
