@@ -9,7 +9,7 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Delete } from "lucide-react";
 
@@ -24,36 +24,77 @@ interface PinPadProps {
 
 export function PinPad({ length = 4, onComplete, onClear }: PinPadProps) {
   const [pin, setPin] = useState("");
+  const submittedPinRef = useRef<string | null>(null);
 
   /**
-   * Handle number button click
-   * Adds digit to PIN and auto-submits when complete
+   * Handle number input (from button click or keyboard)
+   * Adds digit to PIN
    */
-  const handleNumberClick = (num: number) => {
-    if (pin.length < length) {
-      const newPin = pin + num;
-      setPin(newPin);
-      // Auto-submit when PIN is complete
-      if (newPin.length === length) {
-        onComplete(newPin);
-      }
+  const handleNumberInput = useCallback(
+    (num: number) => {
+      setPin((currentPin) => {
+        if (currentPin.length < length) {
+          return currentPin + num;
+        }
+        return currentPin;
+      });
+    },
+    [length]
+  );
+
+  /**
+   * Auto-submit when PIN reaches required length
+   * Uses ref to prevent duplicate submissions
+   */
+  useEffect(() => {
+    if (pin.length === length && submittedPinRef.current !== pin) {
+      submittedPinRef.current = pin;
+      onComplete(pin);
     }
-  };
+  }, [pin, length, onComplete]);
 
   /**
-   * Remove last digit from PIN
+   * Handle backspace (from button click or keyboard)
    */
-  const handleBackspace = () => {
-    setPin(pin.slice(0, -1));
-  };
+  const handleBackspaceInput = useCallback(() => {
+    setPin((currentPin) => currentPin.slice(0, -1));
+    submittedPinRef.current = null;
+  }, []);
 
   /**
-   * Clear entire PIN
+   * Handle clear (from button click or keyboard)
    */
-  const handleClear = () => {
+  const handleClearInput = useCallback(() => {
     setPin("");
+    submittedPinRef.current = null;
     onClear?.();
-  };
+  }, [onClear]);
+
+  /**
+   * Keyboard event listener for number keys
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Number keys 0-9 (both main keyboard and numpad)
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        handleNumberInput(parseInt(e.key, 10));
+      }
+      // Backspace key
+      else if (e.key === "Backspace") {
+        e.preventDefault();
+        handleBackspaceInput();
+      }
+      // Delete or Escape to clear
+      else if (e.key === "Delete" || e.key === "Escape") {
+        e.preventDefault();
+        handleClearInput();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleNumberInput, handleBackspaceInput, handleClearInput]);
 
   return (
     <div className="rounded-2xl p-6 shadow-xl ring-1 shadow-blue-500/50 ring-blue-500/40">
@@ -85,7 +126,7 @@ export function PinPad({ length = 4, onComplete, onClear }: PinPadProps) {
               key={num}
               variant="outline"
               size="lg"
-              onClick={() => handleNumberClick(num)}
+              onClick={() => handleNumberInput(num)}
               className="h-16 border-neutral-700 bg-neutral-800 text-2xl hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
             >
               {num}
@@ -96,7 +137,7 @@ export function PinPad({ length = 4, onComplete, onClear }: PinPadProps) {
           <Button
             variant="outline"
             size="lg"
-            onClick={handleBackspace}
+            onClick={handleBackspaceInput}
             className="h-16 border-neutral-700 bg-neutral-800 hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
           >
             <ArrowLeft className="h-6 w-6" />
@@ -106,7 +147,7 @@ export function PinPad({ length = 4, onComplete, onClear }: PinPadProps) {
           <Button
             variant="outline"
             size="lg"
-            onClick={() => handleNumberClick(0)}
+            onClick={() => handleNumberInput(0)}
             className="h-16 border-neutral-700 bg-neutral-800 text-2xl hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
           >
             0
@@ -116,7 +157,7 @@ export function PinPad({ length = 4, onComplete, onClear }: PinPadProps) {
           <Button
             variant="outline"
             size="lg"
-            onClick={handleClear}
+            onClick={handleClearInput}
             className="h-16 border-neutral-700 bg-neutral-800 hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
           >
             <Delete className="h-6 w-6" />
