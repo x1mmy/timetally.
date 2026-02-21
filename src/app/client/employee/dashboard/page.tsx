@@ -19,6 +19,7 @@ import {
   startOfWeek,
   endOfWeek,
   eachDayOfInterval,
+  isToday,
 } from "date-fns";
 import { useRouter } from "next/navigation";
 import type { Timesheet } from "@/types/database";
@@ -408,6 +409,7 @@ export default function EmployeeDashboardPage() {
             const dateStr = format(day.date, "yyyy-MM-dd");
             const isLoading = loading === dateStr;
             const hasTime = day.startTime || day.endTime;
+            const isTodayDay = isToday(day.date);
 
             return (
               <motion.div
@@ -416,7 +418,11 @@ export default function EmployeeDashboardPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
                 whileHover={{ scale: 1.01 }}
-                className="group rounded-xl border border-neutral-800 bg-gradient-to-br from-neutral-900/90 to-neutral-900/50 p-4 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 md:p-6"
+                className={`group rounded-xl border p-4 backdrop-blur-sm transition-all md:p-6 ${
+                  isTodayDay
+                    ? "border-primary/50 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 shadow-md shadow-primary/10"
+                    : "border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+                }`}
               >
                 <div className="flex items-start gap-3 md:gap-6">
                   {/* Day Number Badge */}
@@ -424,8 +430,10 @@ export default function EmployeeDashboardPage() {
                     whileHover={{ rotate: 5 }}
                     className={`flex min-w-[60px] flex-col items-center justify-center rounded-xl px-3 py-2 shadow-lg transition-all md:min-w-[70px] md:px-4 ${
                       hasTime
-                        ? "bg-gradient-to-br from-primary to-blue-500 text-white shadow-primary/30"
-                        : "bg-neutral-800/80 text-neutral-400"
+                        ? "bg-linear-to-br from-primary to-blue-500 text-white shadow-primary/30"
+                        : isTodayDay
+                          ? "bg-neutral-700/80 text-white ring-2 ring-primary/60"
+                          : "bg-neutral-800/80 text-neutral-400"
                     }`}
                   >
                     <div className="text-2xl font-bold md:text-3xl">
@@ -439,9 +447,16 @@ export default function EmployeeDashboardPage() {
                   {/* Day Info and Times */}
                   <div className="flex-1">
                     <div className="mb-3 md:mb-4">
-                      <h3 className="text-lg font-semibold md:text-xl">
-                        {day.dayName}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold md:text-xl">
+                          {day.dayName}
+                        </h3>
+                        {isTodayDay && (
+                          <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white shadow-sm shadow-primary/50">
+                            Today
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-neutral-400 md:text-sm">
                         {format(day.date, "EEEE, MMMM d")}
                       </p>
