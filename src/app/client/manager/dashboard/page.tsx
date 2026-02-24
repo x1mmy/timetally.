@@ -33,6 +33,7 @@ import {
   Download,
   ArrowRight,
   Printer,
+  FileText,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
@@ -414,6 +415,14 @@ function ManagerDashboardContent() {
               transition={{ delay: 0.2 }}
               className="flex gap-2"
             >
+              <Button
+                variant="outline"
+                onClick={() => router.push("/client/manager/timesheet-activity")}
+                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Activity
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => router.push("/client/manager/settings")}

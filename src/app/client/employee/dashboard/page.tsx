@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { TimePicker } from "@/components/TimePicker";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, LogOut, Clock, CheckCircle2, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut, Clock, CheckCircle2, Calendar, Trash2 } from "lucide-react";
 import {
   format,
   addWeeks,
@@ -50,8 +50,11 @@ export default function EmployeeDashboardPage() {
 
   // UI state
   const [loading, setLoading] = useState<string | null>(null); // stores the date being saved
+  const [deletingDate, setDeletingDate] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  // Per-day save feedback: which date was just saved (shows green/success on that day card)
+  const [lastSavedDate, setLastSavedDate] = useState<string | null>(null);
 
   // Past timesheets
   const [timesheets, setTimesheets] = useState<Timesheet[]>([]);
@@ -239,12 +242,43 @@ export default function EmployeeDashboardPage() {
       }
 
       setSuccess("Time saved successfully!");
+      setLastSavedDate(dateStr);
       setTimeout(() => setSuccess(""), 2000);
+      setTimeout(() => setLastSavedDate(null), 3500);
       void fetchTimesheets();
     } catch {
       setError("An error occurred");
     } finally {
       setLoading(null);
+    }
+  };
+
+  /**
+   * Delete timesheet entry for a day (e.g. wrong day entered)
+   */
+  const deleteDayEntry = async (dateStr: string) => {
+    setDeletingDate(dateStr);
+    setError("");
+    try {
+      const response = await fetch("/api/client/timesheets", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId, workDate: dateStr }),
+      });
+      const json: unknown = await response.json();
+      const hasError = (v: unknown): v is { error: string } =>
+        typeof v === "object" && v !== null && "error" in v && typeof (v as Record<string, unknown>).error === "string";
+      if (!response.ok) {
+        setError(hasError(json) ? json.error : "Failed to remove entry");
+        return;
+      }
+      setSuccess("Entry removed.");
+      setTimeout(() => setSuccess(""), 2000);
+      void fetchTimesheets();
+    } catch {
+      setError("Failed to remove entry");
+    } finally {
+      setDeletingDate(null);
     }
   };
 
@@ -408,8 +442,13 @@ export default function EmployeeDashboardPage() {
           {weekDays.map((day, index) => {
             const dateStr = format(day.date, "yyyy-MM-dd");
             const isLoading = loading === dateStr;
+            const isDeleting = deletingDate === dateStr;
             const hasTime = day.startTime || day.endTime;
             const isTodayDay = isToday(day.date);
+            const justSaved = lastSavedDate === dateStr;
+            const hasSavedEntry = timesheets.some(
+              (ts) => format(new Date(ts.work_date), "yyyy-MM-dd") === dateStr,
+            );
 
             return (
               <motion.div
@@ -419,9 +458,11 @@ export default function EmployeeDashboardPage() {
                 transition={{ delay: 0.1 * index }}
                 whileHover={{ scale: 1.01 }}
                 className={`group rounded-xl border p-4 backdrop-blur-sm transition-all md:p-6 ${
-                  isTodayDay
-                    ? "border-primary/50 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 shadow-md shadow-primary/10"
-                    : "border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+                  justSaved
+                    ? "border-green-500/60 bg-green-500/5 shadow-lg shadow-green-500/10 ring-2 ring-green-400/30"
+                    : isTodayDay
+                      ? "border-primary/50 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 shadow-md shadow-primary/10"
+                      : "border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
                 }`}
               >
                 <div className="flex items-start gap-3 md:gap-6">
@@ -492,13 +533,17 @@ export default function EmployeeDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Save Button */}
-                    <div className="mt-4">
+                    {/* Save Button + per-day saved state */}
+                    <div className="mt-4 space-y-2">
                       <motion.div whileTap={{ scale: 0.98 }}>
                         <Button
                           onClick={() => saveDay(day)}
                           disabled={isLoading || (!day.startTime && !day.endTime)}
-                          className="w-full rounded-xl bg-gradient-to-r from-primary to-blue-500 py-6 text-base font-semibold shadow-lg shadow-primary/30 transition-all hover:shadow-xl hover:shadow-primary/40 disabled:opacity-50 md:text-lg"
+                          className={`w-full rounded-xl py-6 text-base font-semibold shadow-lg transition-all disabled:opacity-50 md:text-lg ${
+                            justSaved
+                              ? "bg-green-600 text-white shadow-green-500/30 hover:bg-green-700"
+                              : "bg-gradient-to-r from-primary to-blue-500 shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
+                          }`}
                         >
                           {isLoading ? (
                             <span className="flex items-center justify-center gap-2">
@@ -510,6 +555,11 @@ export default function EmployeeDashboardPage() {
                               </motion.div>
                               Saving...
                             </span>
+                          ) : justSaved ? (
+                            <span className="flex items-center justify-center gap-2">
+                              <CheckCircle2 className="h-5 w-5" />
+                              Saved!
+                            </span>
                           ) : (
                             <span className="flex items-center justify-center gap-2">
                               <CheckCircle2 className="h-5 w-5" />
@@ -518,6 +568,26 @@ export default function EmployeeDashboardPage() {
                           )}
                         </Button>
                       </motion.div>
+                      {/* Remove entry - for wrong day or to clear */}
+                      {hasSavedEntry && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteDayEntry(dateStr)}
+                          disabled={isDeleting || isLoading}
+                          className="w-full text-neutral-400 hover:bg-red-500/10 hover:text-red-400"
+                        >
+                          {isDeleting ? (
+                            "Removing..."
+                          ) : (
+                            <>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Remove entry
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
