@@ -36,7 +36,7 @@ import {
   FileText,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
-import type { Employee, TimesheetWithEmployee } from "@/types/database";
+import type { Employee, EmployeeCategory, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
 import { exportPayrollToCSV, printPayrollCSV } from "@/lib/csvExport";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,6 +51,7 @@ interface EmployeeWithPay extends Employee {
   totalHours: number;
   rawHours: number; // Total hours before break deductions
   breakMinutes: number; // Total break minutes
+  daysWorked: number; // Total unique days worked (for day_rate employees)
 }
 
 function ManagerDashboardContent() {
@@ -70,6 +71,8 @@ function ManagerDashboardContent() {
   const [rawTimesheets, setRawTimesheets] = useState<TimesheetWithEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [categories, setCategories] = useState<EmployeeCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Date range picker state - initialize from URL if available
   const [viewMode, setViewMode] = useState<"week" | "custom">(
@@ -121,7 +124,7 @@ function ManagerDashboardContent() {
     const loadData = async () => {
       setLoading(true);
 
-      const [employeesData, timesheetsData] = await Promise.all([
+      const [employeesData, timesheetsData, categoriesData] = await Promise.all([
         // Fetch employees
         fetch("/api/client/employees")
           .then(res => res.json() as Promise<{ employees?: Employee[] }>)
@@ -138,10 +141,16 @@ function ManagerDashboardContent() {
             console.error("Error fetching timesheets:", error);
             return [] as TimesheetWithEmployee[];
           }),
+        // Fetch categories
+        fetch("/api/client/categories")
+          .then(res => res.json() as Promise<{ categories?: EmployeeCategory[] }>)
+          .then(data => data?.categories ?? [])
+          .catch(() => [] as EmployeeCategory[]),
       ]);
 
       setRawEmployees(employeesData);
       setRawTimesheets(timesheetsData);
+      setCategories(categoriesData);
       setLoading(false);
     };
 
@@ -251,6 +260,8 @@ function ManagerDashboardContent() {
               sundayHours * emp.sunday_rate +
               publicHolidayHours * phRate;
 
+        const daysWorked = weekdayDays + saturdayDays + sundayDays + publicHolidayDays;
+
         return {
           ...emp,
           weekdayHours,
@@ -260,6 +271,7 @@ function ManagerDashboardContent() {
           totalPay,
           rawHours,
           breakMinutes,
+          daysWorked,
         };
       },
     );
@@ -304,11 +316,15 @@ function ManagerDashboardContent() {
    */
   const filteredEmployees = useMemo(() => {
     const searchLower = searchQuery.toLowerCase();
-    return employees.filter((emp) =>
-      emp.first_name.toLowerCase().includes(searchLower) ||
-      emp.last_name.toLowerCase().includes(searchLower)
-    );
-  }, [employees, searchQuery]);
+    return employees.filter((emp) => {
+      const matchesSearch =
+        emp.first_name.toLowerCase().includes(searchLower) ||
+        emp.last_name.toLowerCase().includes(searchLower);
+      const matchesCategory =
+        selectedCategory === null || emp.category_id === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [employees, searchQuery, selectedCategory]);
 
   /**
    * Handle logout
@@ -611,6 +627,38 @@ function ManagerDashboardContent() {
             </div>
           </div>
 
+          {/* Category filter pills */}
+          {categories.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`rounded-full border px-3 py-1 text-sm font-medium transition-all ${
+                  selectedCategory === null
+                    ? "border-blue-500 bg-blue-500 text-white"
+                    : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
+                  className={`rounded-full border px-3 py-1 text-sm font-medium transition-all ${
+                    selectedCategory === cat.id
+                      ? "border-blue-500 bg-blue-500 text-white"
+                      : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+              <p className="w-full text-xs italic text-neutral-600">
+                * Filter by department. Manage categories in Settings.
+              </p>
+            </div>
+          )}
+
           {/* Employee Cards */}
           {loading ? (
             <motion.div
@@ -672,9 +720,20 @@ function ManagerDashboardContent() {
                       {/* Employee Header with Total Pay */}
                       <div className="relative mb-4 flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="mb-1 text-xl font-bold">
-                            {emp.first_name} {emp.last_name}
-                          </h3>
+                          <div className="mb-1 flex items-center gap-2">
+                            <h3 className="text-xl font-bold">
+                              {emp.first_name} {emp.last_name}
+                            </h3>
+                            {emp.category ? (
+                              <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-blue-400">
+                                {emp.category.name}
+                              </span>
+                            ) : (
+                              <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-500">
+                                Uncategorised
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-neutral-400">
                             Weekday: ${emp.weekday_rate.toFixed(2)}
                             {emp.pay_type === "day_rate" ? "/day" : "/hr"} | Sat: $
@@ -734,6 +793,13 @@ function ManagerDashboardContent() {
                           </div>
                         </motion.div>
                       </div>
+
+                      {/* Day-rate staff totals — only shown for day_rate employees */}
+                      {emp.pay_type === "day_rate" && (
+                        <div className="relative mt-3 border-t border-neutral-800 pt-2 text-sm text-blue-400">
+                          {emp.daysWorked} {emp.daysWorked === 1 ? "day" : "days"} worked &middot; {emp.totalHours.toFixed(1)}h total
+                        </div>
+                      )}
 
                       {/* View Details Indicator */}
                       <div className="relative mt-4 flex items-center justify-end gap-2 text-sm text-primary opacity-0 transition-opacity group-hover:opacity-100">

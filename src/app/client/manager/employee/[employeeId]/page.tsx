@@ -183,6 +183,7 @@ function EmployeeDetailContent() {
     (sum, day) => sum + day.breakMinutes,
     0,
   );
+  const daysWorked = dailyBreakdown.filter((day) => day.totalHours > 0).length;
 
   // Function to navigate back with URL params
   const handleBackToDashboard = () => {
@@ -441,6 +442,20 @@ function EmployeeDetailContent() {
             <div className="relative">
               <h3 className="mb-6 text-xl font-semibold">Week Summary</h3>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                {employee.pay_type === "day_rate" && (
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    className="rounded-xl bg-blue-500/10 p-4 ring-1 ring-blue-500/20"
+                  >
+                    <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
+                      <Calendar className="h-4 w-4" />
+                      <span>Days Worked</span>
+                    </div>
+                    <p className="text-2xl font-bold text-blue-400">
+                      {daysWorked} {daysWorked === 1 ? "day" : "days"}
+                    </p>
+                  </motion.div>
+                )}
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   className="rounded-xl bg-blue-500/10 p-4 ring-1 ring-blue-500/20"

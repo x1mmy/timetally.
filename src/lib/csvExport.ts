@@ -168,80 +168,68 @@ export function printPayrollCSV({
 }: ExportOptions): void {
   const formattedDate = formatDateAU(weekEndingDate);
 
-  // Build HTML table
-  let tableHTML = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Payroll Timesheets - ${formattedDate}</title>
-      <style>
-        @media print {
-          @page {
-            margin: 1cm;
-            size: auto;
-          }
-          body {
-            margin: 0;
-          }
-          /* Hide browser-generated headers and footers */
-          @page {
-            margin-top: 1cm;
-            margin-bottom: 1cm;
-          }
-        }
-        body {
-          font-family: Arial, sans-serif;
-          padding: 20px;
-        }
-        h1 {
-          font-size: 18px;
-          margin-bottom: 10px;
-        }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 20px;
-        }
-        th, td {
-          border: 1px solid #333;
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f0f0f0;
-          font-weight: bold;
-        }
-        tr:nth-child(even) {
-          background-color: #f9f9f9;
-        }
-        .numeric {
-          text-align: right;
-        }
-      </style>
-    </head>
-    <body>
-      <h1>Payroll Timesheets - Week Ending ${formattedDate}</h1>
-      <table>
-        <thead>
-          <tr>
-            <th>Employee ID</th>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Date</th>
-            <th class="numeric">Ordinary Hours</th>
-            <th class="numeric">Saturday Hours</th>
-            <th class="numeric">Sunday Hours</th>
-            <th class="numeric">Total Hours</th>
-            <th>Pay Style</th>
-            <th>Breaks Taken</th>
-            <th>Location</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
+  // Open a new window for printing
+  const win = window.open("", "_blank", "width=900,height=700");
+  if (!win) {
+    alert(
+      "Pop-ups are blocked. Please allow pop-ups for this site to use the print function.",
+    );
+    return;
+  }
 
-  // Add employee rows
+  const doc = win.document;
+  doc.title = `Payroll Timesheets - ${formattedDate}`;
+
+  // Inject stylesheet
+  const style = doc.createElement("style");
+  style.textContent = `
+    @media print { @page { margin: 1cm; size: auto; } body { margin: 0; } }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 18px; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #333; padding: 8px; text-align: left; }
+    th { background-color: #f0f0f0; font-weight: bold; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .numeric { text-align: right; }
+  `;
+  doc.head.appendChild(style);
+
+  // Title heading
+  const h1 = doc.createElement("h1");
+  h1.textContent = `Payroll Timesheets - Week Ending ${formattedDate}`;
+  doc.body.appendChild(h1);
+
+  // Build table using safe DOM methods
+  const table = doc.createElement("table");
+
+  // Header row
+  const thead = doc.createElement("thead");
+  const headerRow = doc.createElement("tr");
+  const headers = [
+    { label: "Employee ID", numeric: false },
+    { label: "First Name", numeric: false },
+    { label: "Last Name", numeric: false },
+    { label: "Date", numeric: false },
+    { label: "Ordinary Hours", numeric: true },
+    { label: "Saturday Hours", numeric: true },
+    { label: "Sunday Hours", numeric: true },
+    { label: "Total Hours", numeric: true },
+    { label: "Pay Style", numeric: false },
+    { label: "Breaks Taken", numeric: false },
+    { label: "Location", numeric: false },
+    { label: "Notes", numeric: false },
+  ];
+  for (const h of headers) {
+    const th = doc.createElement("th");
+    if (h.numeric) th.className = "numeric";
+    th.textContent = h.label;
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Body rows — each cell uses textContent so no HTML injection is possible
+  const tbody = doc.createElement("tbody");
   employees.forEach((employee, index) => {
     const employeeID = generateEmployeeID(index);
     const {
@@ -253,67 +241,43 @@ export function printPayrollCSV({
       totalHours,
       payType,
       breakMinutes,
-      applyBreakRules
+      applyBreakRules,
     } = employee;
 
-    // Format pay style for display
     const payStyleDisplay = payType === "day_rate" ? "Day Rate" : "Hourly";
+    const breaksDisplay = !applyBreakRules ? "No breaks" : `${breakMinutes} minutes`;
 
-    // Format breaks - if no break rules apply, show "No breaks"
-    const breaksDisplay = !applyBreakRules
-      ? "No breaks"
-      : `${breakMinutes} minutes`;
+    const cells: { value: string; numeric: boolean }[] = [
+      { value: employeeID, numeric: false },
+      { value: firstName, numeric: false },
+      { value: lastName, numeric: false },
+      { value: formattedDate, numeric: false },
+      { value: weekdayHours.toFixed(2), numeric: true },
+      { value: saturdayHours.toFixed(2), numeric: true },
+      { value: sundayHours.toFixed(2), numeric: true },
+      { value: totalHours.toFixed(2), numeric: true },
+      { value: payStyleDisplay, numeric: false },
+      { value: breaksDisplay, numeric: false },
+      { value: "", numeric: false },
+      { value: "", numeric: false },
+    ];
 
-    tableHTML += `
-          <tr>
-            <td>${employeeID}</td>
-            <td>${firstName}</td>
-            <td>${lastName}</td>
-            <td>${formattedDate}</td>
-            <td class="numeric">${weekdayHours.toFixed(2)}</td>
-            <td class="numeric">${saturdayHours.toFixed(2)}</td>
-            <td class="numeric">${sundayHours.toFixed(2)}</td>
-            <td class="numeric">${totalHours.toFixed(2)}</td>
-            <td>${payStyleDisplay}</td>
-            <td>${breaksDisplay}</td>
-            <td></td>
-            <td></td>
-          </tr>
-    `;
+    const tr = doc.createElement("tr");
+    for (const cell of cells) {
+      const td = doc.createElement("td");
+      if (cell.numeric) td.className = "numeric";
+      td.textContent = cell.value;
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
   });
+  table.appendChild(tbody);
+  doc.body.appendChild(table);
 
-  tableHTML += `
-        </tbody>
-      </table>
-    </body>
-    </html>
-  `;
-
-  // Create a hidden iframe for printing
-  const printWindow = document.createElement('iframe');
-  printWindow.style.position = 'fixed';
-  printWindow.style.right = '0';
-  printWindow.style.bottom = '0';
-  printWindow.style.width = '0';
-  printWindow.style.height = '0';
-  printWindow.style.border = 'none';
-  document.body.appendChild(printWindow);
-
-  // Write content and trigger print
-  const doc = printWindow.contentWindow?.document;
-  if (doc) {
-    doc.open();
-    doc.write(tableHTML);
-    doc.close();
-
-    // Wait for content to load, then print
-    printWindow.contentWindow?.focus();
-    setTimeout(() => {
-      printWindow.contentWindow?.print();
-      // Clean up after printing
-      setTimeout(() => {
-        document.body.removeChild(printWindow);
-      }, 100);
-    }, 250);
-  }
+  // Allow styles to render before opening print dialog
+  setTimeout(() => {
+    win.focus();
+    win.print();
+    win.close();
+  }, 300);
 }

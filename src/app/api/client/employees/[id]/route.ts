@@ -177,6 +177,11 @@ export async function PUT(
       updates.pay_type = body.payType;
     }
 
+    // Update category if provided (nullable — null removes the category)
+    if (body.categoryId !== undefined) {
+      updates.category_id = body.categoryId;
+    }
+
     // Execute the update query in the database
     const { data: employee, error } = await supabase
       .from("employees")
