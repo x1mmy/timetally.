@@ -33,10 +33,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    // Fetch all employees for this client
+    // Fetch all employees for this client, joining category info
     const { data: employees, error } = await supabase
       .from("employees")
-      .select("*")
+      .select("*, category:employee_categories(id, name)")
       .eq("client_id", client.id)
       .order("first_name", { ascending: true });
 

@@ -39,13 +39,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Edit, Loader2, Clock, Calendar, Coffee } from "lucide-react";
-import type { Employee } from "@/types/database";
+import type { Employee, EmployeeCategory } from "@/types/database";
 
 interface EmployeeDialogProps {
   mode: "add" | "edit";
   employee?: Employee;
   onSuccess?: () => void;
   trigger?: React.ReactNode;
+  categories?: EmployeeCategory[];
 }
 
 export function EmployeeDialog({
@@ -53,6 +54,7 @@ export function EmployeeDialog({
   employee,
   onSuccess,
   trigger,
+  categories = [],
 }: EmployeeDialogProps) {
   // Dialog and loading state
   const [open, setOpen] = useState(false);
@@ -66,6 +68,7 @@ export function EmployeeDialog({
   const [pin, setPin] = useState("");
   const [payType, setPayType] = useState<"hourly" | "day_rate">("hourly");
   const [applyBreakRules, setApplyBreakRules] = useState(true);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [weekdayRate, setWeekdayRate] = useState("25.00");
   const [saturdayRate, setSaturdayRate] = useState("30.00");
   const [sundayRate, setSundayRate] = useState("35.00");
@@ -84,6 +87,7 @@ export function EmployeeDialog({
       setPin(employee.pin);
       setPayType((employee.pay_type as "hourly" | "day_rate" | undefined) ?? "hourly");
       setApplyBreakRules((employee.apply_break_rules as boolean | undefined) ?? true);
+      setCategoryId(employee.category_id ?? null);
       setWeekdayRate(employee.weekday_rate.toFixed(2));
       setSaturdayRate(employee.saturday_rate.toFixed(2));
       setSundayRate(employee.sunday_rate.toFixed(2));
@@ -95,6 +99,7 @@ export function EmployeeDialog({
       setPin("");
       setPayType("hourly");
       setApplyBreakRules(true);
+      setCategoryId(null);
       setWeekdayRate("25.00");
       setSaturdayRate("30.00");
       setSundayRate("35.00");
@@ -161,6 +166,7 @@ export function EmployeeDialog({
         pin,
         payType,
         applyBreakRules,
+        categoryId,
         weekdayRate: weekdayRateNum,
         saturdayRate: saturdayRateNum,
         sundayRate: sundayRateNum,
@@ -209,6 +215,7 @@ export function EmployeeDialog({
         setPin("");
         setPayType("hourly");
         setApplyBreakRules(true);
+        setCategoryId(null);
         setWeekdayRate("25.00");
         setSaturdayRate("30.00");
         setSundayRate("35.00");
@@ -392,6 +399,25 @@ export function EmployeeDialog({
                   : "No break time deductions applied"}
               </p>
             </div>
+
+            {/* Category */}
+            <div className="grid gap-2">
+                <Label htmlFor="category">Category</Label>
+                <select
+                  id="category"
+                  value={categoryId ?? "__none__"}
+                  onChange={(e) => setCategoryId(e.target.value === "__none__" ? null : e.target.value)}
+                  className="rounded-md border border-neutral-600 bg-neutral-700 px-3 py-2 text-sm text-white focus:border-primary/50 focus:outline-none"
+                >
+                  <option value="__none__">— None —</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs italic text-neutral-500">
+                  * Optional. Used to organise staff on the payroll dashboard.
+                </p>
+              </div>
 
             {/* Pay Rates */}
             <div className="grid gap-2">

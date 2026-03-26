@@ -31,6 +31,17 @@ export interface Client {
 }
 
 /**
+ * Employee category
+ * Organises employees by department (e.g. Deli, Register, Fruit)
+ */
+export interface EmployeeCategory {
+  id: string;
+  client_id: string;
+  name: string;
+  created_at: string;
+}
+
+/**
  * Employee entity
  * Belongs to a specific client
  */
@@ -46,6 +57,8 @@ export interface Employee {
   public_holiday_rate: number; // Rate for NSW public holidays
   pay_type: "hourly" | "day_rate"; // How the employee is paid
   apply_break_rules: boolean; // Whether break time rules apply to this employee
+  category_id: string | null; // Optional department category
+  category?: { id: string; name: string } | null; // Joined from employee_categories
   status: "active" | "inactive";
   created_at: string;
   updated_at: string;
@@ -157,6 +170,7 @@ export interface UpdateEmployeeInput {
   publicHolidayRate?: number; // Rate for NSW public holidays
   payType?: "hourly" | "day_rate";
   applyBreakRules?: boolean; // Whether break time rules apply
+  categoryId?: string | null; // Department category
   status?: "active" | "inactive";
 }
 
