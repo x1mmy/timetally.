@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { startOfWeek, endOfWeek, format, getDay, addDays, differenceInDays } from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
+import { rateForDate } from "~/lib/payrollRates";
 import { EditTimesheetDialog } from "./components/EditTimesheetDialog";
 import { motion } from "framer-motion";
 import { isPublicHoliday, getHolidayName } from "@/lib/holidays";
@@ -49,24 +50,6 @@ function EmployeeDetailContent() {
   const weekEnd = endDateParam
     ? new Date(endDateParam)
     : endOfWeek(currentWeekStart, { weekStartsOn: 1 });
-
-  /**
-   * Get hourly rate based on day of week or public holiday
-   * Public holidays take precedence over day-of-week
-   */
-  const getHourlyRate = (dateString: string, emp: Employee): number => {
-    // Check public holiday first (takes precedence)
-    if (isPublicHoliday(dateString)) {
-      return (emp.public_holiday_rate as number | undefined) ?? emp.weekday_rate * 2;
-    }
-
-    const date = new Date(dateString);
-    const dayOfWeek = getDay(date);
-
-    if (dayOfWeek === 0) return emp.sunday_rate;
-    if (dayOfWeek === 6) return emp.saturday_rate;
-    return emp.weekday_rate;
-  };
 
   /**
    * Load employee and timesheet data
@@ -120,7 +103,7 @@ function EmployeeDetailContent() {
 
           const totalHours = parseFloat(timesheet.total_hours.toString());
           const breakMinutes = timesheet.break_minutes ?? 0;
-          const rate = getHourlyRate(dateString, emp);
+          const rate = rateForDate(dateString, emp);
 
           // For day_rate employees, pay is the rate (1 day = 1 rate)
           // For hourly employees, pay is hours * rate

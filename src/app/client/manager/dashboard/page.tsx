@@ -5,7 +5,7 @@
  * Read-only view focused on payroll tracking and employee time data.
  *
  * Features:
- * - Employee cards with pay rates and hours breakdown (weekday/Saturday/Sunday)
+ * - Employee cards with pay rates and hours breakdown by calendar day (weekday/Saturday/Sunday); PH uses rate only
  * - Weekly pay calculations with break deductions
  * - Search employees by name
  * - Week navigator (previous/next week)
@@ -38,10 +38,19 @@ import {
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type { Employee, EmployeeCategory, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
+import { payrollForPeriod } from "~/lib/payrollRates";
 import { exportPayrollToCSV, printPayrollCSV } from "@/lib/csvExport";
 import { motion, AnimatePresence } from "framer-motion";
 import { DatePicker } from "@/components/ui/date-picker";
-import { isPublicHoliday } from "@/lib/holidays";
+
+function getCalendarDayBucket(
+  dateString: string,
+): "weekday" | "saturday" | "sunday" {
+  const dayOfWeek = getDay(new Date(dateString));
+  if (dayOfWeek === 0) return "sunday";
+  if (dayOfWeek === 6) return "saturday";
+  return "weekday";
+}
 
 interface EmployeeWithPay extends Employee {
   weekdayHours: number;
@@ -95,24 +104,6 @@ function ManagerDashboardContent() {
   const actualStartDate = viewMode === "week" ? currentWeekStart : customStartDate;
   const actualEndDate = viewMode === "week" ? weekEnd : customEndDate;
 
-  /**
-   * Calculate day type (weekday, saturday, sunday, or public_holiday)
-   * Public holidays take precedence over day-of-week
-   */
-  const getDayType = (
-    dateString: string,
-  ): "weekday" | "saturday" | "sunday" | "public_holiday" => {
-    // Check if it's a public holiday first (takes precedence)
-    if (isPublicHoliday(dateString)) return "public_holiday";
-
-    const date = new Date(dateString);
-    const dayOfWeek = getDay(date);
-
-    if (dayOfWeek === 0) return "sunday";
-    if (dayOfWeek === 6) return "saturday";
-    return "weekday";
-  };
-
   // Memoize date strings to use as stable dependencies
   const startDateStr = format(actualStartDate, "yyyy-MM-dd");
   const endDateStr = format(actualEndDate, "yyyy-MM-dd");
@@ -158,18 +149,12 @@ function ManagerDashboardContent() {
   }, [startDateStr, endDateStr]);
 
   /**
-   * Memoized: Calculate pay data from timesheets
-   * Tracks both hours worked AND unique days worked (for day rate employees)
+   * Memoized: Hour buckets by calendar day + raw/break totals (pay uses payrollForPeriod)
    */
   type PayDataEntry = {
     weekday: number;
     saturday: number;
     sunday: number;
-    public_holiday: number;
-    weekdayDates: Set<string>;
-    saturdayDates: Set<string>;
-    sundayDates: Set<string>;
-    publicHolidayDates: Set<string>;
     rawHours: number;
     breakMinutes: number;
   };
@@ -181,21 +166,15 @@ function ManagerDashboardContent() {
           weekday: 0,
           saturday: 0,
           sunday: 0,
-          public_holiday: 0,
-          weekdayDates: new Set<string>(),
-          saturdayDates: new Set<string>(),
-          sundayDates: new Set<string>(),
-          publicHolidayDates: new Set<string>(),
           rawHours: 0,
           breakMinutes: 0,
         };
 
         const entry = acc[ts.employee_id]!;
-        const dayType = getDayType(ts.work_date);
+        const bucket = getCalendarDayBucket(ts.work_date);
         const hours = parseFloat(ts.total_hours.toString());
         const breakMins = ts.break_minutes ?? 0;
 
-        // Calculate raw hours from start/end time if available
         let rawHours = hours;
         if (ts.start_time && ts.end_time) {
           const start = new Date(`2000-01-01T${ts.start_time}`);
@@ -203,26 +182,24 @@ function ManagerDashboardContent() {
           rawHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
         }
 
-        // Track hours
-        entry[dayType] += hours;
+        entry[bucket] += hours;
         entry.rawHours += rawHours;
         entry.breakMinutes += breakMins;
-
-        // Track unique days worked (for day rate calculation)
-        if (dayType === "weekday") {
-          entry.weekdayDates.add(ts.work_date);
-        } else if (dayType === "saturday") {
-          entry.saturdayDates.add(ts.work_date);
-        } else if (dayType === "sunday") {
-          entry.sundayDates.add(ts.work_date);
-        } else if (dayType === "public_holiday") {
-          entry.publicHolidayDates.add(ts.work_date);
-        }
 
         return acc;
       },
       {},
     );
+  }, [rawTimesheets]);
+
+  const timesheetsByEmployeeId = useMemo(() => {
+    const m = new Map<string, TimesheetWithEmployee[]>();
+    for (const ts of rawTimesheets) {
+      const list = m.get(ts.employee_id) ?? [];
+      list.push(ts);
+      m.set(ts.employee_id, list);
+    }
+    return m;
   }, [rawTimesheets]);
 
   /**
@@ -235,32 +212,11 @@ function ManagerDashboardContent() {
         const weekdayHours = empData?.weekday ?? 0;
         const saturdayHours = empData?.saturday ?? 0;
         const sundayHours = empData?.sunday ?? 0;
-        const publicHolidayHours = empData?.public_holiday ?? 0;
         const rawHours = empData?.rawHours ?? 0;
         const breakMinutes = empData?.breakMinutes ?? 0;
 
-        // Count unique days worked (for day rate employees)
-        const weekdayDays = empData?.weekdayDates?.size ?? 0;
-        const saturdayDays = empData?.saturdayDates?.size ?? 0;
-        const sundayDays = empData?.sundayDates?.size ?? 0;
-        const publicHolidayDays = empData?.publicHolidayDates?.size ?? 0;
-
-        // Get public holiday rate (fallback to 2x weekday if not set)
-        const phRate = (emp.public_holiday_rate as number | undefined) ?? emp.weekday_rate * 2;
-
-        // Calculate pay based on pay_type
-        const totalPay =
-          emp.pay_type === "day_rate"
-            ? weekdayDays * emp.weekday_rate +
-              saturdayDays * emp.saturday_rate +
-              sundayDays * emp.sunday_rate +
-              publicHolidayDays * phRate
-            : weekdayHours * emp.weekday_rate +
-              saturdayHours * emp.saturday_rate +
-              sundayHours * emp.sunday_rate +
-              publicHolidayHours * phRate;
-
-        const daysWorked = weekdayDays + saturdayDays + sundayDays + publicHolidayDays;
+        const sheets = timesheetsByEmployeeId.get(emp.id) ?? [];
+        const { totalPay, daysWorked } = payrollForPeriod(emp, sheets);
 
         return {
           ...emp,
@@ -278,7 +234,7 @@ function ManagerDashboardContent() {
 
     // Sort by total pay (descending)
     return employeesWithPay.sort((a, b) => b.totalPay - a.totalPay);
-  }, [rawEmployees, payData]);
+  }, [rawEmployees, payData, timesheetsByEmployeeId]);
 
   // Update URL when view mode or date range changes
   // Only update if values actually changed to prevent infinite loop
@@ -757,7 +713,7 @@ function ManagerDashboardContent() {
                         </div>
                       </div>
 
-                      {/* Day Boxes */}
+                      {/* Day boxes: calendar Sat/Sun; PH dates still use PH rate in pay */}
                       <div className="relative grid grid-cols-3 gap-3">
                         <motion.div
                           whileHover={{ y: -3 }}
