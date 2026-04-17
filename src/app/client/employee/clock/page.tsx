@@ -43,6 +43,10 @@ export default function FruitClockPage() {
 
     const today = format(new Date(), "yyyy-MM-dd");
     const tsRes = await fetch(`/api/client/timesheets?employeeId=${emp.id}&startDate=${today}&endDate=${today}`);
+    if (!tsRes.ok) {
+      // silently accept "not clocked in" state on fetch failure
+      return;
+    }
     const tsJson = await tsRes.json() as { timesheets?: { start_time: string; end_time: string }[] };
     const ts = tsJson.timesheets?.[0];
     if (ts) {
@@ -56,6 +60,7 @@ export default function FruitClockPage() {
   useEffect(() => { void loadData(); }, [loadData]);
 
   const handleClockIn = async () => {
+    if (loading) return;
     setLoading(true);
     setError("");
     const now = format(new Date(), "HH:mm");
@@ -75,6 +80,11 @@ export default function FruitClockPage() {
   };
 
   const handleClockOut = async () => {
+    if (loading) return;
+    if (!clockState.startTime) {
+      setError("Clock in time not found. Please try again.");
+      return;
+    }
     setLoading(true);
     setError("");
     const now = format(new Date(), "HH:mm");
