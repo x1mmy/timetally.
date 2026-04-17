@@ -50,7 +50,7 @@ export function PrintSelectModal({
           const h = parseFloat(ts.total_hours.toString());
           if (type === "saturday") saturdayHours += h;
           else if (type === "sunday") sundayHours += h;
-          else weekdayHours += h;
+          else weekdayHours += h; // public holidays count as ordinary hours (no separate column)
         }
         return {
           firstName: emp.first_name,
@@ -102,7 +102,7 @@ export function PrintSelectModal({
           >
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Select Print Format</h2>
-              <button onClick={onClose} className="rounded-lg p-1 text-neutral-400 hover:text-white">
+              <button onClick={onClose} aria-label="Close modal" className="rounded-lg p-1 text-neutral-400 hover:text-white">
                 <X className="h-5 w-5" />
               </button>
             </div>
