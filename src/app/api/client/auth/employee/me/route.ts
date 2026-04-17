@@ -56,13 +56,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const categoryRow = employee.employee_categories as { name: string } | null;
+    const raw = employee.employee_categories as { name: string } | { name: string }[] | null;
+    const categoryName = Array.isArray(raw)
+      ? (raw[0]?.name ?? null)
+      : (raw?.name ?? null);
+
     return NextResponse.json({
       employee: {
         id: employee.id,
         firstName: employee.first_name,
         lastName: employee.last_name,
-        categoryName: categoryRow?.name ?? null,
+        categoryName,
       },
     });
   } catch (error) {
