@@ -46,6 +46,10 @@ export default function EmployeeLoginPage() {
 
       // Fetch employee details to check category
       const meRes = await fetch("/api/client/auth/employee/me");
+      if (!meRes.ok) {
+        setError("Failed to load employee info. Please try again.");
+        return;
+      }
       const meJson = (await meRes.json()) as {
         employee?: {
           id: string;
@@ -54,7 +58,11 @@ export default function EmployeeLoginPage() {
           categoryName?: string | null;
         };
       };
-      const categoryName = meJson.employee?.categoryName ?? null;
+      if (!meJson.employee) {
+        setError("Failed to load employee info. Please try again.");
+        return;
+      }
+      const categoryName = meJson.employee.categoryName ?? null;
 
       // Redirect based on category
       if (categoryName === "Fruit") {
