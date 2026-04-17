@@ -38,7 +38,8 @@ import {
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type { Employee, EmployeeCategory, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
-import { exportPayrollToCSV, printPayrollCSV } from "@/lib/csvExport";
+import { exportPayrollToCSV } from "@/lib/csvExport";
+import { PrintSelectModal } from "@/components/PrintSelectModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { DatePicker } from "@/components/ui/date-picker";
 import { isPublicHoliday } from "@/lib/holidays";
@@ -73,6 +74,7 @@ function ManagerDashboardContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState<EmployeeCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   // Date range picker state - initialize from URL if available
   const [viewMode, setViewMode] = useState<"week" | "custom">(
@@ -360,28 +362,6 @@ function ManagerDashboardContent() {
     });
   };
 
-  /**
-   * Handle print payroll
-   */
-  const handlePrintCSV = () => {
-    const employeeData = filteredEmployees.map((emp) => ({
-      firstName: emp.first_name,
-      lastName: emp.last_name,
-      weekdayHours: emp.weekdayHours,
-      saturdayHours: emp.saturdayHours,
-      sundayHours: emp.sundayHours,
-      totalHours: emp.totalHours,
-      payType: emp.pay_type,
-      breakMinutes: emp.breakMinutes,
-      applyBreakRules: emp.apply_break_rules,
-    }));
-
-    printPayrollCSV({
-      employees: employeeData,
-      weekEndingDate: actualEndDate, // Use end date as week-ending date
-    });
-  };
-
   // Memoized: Calculate summary stats
   const { totalPay, totalHours } = useMemo(() => ({
     totalPay: employees.reduce((sum, emp) => sum + emp.totalPay, 0),
@@ -608,7 +588,7 @@ function ManagerDashboardContent() {
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={handlePrintCSV}
+                onClick={() => setPrintModalOpen(true)}
                 variant="outline"
                 className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
                 disabled={filteredEmployees.length === 0}
@@ -819,6 +799,14 @@ function ManagerDashboardContent() {
           )}
         </div>
       </main>
+      <PrintSelectModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        employees={rawEmployees}
+        timesheets={rawTimesheets}
+        weekStart={actualStartDate}
+        weekEnd={actualEndDate}
+      />
     </div>
   );
 }
