@@ -56,7 +56,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const raw = employee.employee_categories as { name: string } | { name: string }[] | null;
+    const raw = employee.employee_categories as
+      | { name: string }
+      | { name: string }[]
+      | null;
     const categoryName = Array.isArray(raw)
       ? (raw[0]?.name ?? null)
       : (raw?.name ?? null);
