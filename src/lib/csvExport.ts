@@ -401,14 +401,15 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
 
   const style = doc.createElement("style");
   style.textContent = `
-    @media print { @page { margin: 1cm; size: landscape; } body { margin: 0; } }
+    @media print { @page { margin: 1cm; size: portrait; } body { margin: 0; } }
     body { font-family: Arial, sans-serif; padding: 20px; }
     h1 { font-size: 18px; margin-bottom: 10px; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #333; padding: 6px 8px; text-align: left; }
     th { background-color: #f0f0f0; font-weight: bold; }
     tr:nth-child(even) { background-color: #f9f9f9; }
-    .numeric { text-align: right; }
+    .numeric { text-align: center; }
+    .empty { text-align: center; color: #999; }
   `;
   doc.head.appendChild(style);
 
@@ -473,7 +474,14 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
     addCell(`${startLabel} - ${endLabel}`);
     for (const day of days) {
       const hours = emp.dailyHours[day.iso];
-      addCell(hours != null && hours > 0 ? hours.toFixed(2) : "", true);
+      if (hours != null && hours > 0) {
+        addCell(hours.toFixed(2), true);
+      } else {
+        const td = doc.createElement("td");
+        td.className = "empty";
+        td.textContent = "-";
+        tr.appendChild(td);
+      }
     }
     addCell(emp.notes ?? "");
 
