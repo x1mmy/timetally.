@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Fetch employee by id constrained to client
     const { data: employee, error: employeeError } = await supabase
       .from("employees")
-      .select("*")
+      .select("*, employee_categories(name)")
       .eq("id", sessionCookie)
       .eq("client_id", client.id)
       .single();
@@ -56,11 +56,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const raw = employee.employee_categories as
+      | { name: string }
+      | { name: string }[]
+      | null;
+    const categoryName = Array.isArray(raw)
+      ? (raw[0]?.name ?? null)
+      : (raw?.name ?? null);
+
     return NextResponse.json({
       employee: {
         id: employee.id,
         firstName: employee.first_name,
         lastName: employee.last_name,
+        categoryName,
       },
     });
   } catch (error) {
