@@ -112,6 +112,14 @@ export default function FruitClockPage() {
   const isClockedIn = clockState.startTime !== null && clockState.endTime === null;
   const isNotClockedIn = clockState.startTime === null;
 
+  const formatAmPm = (time: string | null) => {
+    if (!time) return "";
+    const [h, m] = time.split(":").map(Number);
+    const period = h! >= 12 ? "PM" : "AM";
+    const hour = h! % 12 || 12;
+    return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+  };
+
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-neutral-950 text-white">
       <div className="pointer-events-none absolute inset-0">
@@ -141,7 +149,7 @@ export default function FruitClockPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <p className="text-6xl font-bold tabular-nums">{format(currentTime, "HH:mm")}</p>
+          <p className="text-6xl font-bold tabular-nums">{format(currentTime, "h:mm a")}</p>
           <p className="mt-2 text-neutral-400">{format(currentTime, "EEEE, d MMMM yyyy")}</p>
         </motion.div>
 
@@ -169,7 +177,7 @@ export default function FruitClockPage() {
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-4">
             <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-center">
               <p className="text-sm text-neutral-400">Clocked in at</p>
-              <p className="text-3xl font-bold text-green-400">{clockState.startTime}</p>
+              <p className="text-3xl font-bold text-green-400">{formatAmPm(clockState.startTime)}</p>
             </div>
             <Button
               onClick={handleClockOut}
@@ -190,11 +198,11 @@ export default function FruitClockPage() {
               <div className="flex justify-center gap-8 text-sm text-neutral-400">
                 <div>
                   <p>In</p>
-                  <p className="text-xl font-bold text-white">{clockState.startTime}</p>
+                  <p className="text-xl font-bold text-white">{formatAmPm(clockState.startTime)}</p>
                 </div>
                 <div>
                   <p>Out</p>
-                  <p className="text-xl font-bold text-white">{clockState.endTime}</p>
+                  <p className="text-xl font-bold text-white">{formatAmPm(clockState.endTime)}</p>
                 </div>
               </div>
             </div>
