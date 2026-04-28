@@ -166,7 +166,7 @@ function EmployeeDetailContent() {
     (sum, day) => sum + day.breakMinutes,
     0,
   );
-  const daysWorked = dailyBreakdown.filter((day) => day.totalHours > 0).length;
+  const daysWorked = dailyBreakdown.filter((day) => day.endTime !== null).length;
 
   // Function to navigate back with URL params
   const handleBackToDashboard = () => {
