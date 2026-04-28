@@ -26,9 +26,10 @@ export function payrollForPeriod(
   emp: Employee,
   sheets: TimesheetWithEmployee[],
 ): { totalPay: number; daysWorked: number } {
-  if (sheets.length === 0) return { totalPay: 0, daysWorked: 0 };
+  const complete = sheets.filter((r) => !!r.end_time);
+  if (complete.length === 0) return { totalPay: 0, daysWorked: 0 };
 
-  const uniqueDates = new Set(sheets.map((r) => r.work_date));
+  const uniqueDates = new Set(complete.map((r) => r.work_date));
   const daysWorked = uniqueDates.size;
 
   if (emp.pay_type === "day_rate") {
@@ -40,7 +41,7 @@ export function payrollForPeriod(
   }
 
   let totalPay = 0;
-  for (const ts of sheets) {
+  for (const ts of complete) {
     const h = parseFloat(ts.total_hours.toString());
     totalPay += h * rateForDate(ts.work_date, emp);
   }

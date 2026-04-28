@@ -74,7 +74,7 @@ export interface Timesheet {
   client_id: string;
   work_date: string; // ISO date string
   start_time: string; // HH:MM:SS
-  end_time: string; // HH:MM:SS
+  end_time: string | null; // HH:MM:SS, null if employee has not yet clocked out
   break_minutes: number;
   total_hours: number;
   notes?: string;
