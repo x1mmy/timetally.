@@ -55,6 +55,13 @@ export default function ManagerSettingsPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const BULK_PAGE_SIZE = 10;
 
+  // Preview panel state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewView, setPreviewView] = useState<'weekly' | 'today_only'>('weekly');
+
+  // Per-category view update loading state
+  const [updatingViewId, setUpdatingViewId] = useState<string | null>(null);
+
   /**
    * Fetch employees
    */
@@ -261,6 +268,30 @@ export default function ManagerSettingsPage() {
       }
     } catch (error) {
       console.error("Error deleting category:", error);
+    }
+  };
+
+  /**
+   * Update dashboard view for a category (auto-saves on toggle)
+   */
+  const handleUpdateDashboardView = async (id: string, view: 'weekly' | 'today_only') => {
+    setUpdatingViewId(id);
+    try {
+      const response = await fetch(`/api/client/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dashboardView: view }),
+      });
+      if (response.ok) {
+        await fetchCategories();
+      } else {
+        const data = (await response.json()) as { error?: string };
+        alert(data.error ?? "Failed to update view");
+      }
+    } catch (error) {
+      console.error("Error updating dashboard view:", error);
+    } finally {
+      setUpdatingViewId(null);
     }
   };
 
@@ -510,13 +541,46 @@ export default function ManagerSettingsPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center gap-2">
+                      {/* Name + employee count */}
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
                         <span className="font-medium">{cat.name}</span>
                         <span className="text-xs text-neutral-500">
                           {categoryEmployeeCounts[cat.id] ?? 0} employee{(categoryEmployeeCounts[cat.id] ?? 0) !== 1 ? "s" : ""}
                         </span>
                       </div>
-                      <div className="flex gap-2">
+
+                      {/* Inline segmented view toggle */}
+                      <div className="mx-3 flex shrink-0 items-center rounded-lg border border-neutral-700 bg-neutral-800 p-0.5">
+                        <button
+                          disabled={updatingViewId === cat.id}
+                          onClick={() => {
+                            if (cat.dashboard_view !== 'weekly') void handleUpdateDashboardView(cat.id, 'weekly');
+                          }}
+                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                            cat.dashboard_view === 'weekly'
+                              ? "bg-neutral-600 text-neutral-100 shadow-sm"
+                              : "text-neutral-500 hover:text-neutral-300"
+                          }`}
+                        >
+                          Weekly Schedule
+                        </button>
+                        <button
+                          disabled={updatingViewId === cat.id}
+                          onClick={() => {
+                            if (cat.dashboard_view !== 'today_only') void handleUpdateDashboardView(cat.id, 'today_only');
+                          }}
+                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                            cat.dashboard_view === 'today_only'
+                              ? "bg-neutral-600 text-neutral-100 shadow-sm"
+                              : "text-neutral-500 hover:text-neutral-300"
+                          }`}
+                        >
+                          Clock In/Out
+                        </button>
+                      </div>
+
+                      {/* Rename + Delete actions */}
+                      <div className="flex shrink-0 gap-2">
                         <button
                           onClick={() => { setRenamingId(cat.id); setRenameValue(cat.name); }}
                           className="flex items-center gap-1 rounded-lg border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
