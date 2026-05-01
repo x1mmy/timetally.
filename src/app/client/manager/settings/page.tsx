@@ -770,6 +770,104 @@ export default function ManagerSettingsPage() {
                 )}
               </div>
             )}
+
+            {/* View Preview Panel */}
+            <div className="mt-6 border-t border-neutral-800 pt-5">
+              <button
+                onClick={() => setPreviewOpen((o) => !o)}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <div>
+                  <p className="text-sm font-medium text-neutral-400">Preview employee views</p>
+                  <p className="text-xs italic text-neutral-600">
+                    See what each view looks like for employees before assigning it to a category.
+                  </p>
+                </div>
+                <ChevronDown
+                  className={`h-4 w-4 text-neutral-500 transition-transform duration-200 ${previewOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {previewOpen && (
+                <div className="mt-4">
+                  {/* Tab selector */}
+                  <div className="mb-4 flex gap-2">
+                    <button
+                      onClick={() => setPreviewView('weekly')}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        previewView === 'weekly'
+                          ? "border-blue-700 bg-blue-950/50 text-blue-400"
+                          : "border-neutral-700 bg-neutral-800 text-neutral-500 hover:text-neutral-300"
+                      }`}
+                    >
+                      Weekly Schedule
+                    </button>
+                    <button
+                      onClick={() => setPreviewView('today_only')}
+                      className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        previewView === 'today_only'
+                          ? "border-blue-700 bg-blue-950/50 text-blue-400"
+                          : "border-neutral-700 bg-neutral-800 text-neutral-500 hover:text-neutral-300"
+                      }`}
+                    >
+                      Clock In/Out
+                    </button>
+                  </div>
+
+                  {/* Mockup frame */}
+                  <div className="overflow-hidden rounded-xl border border-neutral-700 bg-neutral-950">
+                    {previewView === 'weekly' ? (
+                      <div className="p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div className="h-3 w-24 rounded bg-neutral-800" />
+                          <div className="flex gap-1">
+                            <div className="h-6 w-6 rounded bg-neutral-800" />
+                            <div className="h-6 w-16 rounded bg-neutral-800" />
+                            <div className="h-6 w-6 rounded bg-neutral-800" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                            <div
+                              key={day}
+                              className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2"
+                            >
+                              <span className="w-7 text-xs text-neutral-500">{day}</span>
+                              <div className="h-2 w-14 rounded bg-neutral-800" />
+                              <span className="text-xs text-neutral-700">—</span>
+                              <div className="h-2 w-14 rounded bg-neutral-800" />
+                              <div className="ml-auto h-5 w-10 rounded bg-neutral-800" />
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-center text-xs text-neutral-600">Weekly Schedule — 7-day grid with time pickers</p>
+                      </div>
+                    ) : (
+                      <div className="p-4">
+                        <div className="mb-4 text-center">
+                          <div className="mx-auto mb-1 h-3 w-32 rounded bg-neutral-800" />
+                          <div className="mx-auto h-6 w-24 rounded bg-neutral-800" />
+                        </div>
+                        <div className="mx-auto mb-4 flex w-fit items-center gap-1 rounded-full border border-neutral-800 bg-neutral-900 px-4 py-1">
+                          <div className="h-2 w-16 rounded bg-neutral-800" />
+                        </div>
+                        <div className="flex justify-center gap-3">
+                          <div className="flex h-20 w-28 flex-col items-center justify-center gap-1 rounded-2xl border border-green-900/40 bg-green-950/30">
+                            <div className="h-5 w-5 rounded-full bg-green-900/50" />
+                            <span className="text-xs text-green-700">Clock In</span>
+                          </div>
+                          <div className="flex h-20 w-28 flex-col items-center justify-center gap-1 rounded-2xl border border-neutral-800 bg-neutral-900/50 opacity-40">
+                            <div className="h-5 w-5 rounded-full bg-neutral-800" />
+                            <span className="text-xs text-neutral-600">Clock Out</span>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-center text-xs text-neutral-600">Clock In/Out — today only, two big action buttons</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </motion.div>
 
           {/* Employees Section */}
