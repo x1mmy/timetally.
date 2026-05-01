@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Fetch employee by id constrained to client
     const { data: employee, error: employeeError } = await supabase
       .from("employees")
-      .select("*, employee_categories(name)")
+      .select("*, employee_categories(name, dashboard_view)")
       .eq("id", sessionCookie)
       .eq("client_id", client.id)
       .single();
@@ -57,12 +57,12 @@ export async function GET(request: NextRequest) {
     }
 
     const raw = employee.employee_categories as
-      | { name: string }
-      | { name: string }[]
+      | { name: string; dashboard_view: string }
+      | { name: string; dashboard_view: string }[]
       | null;
-    const categoryName = Array.isArray(raw)
-      ? (raw[0]?.name ?? null)
-      : (raw?.name ?? null);
+    const categoryEntry = Array.isArray(raw) ? (raw[0] ?? null) : raw;
+    const categoryName = categoryEntry?.name ?? null;
+    const dashboardView = (categoryEntry?.dashboard_view ?? 'weekly') as 'weekly' | 'today_only';
 
     return NextResponse.json({
       employee: {
@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
         firstName: employee.first_name,
         lastName: employee.last_name,
         categoryName,
+        dashboardView,
       },
     });
   } catch (error) {

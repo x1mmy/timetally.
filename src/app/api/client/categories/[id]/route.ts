@@ -35,18 +35,38 @@ export async function PUT(
     const { supabase, clientId } = ctx;
     const { id } = await params;
 
-    const { name } = (await request.json()) as { name?: string };
+    const body = (await request.json()) as { name?: string; dashboardView?: string };
+    const { name } = body;
 
-    if (!name || !name.trim()) {
-      return NextResponse.json(
-        { error: "Category name is required" },
-        { status: 400 },
-      );
+    const updatePayload: Record<string, string> = {};
+
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return NextResponse.json(
+          { error: "Category name cannot be empty" },
+          { status: 400 },
+        );
+      }
+      updatePayload.name = name.trim();
+    }
+
+    if (body.dashboardView !== undefined) {
+      if (body.dashboardView !== 'weekly' && body.dashboardView !== 'today_only') {
+        return NextResponse.json(
+          { error: "Invalid dashboard_view value" },
+          { status: 400 },
+        );
+      }
+      updatePayload.dashboard_view = body.dashboardView;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
     }
 
     const { data: category, error } = await supabase
       .from("employee_categories")
-      .update({ name: name.trim() })
+      .update(updatePayload)
       .eq("id", id)
       .eq("client_id", clientId)
       .select()
