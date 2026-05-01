@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
       id: cat.id,
       client_id: cat.client_id,
       name: cat.name,
+      dashboard_view: (cat.dashboard_view ?? 'weekly') as 'weekly' | 'today_only',
       created_at: cat.created_at,
       employee_count: Array.isArray(cat.employees) ? cat.employees.length : 0,
     }));
@@ -71,7 +72,9 @@ export async function POST(request: NextRequest) {
     }
     const { supabase, clientId } = ctx;
 
-    const { name } = (await request.json()) as { name?: string };
+    const body = (await request.json()) as { name?: string; dashboardView?: string };
+    const { name } = body;
+    const dashboardView = body.dashboardView === 'today_only' ? 'today_only' : 'weekly';
 
     if (!name || !name.trim()) {
       return NextResponse.json(
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     const { data: category, error } = await supabase
       .from("employee_categories")
-      .insert({ client_id: clientId, name: name.trim() })
+      .insert({ client_id: clientId, name: name.trim(), dashboard_view: dashboardView })
       .select()
       .single();
 

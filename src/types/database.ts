@@ -38,8 +38,11 @@ export interface EmployeeCategory {
   id: string;
   client_id: string;
   name: string;
+  dashboard_view: 'weekly' | 'today_only';
   created_at: string;
 }
+
+export type DashboardView = 'weekly' | 'today_only';
 
 /**
  * Employee entity

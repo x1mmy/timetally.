@@ -56,16 +56,17 @@ export default function EmployeeLoginPage() {
           firstName?: string;
           lastName?: string;
           categoryName?: string | null;
+          dashboardView?: 'weekly' | 'today_only' | null;
         };
       };
       if (!meJson.employee) {
         setError("Failed to load employee info. Please try again.");
         return;
       }
-      const categoryName = meJson.employee.categoryName ?? null;
+      const dashboardView = meJson.employee.dashboardView ?? 'weekly';
 
-      // Redirect based on category
-      if (categoryName === "Fruit") {
+      // Redirect based on configured dashboard view for this category
+      if (dashboardView === 'today_only') {
         router.push("/client/employee/clock");
       } else {
         router.push("/client/employee/dashboard");
