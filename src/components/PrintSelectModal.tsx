@@ -179,16 +179,25 @@ export function PrintSelectModal({
               ))}
             </div>
 
-            {selected === "date-range" && (
-              <div className="mt-4">
-                <p className="mb-2 text-sm font-medium text-neutral-300">Date range</p>
-                <div className="flex items-center gap-2">
-                  <DatePicker value={printStartDate} onChange={setPrintStartDate} />
-                  <span className="text-neutral-500">→</span>
-                  <DatePicker value={printEndDate} onChange={setPrintEndDate} />
-                </div>
-              </div>
-            )}
+            <AnimatePresence>
+              {selected === "date-range" && (
+                <motion.div
+                  key="date-range-picker"
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <p className="mb-2 text-sm font-medium text-neutral-300">Date range</p>
+                  <div className="flex items-center gap-2">
+                    <DatePicker value={printStartDate} onChange={setPrintStartDate} />
+                    <span className="text-neutral-500">→</span>
+                    <DatePicker value={printEndDate} onChange={setPrintEndDate} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {categories.length > 0 && (
               <div className="mt-4">
