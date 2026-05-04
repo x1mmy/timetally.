@@ -95,12 +95,14 @@ export function PrintSelectModal({
       const empData = filteredEmployees.map((emp) => {
         const empTs = printTimesheets.filter((ts) => ts.employee_id === emp.id);
         let weekdayHours = 0, saturdayHours = 0, sundayHours = 0;
+        const workedDates = new Set<string>();
         for (const ts of empTs) {
           const type = getDayType(ts.work_date);
           const h = parseFloat(ts.total_hours.toString());
           if (type === "saturday") saturdayHours += h;
           else if (type === "sunday") sundayHours += h;
           else weekdayHours += h;
+          workedDates.add(ts.work_date);
         }
         return {
           firstName: emp.first_name,
@@ -109,6 +111,7 @@ export function PrintSelectModal({
           saturdayHours,
           sundayHours,
           totalHours: weekdayHours + saturdayHours + sundayHours,
+          daysWorked: workedDates.size,
         };
       }).filter((e) => e.totalHours > 0);
 
@@ -176,14 +179,16 @@ export function PrintSelectModal({
               ))}
             </div>
 
-            <div className="mt-4">
-              <p className="mb-2 text-sm font-medium text-neutral-300">Date range</p>
-              <div className="flex items-center gap-2">
-                <DatePicker value={printStartDate} onChange={setPrintStartDate} />
-                <span className="text-neutral-500">→</span>
-                <DatePicker value={printEndDate} onChange={setPrintEndDate} />
+            {selected === "date-range" && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-neutral-300">Date range</p>
+                <div className="flex items-center gap-2">
+                  <DatePicker value={printStartDate} onChange={setPrintStartDate} />
+                  <span className="text-neutral-500">→</span>
+                  <DatePicker value={printEndDate} onChange={setPrintEndDate} />
+                </div>
               </div>
-            </div>
+            )}
 
             {categories.length > 0 && (
               <div className="mt-4">

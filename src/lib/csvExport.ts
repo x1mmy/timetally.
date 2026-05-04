@@ -291,6 +291,7 @@ interface WeekSummaryEmployee {
   saturdayHours: number;
   sundayHours: number;
   totalHours: number;
+  daysWorked: number;
   notes?: string;
 }
 
@@ -334,6 +335,7 @@ export function printWeekSummary({ employees, weekEndingDate }: WeekSummaryOptio
     { label: "Ordinary Hours", numeric: true },
     { label: "Saturday Hours", numeric: true },
     { label: "Sunday Hours", numeric: true },
+    { label: "Days", numeric: true },
     { label: "Total Hours", numeric: true },
     { label: "Notes", numeric: false },
   ];
@@ -356,6 +358,7 @@ export function printWeekSummary({ employees, weekEndingDate }: WeekSummaryOptio
       { value: emp.weekdayHours.toFixed(2), numeric: true },
       { value: emp.saturdayHours.toFixed(2), numeric: true },
       { value: emp.sundayHours.toFixed(2), numeric: true },
+      { value: String(emp.daysWorked), numeric: true },
       { value: emp.totalHours.toFixed(2), numeric: true },
       { value: emp.notes ?? "", numeric: false },
     ];
@@ -455,6 +458,13 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
   notesTh.textContent = "Notes";
   headerRow.appendChild(notesTh);
 
+  for (const label of ["Days", "Total Hrs"]) {
+    const th = doc.createElement("th");
+    th.className = "numeric";
+    th.textContent = label;
+    headerRow.appendChild(th);
+  }
+
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
@@ -472,9 +482,14 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
     addCell(emp.firstName);
     addCell(emp.lastName);
     addCell(`${startLabel} - ${endLabel}`);
+
+    let total = 0;
+    let daysWorked = 0;
     for (const day of days) {
       const hours = emp.dailyHours[day.iso];
       if (hours != null && hours > 0) {
+        total += hours;
+        daysWorked++;
         addCell(hours.toFixed(2), true);
       } else {
         const td = doc.createElement("td");
@@ -484,6 +499,8 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
       }
     }
     addCell(emp.notes ?? "");
+    addCell(String(daysWorked), true);
+    addCell(total.toFixed(2), true);
 
     tbody.appendChild(tr);
   }
@@ -564,9 +581,14 @@ export function printDateRange({ employees, startDate, endDate }: DateRangeOptio
     th.textContent = day.label;
     headerRow.appendChild(th);
   }
+  const daysTh = doc.createElement("th");
+  daysTh.className = "numeric";
+  daysTh.textContent = "Days";
+  headerRow.appendChild(daysTh);
+
   const totalTh = doc.createElement("th");
   totalTh.className = "numeric";
-  totalTh.textContent = "Total";
+  totalTh.textContent = "Total Hrs";
   headerRow.appendChild(totalTh);
 
   thead.appendChild(headerRow);
@@ -587,10 +609,12 @@ export function printDateRange({ employees, startDate, endDate }: DateRangeOptio
     addCell(emp.lastName);
 
     let total = 0;
+    let daysWorked = 0;
     for (const day of days) {
       const hours = emp.dailyHours[day.iso];
       if (hours != null && hours > 0) {
         total += hours;
+        daysWorked++;
         addCell(hours.toFixed(2), true);
       } else {
         const td = doc.createElement("td");
@@ -599,6 +623,7 @@ export function printDateRange({ employees, startDate, endDate }: DateRangeOptio
         tr.appendChild(td);
       }
     }
+    addCell(String(daysWorked), true);
     addCell(total.toFixed(2), true);
 
     tbody.appendChild(tr);
