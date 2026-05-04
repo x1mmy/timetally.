@@ -59,12 +59,14 @@ export function PrintSelectModal({
       const empData = filteredEmployees.map((emp) => {
         const empTs = timesheets.filter((ts) => ts.employee_id === emp.id);
         let weekdayHours = 0, saturdayHours = 0, sundayHours = 0;
+        const workedDates = new Set<string>();
         for (const ts of empTs) {
           const type = getDayType(ts.work_date);
           const h = parseFloat(ts.total_hours.toString());
           if (type === "saturday") saturdayHours += h;
           else if (type === "sunday") sundayHours += h;
-          else weekdayHours += h; // public holidays count as ordinary hours (no separate column)
+          else weekdayHours += h;
+          workedDates.add(ts.work_date);
         }
         return {
           firstName: emp.first_name,
@@ -73,6 +75,7 @@ export function PrintSelectModal({
           saturdayHours,
           sundayHours,
           totalHours: weekdayHours + saturdayHours + sundayHours,
+          daysWorked: workedDates.size,
         };
       }).filter((e) => e.totalHours > 0);
 
@@ -98,7 +101,6 @@ export function PrintSelectModal({
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -107,7 +109,6 @@ export function PrintSelectModal({
             onClick={onClose}
           />
 
-          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -291,6 +291,7 @@ interface WeekSummaryEmployee {
   saturdayHours: number;
   sundayHours: number;
   totalHours: number;
+  daysWorked: number;
   notes?: string;
 }
 
@@ -334,6 +335,7 @@ export function printWeekSummary({ employees, weekEndingDate }: WeekSummaryOptio
     { label: "Ordinary Hours", numeric: true },
     { label: "Saturday Hours", numeric: true },
     { label: "Sunday Hours", numeric: true },
+    { label: "Days", numeric: true },
     { label: "Total Hours", numeric: true },
     { label: "Notes", numeric: false },
   ];
@@ -356,6 +358,7 @@ export function printWeekSummary({ employees, weekEndingDate }: WeekSummaryOptio
       { value: emp.weekdayHours.toFixed(2), numeric: true },
       { value: emp.saturdayHours.toFixed(2), numeric: true },
       { value: emp.sundayHours.toFixed(2), numeric: true },
+      { value: String(emp.daysWorked), numeric: true },
       { value: emp.totalHours.toFixed(2), numeric: true },
       { value: emp.notes ?? "", numeric: false },
     ];
@@ -455,6 +458,13 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
   notesTh.textContent = "Notes";
   headerRow.appendChild(notesTh);
 
+  for (const label of ["Days", "Total Hrs"]) {
+    const th = doc.createElement("th");
+    th.className = "numeric";
+    th.textContent = label;
+    headerRow.appendChild(th);
+  }
+
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
@@ -472,9 +482,14 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
     addCell(emp.firstName);
     addCell(emp.lastName);
     addCell(`${startLabel} - ${endLabel}`);
+
+    let total = 0;
+    let daysWorked = 0;
     for (const day of days) {
       const hours = emp.dailyHours[day.iso];
       if (hours != null && hours > 0) {
+        total += hours;
+        daysWorked++;
         addCell(hours.toFixed(2), true);
       } else {
         const td = doc.createElement("td");
@@ -484,6 +499,132 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
       }
     }
     addCell(emp.notes ?? "");
+    addCell(String(daysWorked), true);
+    addCell(total.toFixed(2), true);
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  doc.body.appendChild(table);
+
+  setTimeout(() => { win.focus(); win.print(); win.close(); }, 300);
+}
+
+// ─── Date Range Breakdown ─────────────────────────────────────────────────────
+
+interface DateRangeOptions {
+  employees: DayBreakdownEmployee[];
+  startDate: Date;
+  endDate: Date;
+}
+
+export function printDateRange({ employees, startDate, endDate }: DateRangeOptions): void {
+  const startLabel = formatDateAU(startDate);
+  const endLabel = formatDateAU(endDate);
+  const isSingleDay = startLabel === endLabel;
+
+  const title = isSingleDay
+    ? `Report - ${startLabel}`
+    : `Report - ${startLabel} to ${endLabel}`;
+
+  const win = window.open("", "_blank", "width=1100,height=700");
+  if (!win) { alert("Pop-ups are blocked. Please allow pop-ups for this site to use the print function."); return; }
+
+  const doc = win.document;
+  doc.title = title;
+
+  const style = doc.createElement("style");
+  style.textContent = `
+    @media print { @page { margin: 1cm; size: landscape; } body { margin: 0; } }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { font-size: 18px; margin-bottom: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #333; padding: 6px 8px; text-align: left; }
+    th { background-color: #f0f0f0; font-weight: bold; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .numeric { text-align: center; }
+    .empty { text-align: center; color: #999; }
+  `;
+  doc.head.appendChild(style);
+
+  const h1 = doc.createElement("h1");
+  h1.textContent = title;
+  doc.body.appendChild(h1);
+
+  // One column per day in the selected range
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const days: { iso: string; label: string }[] = [];
+  const cursor = new Date(startDate);
+  while (cursor <= endDate) {
+    const dd = String(cursor.getDate()).padStart(2, "0");
+    const mm = String(cursor.getMonth() + 1).padStart(2, "0");
+    const iso = `${cursor.getFullYear()}-${mm}-${dd}`;
+    const label = isSingleDay
+      ? `${dd}/${mm}/${cursor.getFullYear()}`
+      : `${dayNames[cursor.getDay()]} ${dd}/${mm}`;
+    days.push({ iso, label });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const table = doc.createElement("table");
+  const thead = doc.createElement("thead");
+  const headerRow = doc.createElement("tr");
+
+  for (const label of ["First Name", "Last Name"]) {
+    const th = doc.createElement("th");
+    th.textContent = label;
+    headerRow.appendChild(th);
+  }
+  for (const day of days) {
+    const th = doc.createElement("th");
+    th.className = "numeric";
+    th.textContent = day.label;
+    headerRow.appendChild(th);
+  }
+  const daysTh = doc.createElement("th");
+  daysTh.className = "numeric";
+  daysTh.textContent = "Days";
+  headerRow.appendChild(daysTh);
+
+  const totalTh = doc.createElement("th");
+  totalTh.className = "numeric";
+  totalTh.textContent = "Total Hrs";
+  headerRow.appendChild(totalTh);
+
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = doc.createElement("tbody");
+  for (const emp of employees) {
+    const tr = doc.createElement("tr");
+
+    const addCell = (text: string, numeric = false) => {
+      const td = doc.createElement("td");
+      if (numeric) td.className = "numeric";
+      td.textContent = text;
+      tr.appendChild(td);
+    };
+
+    addCell(emp.firstName);
+    addCell(emp.lastName);
+
+    let total = 0;
+    let daysWorked = 0;
+    for (const day of days) {
+      const hours = emp.dailyHours[day.iso];
+      if (hours != null && hours > 0) {
+        total += hours;
+        daysWorked++;
+        addCell(hours.toFixed(2), true);
+      } else {
+        const td = doc.createElement("td");
+        td.className = "empty";
+        td.textContent = "-";
+        tr.appendChild(td);
+      }
+    }
+    addCell(String(daysWorked), true);
+    addCell(total.toFixed(2), true);
 
     tbody.appendChild(tr);
   }
