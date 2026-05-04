@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { printWeekSummary, printDayBreakdown } from "@/lib/csvExport";
+import { DatePicker } from "@/components/ui/date-picker";
+import { printWeekSummary, printDayBreakdown, printDateRange } from "@/lib/csvExport";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { format, getDay } from "date-fns";
 import { isPublicHoliday } from "@/lib/holidays";
@@ -32,12 +33,36 @@ export function PrintSelectModal({
   open,
   onClose,
   employees,
-  timesheets,
   weekStart,
   weekEnd,
 }: PrintSelectModalProps) {
-  const [selected, setSelected] = useState<"week-summary" | "day-breakdown" | null>(null);
+  const [selected, setSelected] = useState<"week-summary" | "day-breakdown" | "date-range" | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [printStartDate, setPrintStartDate] = useState<Date>(weekStart);
+  const [printEndDate, setPrintEndDate] = useState<Date>(weekEnd);
+  const [printTimesheets, setPrintTimesheets] = useState<TimesheetWithEmployee[]>([]);
+  const [fetchingTimesheets, setFetchingTimesheets] = useState(false);
+
+  // Keep dates in sync when dashboard range changes
+  useEffect(() => {
+    setPrintStartDate(weekStart);
+    setPrintEndDate(weekEnd);
+  }, [weekStart, weekEnd]);
+
+  // Fetch timesheets for the selected print range whenever it changes or modal opens
+  useEffect(() => {
+    if (!open) return;
+
+    const start = format(printStartDate, "yyyy-MM-dd");
+    const end = format(printEndDate, "yyyy-MM-dd");
+
+    setFetchingTimesheets(true);
+    fetch(`/api/client/timesheets?startDate=${start}&endDate=${end}`)
+      .then((res) => res.json() as Promise<{ timesheets?: TimesheetWithEmployee[] }>)
+      .then((data) => setPrintTimesheets(data?.timesheets ?? []))
+      .catch(() => setPrintTimesheets([]))
+      .finally(() => setFetchingTimesheets(false));
+  }, [open, printStartDate, printEndDate]);
 
   const categories = Array.from(
     new Map(
@@ -55,16 +80,27 @@ export function PrintSelectModal({
   const handlePrint = () => {
     if (!selected) return;
 
+    const buildDailyEmpData = () =>
+      filteredEmployees.map((emp) => {
+        const empTs = printTimesheets.filter((ts) => ts.employee_id === emp.id);
+        const dailyHours: Record<string, number> = {};
+        for (const ts of empTs) {
+          const iso = format(new Date(ts.work_date), "yyyy-MM-dd");
+          dailyHours[iso] = (dailyHours[iso] ?? 0) + parseFloat(ts.total_hours.toString());
+        }
+        return { firstName: emp.first_name, lastName: emp.last_name, dailyHours };
+      }).filter((e) => Object.keys(e.dailyHours).length > 0);
+
     if (selected === "week-summary") {
       const empData = filteredEmployees.map((emp) => {
-        const empTs = timesheets.filter((ts) => ts.employee_id === emp.id);
+        const empTs = printTimesheets.filter((ts) => ts.employee_id === emp.id);
         let weekdayHours = 0, saturdayHours = 0, sundayHours = 0;
         for (const ts of empTs) {
           const type = getDayType(ts.work_date);
           const h = parseFloat(ts.total_hours.toString());
           if (type === "saturday") saturdayHours += h;
           else if (type === "sunday") sundayHours += h;
-          else weekdayHours += h; // public holidays count as ordinary hours (no separate column)
+          else weekdayHours += h;
         }
         return {
           firstName: emp.first_name,
@@ -76,20 +112,13 @@ export function PrintSelectModal({
         };
       }).filter((e) => e.totalHours > 0);
 
-      printWeekSummary({ employees: empData, weekEndingDate: weekEnd });
+      printWeekSummary({ employees: empData, weekEndingDate: printEndDate });
+    } else if (selected === "day-breakdown") {
+      printDayBreakdown({ employees: buildDailyEmpData(), weekStart: printStartDate, weekEnd: printEndDate });
     } else {
-      const empData = filteredEmployees.map((emp) => {
-        const empTs = timesheets.filter((ts) => ts.employee_id === emp.id);
-        const dailyHours: Record<string, number> = {};
-        for (const ts of empTs) {
-          const iso = format(new Date(ts.work_date), "yyyy-MM-dd");
-          dailyHours[iso] = (dailyHours[iso] ?? 0) + parseFloat(ts.total_hours.toString());
-        }
-        return { firstName: emp.first_name, lastName: emp.last_name, dailyHours };
-      }).filter((e) => Object.keys(e.dailyHours).length > 0);
-
-      printDayBreakdown({ employees: empData, weekStart, weekEnd });
+      printDateRange({ employees: buildDailyEmpData(), startDate: printStartDate, endDate: printEndDate });
     }
+
 
     onClose();
   };
@@ -98,7 +127,6 @@ export function PrintSelectModal({
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -107,7 +135,6 @@ export function PrintSelectModal({
             onClick={onClose}
           />
 
-          {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -122,7 +149,7 @@ export function PrintSelectModal({
             </div>
 
             <div className="space-y-3">
-              {(["week-summary", "day-breakdown"] as const).map((opt) => (
+              {(["week-summary", "day-breakdown", "date-range"] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => setSelected(opt)}
@@ -135,16 +162,27 @@ export function PrintSelectModal({
                   <FileText className="h-5 w-5 shrink-0 text-primary" />
                   <div>
                     <p className="font-medium">
-                      {opt === "week-summary" ? "Week Summary" : "Day Breakdown"}
+                      {opt === "week-summary" ? "Week Summary" : opt === "day-breakdown" ? "Day Breakdown" : "Date Range"}
                     </p>
                     <p className="text-xs text-neutral-400">
                       {opt === "week-summary"
                         ? "One row per employee — weekly hour totals"
-                        : "One row per employee — hours per day across the week"}
+                        : opt === "day-breakdown"
+                        ? "One row per employee — hours per day across the week"
+                        : "One column per day in the selected range — works for a single day too"}
                     </p>
                   </div>
                 </button>
               ))}
+            </div>
+
+            <div className="mt-4">
+              <p className="mb-2 text-sm font-medium text-neutral-300">Date range</p>
+              <div className="flex items-center gap-2">
+                <DatePicker value={printStartDate} onChange={setPrintStartDate} />
+                <span className="text-neutral-500">→</span>
+                <DatePicker value={printEndDate} onChange={setPrintEndDate} />
+              </div>
             </div>
 
             {categories.length > 0 && (
@@ -180,10 +218,10 @@ export function PrintSelectModal({
 
             <Button
               onClick={handlePrint}
-              disabled={!selected}
+              disabled={!selected || fetchingTimesheets}
               className="mt-6 w-full bg-gradient-to-r from-primary to-blue-500 disabled:opacity-40"
             >
-              Print
+              {fetchingTimesheets ? "Loading..." : "Print"}
             </Button>
           </motion.div>
         </div>
