@@ -37,12 +37,26 @@ export function PrintSelectModal({
   weekEnd,
 }: PrintSelectModalProps) {
   const [selected, setSelected] = useState<"week-summary" | "day-breakdown" | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const categories = Array.from(
+    new Map(
+      employees
+        .filter((e) => e.category != null)
+        .map((e) => [e.category!.id, e.category!] as [string, { id: string; name: string }])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
+
+  const filteredEmployees =
+    selectedCategory === null
+      ? employees
+      : employees.filter((e) => e.category_id === selectedCategory);
 
   const handlePrint = () => {
     if (!selected) return;
 
     if (selected === "week-summary") {
-      const empData = employees.map((emp) => {
+      const empData = filteredEmployees.map((emp) => {
         const empTs = timesheets.filter((ts) => ts.employee_id === emp.id);
         let weekdayHours = 0, saturdayHours = 0, sundayHours = 0;
         for (const ts of empTs) {
@@ -64,7 +78,7 @@ export function PrintSelectModal({
 
       printWeekSummary({ employees: empData, weekEndingDate: weekEnd });
     } else {
-      const empData = employees.map((emp) => {
+      const empData = filteredEmployees.map((emp) => {
         const empTs = timesheets.filter((ts) => ts.employee_id === emp.id);
         const dailyHours: Record<string, number> = {};
         for (const ts of empTs) {
@@ -132,6 +146,37 @@ export function PrintSelectModal({
                 </button>
               ))}
             </div>
+
+            {categories.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium text-neutral-300">Filter by category</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
+                      selectedCategory === null
+                        ? "border-primary bg-primary/10 text-white"
+                        : "border-neutral-700 text-neutral-400 hover:border-neutral-500"
+                    }`}
+                  >
+                    All
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
+                        selectedCategory === cat.id
+                          ? "border-primary bg-primary/10 text-white"
+                          : "border-neutral-700 text-neutral-400 hover:border-neutral-500"
+                      }`}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <Button
               onClick={handlePrint}
