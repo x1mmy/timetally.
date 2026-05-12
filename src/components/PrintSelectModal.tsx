@@ -66,7 +66,7 @@ export function PrintSelectModal({
           if (type === "saturday") saturdayHours += h;
           else if (type === "sunday") sundayHours += h;
           else weekdayHours += h;
-          workedDates.add(ts.work_date);
+          if (ts.end_time) workedDates.add(ts.work_date);
         }
         return {
           firstName: emp.first_name,
