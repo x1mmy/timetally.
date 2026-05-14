@@ -94,10 +94,13 @@ export default function ManagerSettingsPage() {
       if (response.ok) {
         setCategories(data.categories ?? []);
         const counts: Record<string, number> = {};
+        const rounding: Record<string, number> = {};
         for (const cat of data.categories ?? []) {
           counts[cat.id] = cat.employee_count;
+          rounding[cat.id] = cat.clock_in_rounding_minutes;
         }
         setCategoryEmployeeCounts(counts);
+        setCategoryRounding(rounding);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -295,6 +298,28 @@ export default function ManagerSettingsPage() {
       console.error("Error updating dashboard view:", error);
     } finally {
       setUpdatingViewId(null);
+    }
+  };
+
+  /**
+   * Update clock-in rounding for a category (optimistic, auto-saves on change)
+   */
+  const handleUpdateRounding = async (id: string, minutes: number) => {
+    setCategoryRounding((prev) => ({ ...prev, [id]: minutes }));
+    try {
+      const response = await fetch(`/api/client/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roundingMinutes: minutes }),
+      });
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        alert(data.error ?? "Failed to update rounding");
+        await fetchCategories();
+      }
+    } catch (error) {
+      console.error("Error updating rounding:", error);
+      await fetchCategories();
     }
   };
 
@@ -617,7 +642,7 @@ export default function ManagerSettingsPage() {
                                         return (
                                           <button
                                             key={mins}
-                                            onClick={() => setCategoryRounding((prev) => ({ ...prev, [cat.id]: mins }))}
+                                            onClick={() => void handleUpdateRounding(cat.id, mins)}
                                             className={`rounded-md py-1 text-xs font-medium transition-colors ${
                                               active
                                                 ? "bg-blue-600 text-white"

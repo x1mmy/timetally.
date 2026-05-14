@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
       client_id: cat.client_id,
       name: cat.name,
       dashboard_view: (cat.dashboard_view ?? 'weekly') as 'weekly' | 'today_only',
+      clock_in_rounding_minutes: (cat.clock_in_rounding_minutes as number | undefined) ?? 0,
       created_at: cat.created_at,
       employee_count: Array.isArray(cat.employees) ? cat.employees.length : 0,
     }));
