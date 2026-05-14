@@ -12,7 +12,7 @@ type SessionType = "manager" | "employee" | null;
 
 // Rounds a "HH:MM:SS" time string up to the next interval boundary.
 // e.g. "09:03:00" with 15 → "09:15:00". Already-on-boundary times are unchanged.
-function applyClockInRounding(time: string, intervalMinutes: number): string {
+function roundTime(time: string, intervalMinutes: number): string {
   if (intervalMinutes === 0) return time;
   const parts = time.split(":").map(Number);
   const h = parts[0] ?? 0;
@@ -218,7 +218,9 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       const newStartTime = startTime ?? existing.start_time;
-      const newEndTime = endTime ?? existing.end_time;
+      const newEndTime = typeof endTime === "string"
+        ? roundTime(endTime, roundingMinutes)
+        : (endTime ?? existing.end_time);
       const timesChanged =
         newStartTime !== existing.start_time || newEndTime !== existing.end_time;
 
@@ -267,7 +269,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const roundedStartTime = applyClockInRounding(startTime, roundingMinutes);
+    const roundedStartTime = roundTime(startTime, roundingMinutes);
 
     const { data: timesheet, error } = await supabase
       .from("timesheets")
@@ -276,7 +278,7 @@ export async function POST(request: NextRequest) {
         client_id: employee.client_id,
         work_date: workDate,
         start_time: roundedStartTime,
-        end_time: endTime ?? null,
+        end_time: typeof endTime === "string" ? roundTime(endTime, roundingMinutes) : null,
         notes: notes ?? null,
       })
       .select()
