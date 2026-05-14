@@ -629,9 +629,21 @@ export default function ManagerSettingsPage() {
                                         );
                                       })}
                                     </div>
-                                    <p className="mt-2 text-xs text-neutral-600">
-                                      Rounds clock-in up to the next interval — e.g. 9:03 → 9:15 with 15m rounding.
-                                    </p>
+                                    {(() => {
+                                      const selected = categoryRounding[cat.id] ?? 0;
+                                      if (selected === 0) {
+                                        return <p className="mt-2 text-xs text-neutral-600">Times are recorded exactly as clocked.</p>;
+                                      }
+                                      const inputMins = 9 * 60 + 3;
+                                      const roundedMins = Math.ceil(inputMins / selected) * selected;
+                                      const h = Math.floor(roundedMins / 60);
+                                      const m = String(roundedMins % 60).padStart(2, "0");
+                                      return (
+                                        <p className="mt-2 text-xs text-neutral-600">
+                                          e.g. 9:03 → {h}:{m} with {selected}m rounding.
+                                        </p>
+                                      );
+                                    })()}
                                   </div>
                                 )}
 
