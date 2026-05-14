@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, ArrowLeft, Save, Trash2, Search, Users, Clock, Tag, Pencil, Check, X, ChevronDown } from "lucide-react";
+import { Settings, ArrowLeft, Save, Trash2, Search, Users, Clock, Tag, Pencil, Check, X, ChevronDown, Settings2 } from "lucide-react";
 import type { Employee, EmployeeCategory } from "@/types/database";
 import { EmployeeDialog } from "./components/EmployeeDialog";
 import { motion } from "framer-motion";
@@ -46,6 +46,9 @@ export default function ManagerSettingsPage() {
   const [addingCategory, setAddingCategory] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [settingsOpenId, setSettingsOpenId] = useState<string | null>(null);
+  // rounding in minutes per category (0 = no rounding); backend not connected yet
+  const [categoryRounding, setCategoryRounding] = useState<Record<string, number>>({});
 
   // Bulk assign state
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
@@ -549,37 +552,7 @@ export default function ManagerSettingsPage() {
                         </span>
                       </div>
 
-                      {/* Inline segmented view toggle */}
-                      <div className="mx-3 flex shrink-0 items-center rounded-lg border border-neutral-700 bg-neutral-800 p-0.5">
-                        <button
-                          disabled={updatingViewId === cat.id}
-                          onClick={() => {
-                            if (cat.dashboard_view !== 'weekly') void handleUpdateDashboardView(cat.id, 'weekly');
-                          }}
-                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                            cat.dashboard_view === 'weekly'
-                              ? "bg-neutral-600 text-neutral-100 shadow-sm"
-                              : "text-neutral-500 hover:text-neutral-300"
-                          }`}
-                        >
-                          Weekly Schedule
-                        </button>
-                        <button
-                          disabled={updatingViewId === cat.id}
-                          onClick={() => {
-                            if (cat.dashboard_view !== 'today_only') void handleUpdateDashboardView(cat.id, 'today_only');
-                          }}
-                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                            cat.dashboard_view === 'today_only'
-                              ? "bg-neutral-600 text-neutral-100 shadow-sm"
-                              : "text-neutral-500 hover:text-neutral-300"
-                          }`}
-                        >
-                          Clock In/Out
-                        </button>
-                      </div>
-
-                      {/* Rename + Delete actions */}
+                      {/* Rename + Delete + Settings actions */}
                       <div className="flex shrink-0 gap-2">
                         <button
                           onClick={() => { setRenamingId(cat.id); setRenameValue(cat.name); }}
@@ -587,6 +560,88 @@ export default function ManagerSettingsPage() {
                         >
                           <Pencil className="h-3 w-3" /> Rename
                         </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => setSettingsOpenId(settingsOpenId === cat.id ? null : cat.id)}
+                            className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs transition-colors ${
+                              settingsOpenId === cat.id
+                                ? "border-blue-700 bg-blue-950/50 text-blue-400"
+                                : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                            }`}
+                          >
+                            <Settings2 className="h-3 w-3" /> Settings
+                          </button>
+                          {settingsOpenId === cat.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setSettingsOpenId(null)}
+                              />
+                              <div className="absolute right-0 top-full z-20 mt-1.5 w-64 rounded-xl border border-neutral-700 bg-neutral-900 p-3 shadow-xl shadow-black/60">
+                                <p className="mb-2 text-xs font-medium text-neutral-400">Employee Dashboard View</p>
+                                <div className="flex rounded-lg border border-neutral-700 bg-neutral-800 p-0.5">
+                                  <button
+                                    disabled={updatingViewId === cat.id}
+                                    onClick={() => {
+                                      if (cat.dashboard_view !== 'weekly') void handleUpdateDashboardView(cat.id, 'weekly');
+                                    }}
+                                    className={`flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                      cat.dashboard_view === 'weekly'
+                                        ? "bg-neutral-600 text-neutral-100 shadow-sm"
+                                        : "text-neutral-500 hover:text-neutral-300"
+                                    }`}
+                                  >
+                                    Weekly
+                                  </button>
+                                  <button
+                                    disabled={updatingViewId === cat.id}
+                                    onClick={() => {
+                                      if (cat.dashboard_view !== 'today_only') void handleUpdateDashboardView(cat.id, 'today_only');
+                                    }}
+                                    className={`flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                      cat.dashboard_view === 'today_only'
+                                        ? "bg-neutral-600 text-neutral-100 shadow-sm"
+                                        : "text-neutral-500 hover:text-neutral-300"
+                                    }`}
+                                  >
+                                    Clock In/Out
+                                  </button>
+                                </div>
+
+                                {cat.dashboard_view === 'today_only' && (
+                                  <div className="mt-3 border-t border-neutral-800 pt-3">
+                                    <p className="mb-2 text-xs font-medium text-neutral-400">Clock-in Rounding</p>
+                                    <div className="grid grid-cols-5 gap-1">
+                                      {[0, 5, 10, 15, 30].map((mins) => {
+                                        const active = (categoryRounding[cat.id] ?? 0) === mins;
+                                        return (
+                                          <button
+                                            key={mins}
+                                            onClick={() => setCategoryRounding((prev) => ({ ...prev, [cat.id]: mins }))}
+                                            className={`rounded-md py-1 text-xs font-medium transition-colors ${
+                                              active
+                                                ? "bg-blue-600 text-white"
+                                                : "bg-neutral-800 text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300"
+                                            }`}
+                                          >
+                                            {mins === 0 ? "Off" : `${mins}m`}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    <p className="mt-2 text-xs text-neutral-600">
+                                      Rounds clock-in up to the next interval — e.g. 9:03 → 9:15 with 15m rounding.
+                                    </p>
+                                  </div>
+                                )}
+
+                                <p className="mt-2 text-xs text-neutral-600">
+                                  Controls what employees in this category see on their dashboard.
+                                </p>
+                              </div>
+                            </>
+                          )}
+                        </div>
                         <button
                           onClick={() => void handleDeleteCategory(cat.id, cat.name)}
                           className="flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs text-red-400 hover:border-red-900 hover:bg-red-900/20"
