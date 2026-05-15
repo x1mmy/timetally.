@@ -39,6 +39,7 @@ export interface EmployeeCategory {
   client_id: string;
   name: string;
   dashboard_view: 'weekly' | 'today_only';
+  clock_in_rounding_minutes: number;
   created_at: string;
 }
 

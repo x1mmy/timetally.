@@ -92,7 +92,7 @@ export default function FruitClockPage() {
     const res = await fetch("/api/client/timesheets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employeeId, workDate: today, startTime: `${clockState.startTime}:00`, endTime: `${now}:00` }),
+      body: JSON.stringify({ employeeId, workDate: today, endTime: `${now}:00` }),
     });
     if (!res.ok) {
       const json = await res.json() as { error?: string };

@@ -35,10 +35,10 @@ export async function PUT(
     const { supabase, clientId } = ctx;
     const { id } = await params;
 
-    const body = (await request.json()) as { name?: string; dashboardView?: string };
+    const body = (await request.json()) as { name?: string; dashboardView?: string; roundingMinutes?: number };
     const { name } = body;
 
-    const updatePayload: Record<string, string> = {};
+    const updatePayload: Record<string, string | number> = {};
 
     if (name !== undefined) {
       if (!name.trim()) {
@@ -58,6 +58,17 @@ export async function PUT(
         );
       }
       updatePayload.dashboard_view = body.dashboardView;
+    }
+
+    if (body.roundingMinutes !== undefined) {
+      const allowed = [0, 5, 10, 15, 30];
+      if (!allowed.includes(body.roundingMinutes)) {
+        return NextResponse.json(
+          { error: "roundingMinutes must be 0, 5, 10, 15, or 30" },
+          { status: 400 },
+        );
+      }
+      updatePayload.clock_in_rounding_minutes = body.roundingMinutes;
     }
 
     if (Object.keys(updatePayload).length === 0) {

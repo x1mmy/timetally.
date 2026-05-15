@@ -10,6 +10,21 @@ import { getSubdomainFromRequest } from "@/lib/subdomain";
 
 type SessionType = "manager" | "employee" | null;
 
+// Rounds a "HH:MM:SS" time string up to the next interval boundary.
+// e.g. "09:03:00" with 15 → "09:15:00". Already-on-boundary times are unchanged.
+function roundTime(time: string, intervalMinutes: number): string {
+  if (intervalMinutes === 0) return time;
+  const parts = time.split(":").map(Number);
+  const h = parts[0] ?? 0;
+  const m = parts[1] ?? 0;
+  const s = parts[2] ?? 0;
+  const totalMinutes = h * 60 + m;
+  const rounded = Math.ceil(totalMinutes / intervalMinutes) * intervalMinutes;
+  const rh = Math.floor(rounded / 60) % 24;
+  const rm = rounded % 60;
+  return `${String(rh).padStart(2, "0")}:${String(rm).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 function getClientSession(request: NextRequest): {
   type: SessionType;
   clientId: string | null;
@@ -166,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     const { data: employee } = await supabase
       .from("employees")
-      .select("client_id")
+      .select("client_id, category:employee_categories(clock_in_rounding_minutes)")
       .eq("id", employeeId)
       .single();
 
@@ -190,6 +205,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const roundingMinutes =
+      (employee.category as { clock_in_rounding_minutes?: number } | null)
+        ?.clock_in_rounding_minutes ?? 0;
+
     const { data: existing } = await supabase
       .from("timesheets")
       .select("id, start_time, end_time")
@@ -199,7 +218,9 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       const newStartTime = startTime ?? existing.start_time;
-      const newEndTime = endTime ?? existing.end_time;
+      const newEndTime = typeof endTime === "string"
+        ? roundTime(endTime, roundingMinutes)
+        : (endTime ?? existing.end_time);
       const timesChanged =
         newStartTime !== existing.start_time || newEndTime !== existing.end_time;
 
@@ -248,14 +269,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const roundedStartTime = roundTime(startTime, roundingMinutes);
+
     const { data: timesheet, error } = await supabase
       .from("timesheets")
       .insert({
         employee_id: employeeId,
         client_id: employee.client_id,
         work_date: workDate,
-        start_time: startTime,
-        end_time: endTime ?? null,
+        start_time: roundedStartTime,
+        end_time: typeof endTime === "string" ? roundTime(endTime, roundingMinutes) : null,
         notes: notes ?? null,
       })
       .select()
