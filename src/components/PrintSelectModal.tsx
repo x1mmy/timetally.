@@ -4,7 +4,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { printWeekSummary, printDayBreakdown } from "@/lib/csvExport";
+import { printWeekSummary, printDayBreakdown, printClockTimesReport } from "@/lib/csvExport";
+import type { ClockTimesEntry } from "@/lib/csvExport";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { format, getDay } from "date-fns";
 import { isPublicHoliday } from "@/lib/holidays";
@@ -36,7 +37,7 @@ export function PrintSelectModal({
   weekStart,
   weekEnd,
 }: PrintSelectModalProps) {
-  const [selected, setSelected] = useState<"week-summary" | "day-breakdown" | null>(null);
+  const [selected, setSelected] = useState<"week-summary" | "day-breakdown" | "clock-times" | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const categories = Array.from(
@@ -80,7 +81,7 @@ export function PrintSelectModal({
       }).filter((e) => e.totalHours > 0);
 
       printWeekSummary({ employees: empData, weekEndingDate: weekEnd });
-    } else {
+    } else if (selected === "day-breakdown") {
       const empData = filteredEmployees.map((emp) => {
         const empTs = timesheets.filter((ts) => ts.employee_id === emp.id);
         const dailyHours: Record<string, number> = {};
@@ -92,6 +93,24 @@ export function PrintSelectModal({
       }).filter((e) => Object.keys(e.dailyHours).length > 0);
 
       printDayBreakdown({ employees: empData, weekStart, weekEnd });
+    } else {
+      const empById = new Map(filteredEmployees.map((e) => [e.id, e]));
+      const entries: ClockTimesEntry[] = timesheets
+        .filter((ts) => empById.has(ts.employee_id))
+        .map((ts) => {
+          const emp = empById.get(ts.employee_id)!;
+          return {
+            date: format(new Date(ts.work_date), "yyyy-MM-dd"),
+            firstName: emp.first_name,
+            lastName: emp.last_name,
+            categoryName: emp.category?.name ?? "",
+            startTime: ts.start_time,
+            endTime: ts.end_time ?? null,
+            totalHours: parseFloat(ts.total_hours.toString()),
+          };
+        });
+
+      printClockTimesReport({ entries, startDate: weekStart, endDate: weekEnd });
     }
 
     onClose();
@@ -123,7 +142,7 @@ export function PrintSelectModal({
             </div>
 
             <div className="space-y-3">
-              {(["week-summary", "day-breakdown"] as const).map((opt) => (
+              {(["week-summary", "day-breakdown", "clock-times"] as const).map((opt) => (
                 <button
                   key={opt}
                   onClick={() => setSelected(opt)}
@@ -136,12 +155,14 @@ export function PrintSelectModal({
                   <FileText className="h-5 w-5 shrink-0 text-primary" />
                   <div>
                     <p className="font-medium">
-                      {opt === "week-summary" ? "Week Summary" : "Day Breakdown"}
+                      {opt === "week-summary" ? "Week Summary" : opt === "day-breakdown" ? "Day Breakdown" : "Clock Times"}
                     </p>
                     <p className="text-xs text-neutral-400">
                       {opt === "week-summary"
                         ? "One row per employee — weekly hour totals"
-                        : "One row per employee — hours per day across the week"}
+                        : opt === "day-breakdown"
+                          ? "One row per employee — hours per day across the week"
+                          : "One row per shift — exact clock-in and clock-out times"}
                     </p>
                   </div>
                 </button>
