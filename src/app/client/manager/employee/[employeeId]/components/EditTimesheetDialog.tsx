@@ -143,9 +143,9 @@ export function EditTimesheetDialog({
       <DialogContent className="border-neutral-700 bg-neutral-800 text-white sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Edit Timesheet</DialogTitle>
+            <DialogTitle>{initialStartTime ? "Edit Timesheet" : "Add Hours"}</DialogTitle>
             <DialogDescription className="text-neutral-400">
-              Update start and end times for {new Date(workDate).toLocaleDateString()}
+              {initialStartTime ? "Update" : "Add"} start and end times for {new Date(workDate).toLocaleDateString()}
             </DialogDescription>
           </DialogHeader>
 
@@ -195,7 +195,7 @@ export function EditTimesheetDialog({
                   Updating...
                 </>
               ) : (
-                "Save Changes"
+                initialStartTime ? "Save Changes" : "Add Hours"
               )}
             </Button>
           </DialogFooter>
