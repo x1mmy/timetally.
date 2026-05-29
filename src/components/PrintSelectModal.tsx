@@ -104,8 +104,8 @@ export function PrintSelectModal({
             firstName: emp.first_name,
             lastName: emp.last_name,
             categoryName: emp.category?.name ?? "",
-            startTime: ts.start_time,
-            endTime: ts.end_time ?? null,
+            startTime: ts.original_start_time ?? ts.start_time,
+            endTime: ts.original_end_time ?? ts.end_time ?? null,
             totalHours: parseFloat(ts.total_hours.toString()),
           };
         });

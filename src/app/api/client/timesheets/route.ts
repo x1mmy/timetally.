@@ -279,6 +279,8 @@ export async function POST(request: NextRequest) {
         work_date: workDate,
         start_time: roundedStartTime,
         end_time: typeof endTime === "string" ? roundTime(endTime, roundingMinutes) : null,
+        original_start_time: startTime,
+        original_end_time: typeof endTime === "string" ? endTime : null,
         notes: notes ?? null,
       })
       .select()
