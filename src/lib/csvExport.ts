@@ -572,7 +572,7 @@ export function printClockTimesReport({ entries, startDate, endDate }: ClockTime
 
   const subtitle = doc.createElement("p");
   subtitle.className = "subtitle";
-  subtitle.textContent = "Times shown are as recorded (after any rounding).";
+  subtitle.textContent = "Clock-in/out as punched where recorded; older entries may show rounded times.";
   doc.body.appendChild(subtitle);
 
   if (entries.length === 0) {
