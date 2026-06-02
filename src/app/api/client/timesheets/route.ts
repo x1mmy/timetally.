@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     const { data: existing } = await supabase
       .from("timesheets")
-      .select("id, start_time, end_time")
+      .select("id, start_time, end_time, original_end_time")
       .eq("employee_id", employeeId)
       .eq("work_date", workDate)
       .single();
@@ -229,6 +229,10 @@ export async function POST(request: NextRequest) {
         end_time: newEndTime,
         notes: notes ?? null,
       };
+      // Capture original end time on first clock-out only; don't overwrite on manager edits
+      if (existing.end_time === null && typeof endTime === "string") {
+        updateData.original_end_time = endTime;
+      }
       if (timesChanged) updateData.break_minutes = null;
 
       const { data: timesheet, error } = await supabase
