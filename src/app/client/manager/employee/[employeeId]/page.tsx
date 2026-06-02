@@ -366,7 +366,19 @@ function EmployeeDetailContent() {
                         </motion.div>
                       </div>
                     ) : (
-                      <p className="text-sm text-neutral-500">No hours logged</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-neutral-500">No hours logged</p>
+                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingDay(day)}
+                            className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-green-500/50 hover:bg-green-500/10 hover:text-green-400"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </motion.div>
+                      </div>
                     )}
                   </div>
 

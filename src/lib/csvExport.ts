@@ -510,6 +510,140 @@ export function printDayBreakdown({ employees, weekStart, weekEnd }: DayBreakdow
   setTimeout(() => { win.focus(); win.print(); win.close(); }, 300);
 }
 
+// ─── Clock Times Report ───────────────────────────────────────────────────────
+
+export interface ClockTimesEntry {
+  date: string; // ISO yyyy-MM-dd
+  firstName: string;
+  lastName: string;
+  categoryName: string;
+  startTime: string; // HH:MM:SS
+  endTime: string | null;
+  totalHours: number;
+}
+
+interface ClockTimesOptions {
+  entries: ClockTimesEntry[];
+  startDate: Date;
+  endDate: Date;
+}
+
+function formatTime12hr(time: string | null): string {
+  if (!time) return "—";
+  const parts = time.split(":").map(Number);
+  const h = parts[0] ?? 0;
+  const m = parts[1] ?? 0;
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+export function printClockTimesReport({ entries, startDate, endDate }: ClockTimesOptions): void {
+  const startLabel = formatDateAU(startDate);
+  const endLabel = formatDateAU(endDate);
+  const isSingleDay = startLabel === endLabel;
+  const title = isSingleDay ? `Clock Times - ${startLabel}` : `Clock Times - ${startLabel} to ${endLabel}`;
+
+  const win = window.open("", "_blank", "width=1000,height=700");
+  if (!win) { alert("Pop-ups are blocked. Please allow pop-ups for this site to use the print function."); return; }
+
+  const doc = win.document;
+  doc.title = title;
+
+  const style = doc.createElement("style");
+  style.textContent = `
+    @media print { @page { margin: 1cm; size: portrait; } body { margin: 0; } }
+    body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
+    h1 { font-size: 18px; margin-bottom: 4px; }
+    p.subtitle { font-size: 13px; color: #555; margin: 0 0 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #ccc; padding: 7px 10px; text-align: left; font-size: 13px; }
+    th { background-color: #f0f0f0; font-weight: bold; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .center { text-align: center; }
+    .cat-header td { background-color: #e0e8f0; font-weight: bold; font-size: 13px; }
+    .no-data { text-align: center; color: #999; padding: 20px; }
+  `;
+  doc.head.appendChild(style);
+
+  const h1 = doc.createElement("h1");
+  h1.textContent = title;
+  doc.body.appendChild(h1);
+
+  const subtitle = doc.createElement("p");
+  subtitle.className = "subtitle";
+  subtitle.textContent = "Clock-in/out as punched where recorded; older entries may show rounded times.";
+  doc.body.appendChild(subtitle);
+
+  if (entries.length === 0) {
+    const p = doc.createElement("p");
+    p.className = "no-data";
+    p.textContent = "No timesheet entries for this period.";
+    doc.body.appendChild(p);
+    setTimeout(() => { win.focus(); win.print(); win.close(); }, 300);
+    return;
+  }
+
+  // Sort: category → employee last name → date
+  const sorted = [...entries].sort((a, b) => {
+    const catCmp = a.categoryName.localeCompare(b.categoryName);
+    if (catCmp !== 0) return catCmp;
+    const nameCmp = `${a.lastName}${a.firstName}`.localeCompare(`${b.lastName}${b.firstName}`);
+    if (nameCmp !== 0) return nameCmp;
+    return a.date.localeCompare(b.date);
+  });
+
+  const table = doc.createElement("table");
+  const thead = doc.createElement("thead");
+  const headerRow = doc.createElement("tr");
+  for (const label of ["Date", "Employee", "Category", "Clock In", "Clock Out", "Hours"]) {
+    const th = doc.createElement("th");
+    th.textContent = label;
+    if (label === "Clock In" || label === "Clock Out" || label === "Hours") th.className = "center";
+    headerRow.appendChild(th);
+  }
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  const tbody = doc.createElement("tbody");
+  let lastCat = "";
+  for (const entry of sorted) {
+    if (entry.categoryName !== lastCat) {
+      lastCat = entry.categoryName;
+      const catRow = doc.createElement("tr");
+      catRow.className = "cat-header";
+      const catCell = doc.createElement("td");
+      catCell.colSpan = 6;
+      catCell.textContent = entry.categoryName || "Uncategorised";
+      catRow.appendChild(catCell);
+      tbody.appendChild(catRow);
+    }
+
+    const tr = doc.createElement("tr");
+    const addCell = (text: string, center = false) => {
+      const td = doc.createElement("td");
+      if (center) td.className = "center";
+      td.textContent = text;
+      tr.appendChild(td);
+    };
+
+    const [y, mo, d] = entry.date.split("-");
+    const dateLabel = `${d}/${mo}/${y}`;
+
+    addCell(dateLabel ?? entry.date);
+    addCell(`${entry.firstName} ${entry.lastName}`);
+    addCell(entry.categoryName || "Uncategorised");
+    addCell(formatTime12hr(entry.startTime), true);
+    addCell(formatTime12hr(entry.endTime), true);
+    addCell(entry.endTime ? entry.totalHours.toFixed(2) : "—", true);
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  doc.body.appendChild(table);
+
+  setTimeout(() => { win.focus(); win.print(); win.close(); }, 300);
+}
+
 // ─── Date Range Breakdown ─────────────────────────────────────────────────────
 
 interface DateRangeOptions {

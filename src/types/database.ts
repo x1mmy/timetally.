@@ -81,6 +81,8 @@ export interface Timesheet {
   end_time: string | null; // HH:MM:SS, null if employee has not yet clocked out
   break_minutes: number;
   total_hours: number;
+  original_start_time: string | null;
+  original_end_time: string | null;
   notes?: string;
   submitted_at: string;
   created_at: string;
