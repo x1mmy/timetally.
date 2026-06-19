@@ -40,6 +40,7 @@ export interface EmployeeCategory {
   name: string;
   dashboard_view: 'weekly' | 'today_only';
   clock_in_rounding_minutes: number;
+  enable_break_tracking: boolean;
   created_at: string;
 }
 
@@ -83,6 +84,8 @@ export interface Timesheet {
   total_hours: number;
   original_start_time: string | null;
   original_end_time: string | null;
+  on_break: boolean;
+  break_start_time: string | null; // HH:MM:SS, set when employee clocks out for a break
   notes?: string;
   submitted_at: string;
   created_at: string;

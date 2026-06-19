@@ -49,6 +49,7 @@ export default function ManagerSettingsPage() {
   const [settingsOpenId, setSettingsOpenId] = useState<string | null>(null);
   // rounding in minutes per category (0 = no rounding); backend not connected yet
   const [categoryRounding, setCategoryRounding] = useState<Record<string, number>>({});
+  const [categoryBreakTracking, setCategoryBreakTracking] = useState<Record<string, boolean>>({});
 
   // Bulk assign state
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
@@ -95,12 +96,15 @@ export default function ManagerSettingsPage() {
         setCategories(data.categories ?? []);
         const counts: Record<string, number> = {};
         const rounding: Record<string, number> = {};
+        const breakTracking: Record<string, boolean> = {};
         for (const cat of data.categories ?? []) {
           counts[cat.id] = cat.employee_count;
           rounding[cat.id] = cat.clock_in_rounding_minutes;
+          breakTracking[cat.id] = cat.enable_break_tracking;
         }
         setCategoryEmployeeCounts(counts);
         setCategoryRounding(rounding);
+        setCategoryBreakTracking(breakTracking);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -319,6 +323,28 @@ export default function ManagerSettingsPage() {
       }
     } catch (error) {
       console.error("Error updating rounding:", error);
+      await fetchCategories();
+    }
+  };
+
+  /**
+   * Toggle break tracking for a category (auto-saves)
+   */
+  const handleUpdateBreakTracking = async (id: string, enabled: boolean) => {
+    setCategoryBreakTracking((prev) => ({ ...prev, [id]: enabled }));
+    try {
+      const response = await fetch(`/api/client/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enableBreakTracking: enabled }),
+      });
+      if (!response.ok) {
+        const data = (await response.json()) as { error?: string };
+        alert(data.error ?? "Failed to update break tracking");
+        await fetchCategories();
+      }
+    } catch (error) {
+      console.error("Error updating break tracking:", error);
       await fetchCategories();
     }
   };
@@ -669,6 +695,43 @@ export default function ManagerSettingsPage() {
                                         </p>
                                       );
                                     })()}
+                                  </div>
+                                )}
+
+                                {cat.dashboard_view === 'today_only' && (
+                                  <div className="mt-3 border-t border-neutral-800 pt-3">
+                                    <p className="mb-2 text-xs font-medium text-neutral-400">Break Tracking</p>
+                                    <div className="flex rounded-lg border border-neutral-700 bg-neutral-800 p-0.5">
+                                      <button
+                                        onClick={() => {
+                                          if (categoryBreakTracking[cat.id]) void handleUpdateBreakTracking(cat.id, false);
+                                        }}
+                                        className={`flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                          !categoryBreakTracking[cat.id]
+                                            ? "bg-neutral-600 text-neutral-100 shadow-sm"
+                                            : "text-neutral-500 hover:text-neutral-300"
+                                        }`}
+                                      >
+                                        Off
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (!categoryBreakTracking[cat.id]) void handleUpdateBreakTracking(cat.id, true);
+                                        }}
+                                        className={`flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                          categoryBreakTracking[cat.id]
+                                            ? "bg-amber-600 text-white shadow-sm"
+                                            : "text-neutral-500 hover:text-neutral-300"
+                                        }`}
+                                      >
+                                        On
+                                      </button>
+                                    </div>
+                                    <p className="mt-2 text-xs text-neutral-600">
+                                      {categoryBreakTracking[cat.id]
+                                        ? "Employees can clock out for a break and back in during their shift."
+                                        : "Breaks are deducted automatically based on break rules."}
+                                    </p>
                                   </div>
                                 )}
 

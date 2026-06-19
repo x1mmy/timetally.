@@ -154,8 +154,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    const { employeeId, workDate, startTime, endTime, notes } =
-      await request.json();
+    const { employeeId, workDate, startTime, endTime, notes, action } =
+      await request.json() as {
+        employeeId?: string;
+        workDate?: string;
+        startTime?: string;
+        endTime?: string;
+        notes?: string;
+        action?: "breakStart" | "breakEnd";
+      };
 
     if (!employeeId || !workDate) {
       return NextResponse.json(
@@ -164,7 +171,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!startTime && !endTime) {
+    if (!action && !startTime && !endTime) {
       return NextResponse.json(
         { error: "Please provide at least a start time or end time" },
         { status: 400 },
@@ -181,7 +188,7 @@ export async function POST(request: NextRequest) {
 
     const { data: employee } = await supabase
       .from("employees")
-      .select("client_id, category:employee_categories(clock_in_rounding_minutes)")
+      .select("client_id, category:employee_categories(clock_in_rounding_minutes, enable_break_tracking)")
       .eq("id", employeeId)
       .single();
 
@@ -205,18 +212,78 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const roundingMinutes =
-      (employee.category as { clock_in_rounding_minutes?: number } | null)
-        ?.clock_in_rounding_minutes ?? 0;
+    const categoryData = employee.category as { clock_in_rounding_minutes?: number; enable_break_tracking?: boolean } | null;
+    const roundingMinutes = categoryData?.clock_in_rounding_minutes ?? 0;
+    const enableBreakTracking = categoryData?.enable_break_tracking ?? false;
 
     const { data: existing } = await supabase
       .from("timesheets")
-      .select("id, start_time, end_time, original_end_time")
+      .select("id, start_time, end_time, original_end_time, on_break, break_start_time, break_minutes")
       .eq("employee_id", employeeId)
       .eq("work_date", workDate)
       .single();
 
+    // Handle break actions before the normal clock-in/out flow
+    if (action === "breakStart" || action === "breakEnd") {
+      if (!existing) {
+        return NextResponse.json({ error: "No active timesheet found for today" }, { status: 404 });
+      }
+      if (existing.end_time !== null) {
+        return NextResponse.json({ error: "Shift has already ended" }, { status: 400 });
+      }
+      if (!enableBreakTracking) {
+        return NextResponse.json({ error: "Break tracking is not enabled for this category" }, { status: 400 });
+      }
+      // Only employees can trigger break actions
+      if (session.type !== "employee") {
+        return NextResponse.json({ error: "Only employees can clock out for breaks" }, { status: 403 });
+      }
+
+      if (action === "breakStart") {
+        if (existing.on_break) {
+          return NextResponse.json({ error: "Already on break" }, { status: 400 });
+        }
+        const now = new Date();
+        const breakStartTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+        const { data: timesheet, error } = await supabase
+          .from("timesheets")
+          .update({ on_break: true, break_start_time: breakStartTime })
+          .eq("id", existing.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return NextResponse.json({ timesheet }, { status: 200 });
+      }
+
+      // breakEnd
+      if (!existing.on_break || !existing.break_start_time) {
+        return NextResponse.json({ error: "Not currently on break" }, { status: 400 });
+      }
+      const [bh, bm, bs] = (existing.break_start_time as string).split(":").map(Number);
+      const breakStartSeconds = (bh ?? 0) * 3600 + (bm ?? 0) * 60 + (bs ?? 0);
+      const now = new Date();
+      const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      let durationSeconds = nowSeconds - breakStartSeconds;
+      if (durationSeconds < 0) durationSeconds += 24 * 3600;
+      const durationMinutes = Math.round(durationSeconds / 60);
+      const newBreakMinutes = ((existing.break_minutes as number) ?? 0) + durationMinutes;
+
+      const { data: timesheet, error } = await supabase
+        .from("timesheets")
+        .update({ on_break: false, break_start_time: null, break_minutes: newBreakMinutes })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return NextResponse.json({ timesheet }, { status: 200 });
+    }
+
     if (existing) {
+      // Block clock-out while on break
+      if (typeof endTime === "string" && (existing.on_break as boolean)) {
+        return NextResponse.json({ error: "Please end your break before clocking out" }, { status: 400 });
+      }
+
       const newStartTime = startTime ?? existing.start_time;
       const newEndTime = typeof endTime === "string"
         ? roundTime(endTime, roundingMinutes)
@@ -233,7 +300,8 @@ export async function POST(request: NextRequest) {
       if (existing.end_time === null && typeof endTime === "string") {
         updateData.original_end_time = endTime;
       }
-      if (timesChanged) updateData.break_minutes = null;
+      // Only reset break_minutes for trigger recalculation when no breaks have been manually tracked
+      if (timesChanged && ((existing.break_minutes as number) ?? 0) === 0) updateData.break_minutes = null;
 
       const { data: timesheet, error } = await supabase
         .from("timesheets")

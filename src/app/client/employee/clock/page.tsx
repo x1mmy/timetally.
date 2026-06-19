@@ -10,16 +10,19 @@ import { Button } from "@/components/ui/button";
 interface ClockState {
   startTime: string | null; // HH:MM from saved timesheet
   endTime: string | null;
+  onBreak: boolean;
+  breakStartTime: string | null; // HH:MM when break started
 }
 
 export default function FruitClockPage() {
   const router = useRouter();
   const [employeeName, setEmployeeName] = useState("Employee");
   const [employeeId, setEmployeeId] = useState("");
-  const [clockState, setClockState] = useState<ClockState>({ startTime: null, endTime: null });
+  const [clockState, setClockState] = useState<ClockState>({ startTime: null, endTime: null, onBreak: false, breakStartTime: null });
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [enableBreakTracking, setEnableBreakTracking] = useState(false);
 
   // Live clock tick
   useEffect(() => {
@@ -31,7 +34,7 @@ export default function FruitClockPage() {
   const loadData = useCallback(async () => {
     const meRes = await fetch("/api/client/auth/employee/me");
     const meJson = await meRes.json() as {
-      employee?: { id: string; firstName?: string; lastName?: string };
+      employee?: { id: string; firstName?: string; lastName?: string; enableBreakTracking?: boolean };
     };
     if (!meRes.ok || !meJson.employee) {
       router.push("/client/employee/login");
@@ -40,6 +43,7 @@ export default function FruitClockPage() {
     const emp = meJson.employee;
     setEmployeeName(`${emp.firstName ?? ""} ${emp.lastName ?? ""}`.trim() || "Employee");
     setEmployeeId(emp.id);
+    setEnableBreakTracking(emp.enableBreakTracking ?? false);
 
     const today = format(new Date(), "yyyy-MM-dd");
     const tsRes = await fetch(`/api/client/timesheets?employeeId=${emp.id}&startDate=${today}&endDate=${today}`);
@@ -47,12 +51,14 @@ export default function FruitClockPage() {
       // silently accept "not clocked in" state on fetch failure
       return;
     }
-    const tsJson = await tsRes.json() as { timesheets?: { start_time: string; end_time: string }[] };
+    const tsJson = await tsRes.json() as { timesheets?: { start_time: string; end_time: string | null; on_break?: boolean; break_start_time?: string | null }[] };
     const ts = tsJson.timesheets?.[0];
     if (ts) {
       setClockState({
         startTime: ts.start_time?.slice(0, 5) ?? null,
         endTime: ts.end_time?.slice(0, 5) ?? null,
+        onBreak: ts.on_break ?? false,
+        breakStartTime: ts.break_start_time?.slice(0, 5) ?? null,
       });
     }
   }, [router]);
@@ -74,7 +80,7 @@ export default function FruitClockPage() {
       const json = await res.json() as { error?: string };
       setError(json.error ?? "Failed to clock in");
     } else {
-      setClockState({ startTime: now, endTime: null });
+      setClockState({ startTime: now, endTime: null, onBreak: false, breakStartTime: null });
     }
     setLoading(false);
   };
@@ -103,13 +109,53 @@ export default function FruitClockPage() {
     setLoading(false);
   };
 
+  const handleBreakStart = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError("");
+    const today = format(new Date(), "yyyy-MM-dd");
+    const res = await fetch("/api/client/timesheets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId, workDate: today, action: "breakStart" }),
+    });
+    if (!res.ok) {
+      const json = await res.json() as { error?: string };
+      setError(json.error ?? "Failed to start break");
+    } else {
+      const now = format(new Date(), "HH:mm");
+      setClockState((prev) => ({ ...prev, onBreak: true, breakStartTime: now }));
+    }
+    setLoading(false);
+  };
+
+  const handleBreakEnd = async () => {
+    if (loading) return;
+    setLoading(true);
+    setError("");
+    const today = format(new Date(), "yyyy-MM-dd");
+    const res = await fetch("/api/client/timesheets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeId, workDate: today, action: "breakEnd" }),
+    });
+    if (!res.ok) {
+      const json = await res.json() as { error?: string };
+      setError(json.error ?? "Failed to end break");
+    } else {
+      setClockState((prev) => ({ ...prev, onBreak: false, breakStartTime: null }));
+    }
+    setLoading(false);
+  };
+
   const handleLogout = async () => {
     await fetch("/api/client/auth/employee", { method: "DELETE" });
     router.push("/client");
   };
 
   const isComplete = clockState.startTime !== null && clockState.endTime !== null;
-  const isClockedIn = clockState.startTime !== null && clockState.endTime === null;
+  const isOnBreak = clockState.startTime !== null && clockState.endTime === null && clockState.onBreak;
+  const isClockedIn = clockState.startTime !== null && clockState.endTime === null && !clockState.onBreak;
   const isNotClockedIn = clockState.startTime === null;
 
   const formatAmPm = (time: string | null) => {
@@ -179,12 +225,38 @@ export default function FruitClockPage() {
               <p className="text-sm text-neutral-400">Clocked in at</p>
               <p className="text-3xl font-bold text-green-400">{formatAmPm(clockState.startTime)}</p>
             </div>
+            {enableBreakTracking && (
+              <Button
+                onClick={handleBreakStart}
+                disabled={loading}
+                className="h-16 w-full rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-lg font-bold shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 disabled:opacity-50"
+              >
+                {loading ? <Clock className="animate-spin h-6 w-6" /> : "Take a Break"}
+              </Button>
+            )}
             <Button
               onClick={handleClockOut}
               disabled={loading}
               className="h-24 w-full rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 text-2xl font-bold shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40 disabled:opacity-50"
             >
               {loading ? <Clock className="animate-spin h-8 w-8" /> : "Clock Out"}
+            </Button>
+          </motion.div>
+        )}
+
+        {/* State: on break */}
+        {isOnBreak && (
+          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="w-full space-y-4">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
+              <p className="text-sm text-neutral-400">On break since</p>
+              <p className="text-3xl font-bold text-amber-400">{formatAmPm(clockState.breakStartTime)}</p>
+            </div>
+            <Button
+              onClick={handleBreakEnd}
+              disabled={loading}
+              className="h-24 w-full rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-2xl font-bold shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 disabled:opacity-50"
+            >
+              {loading ? <Clock className="animate-spin h-8 w-8" /> : "End Break"}
             </Button>
           </motion.div>
         )}
