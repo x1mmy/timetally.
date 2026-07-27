@@ -1,6 +1,6 @@
 import "~/styles/globals.css";
 
-import { type Metadata } from "next";
+import { type Metadata, type Viewport } from "next";
 import localFont from "next/font/local";
 
 import { TRPCReactProvider } from "~/trpc/react";
@@ -13,6 +13,11 @@ export const metadata: Metadata = {
     { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
     { rel: "icon", url: "/favicon.ico", sizes: "any" }, // Fallback
   ],
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 const satoshi = localFont({
