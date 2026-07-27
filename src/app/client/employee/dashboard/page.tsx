@@ -12,7 +12,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { TimePicker } from "@/components/TimePicker";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, LogOut, Clock, CheckCircle2, Calendar, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  Trash2,
+} from "lucide-react";
 import {
   format,
   addWeeks,
@@ -24,7 +32,8 @@ import {
 import { useRouter } from "next/navigation";
 import type { Timesheet } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
-import { motion, AnimatePresence } from "framer-motion";
+import { LazyMotion, m, AnimatePresence } from "framer-motion";
+import { loadDomAnimation } from "@/lib/motion-features";
 
 interface DayEntry {
   date: Date;
@@ -267,7 +276,10 @@ export default function EmployeeDashboardPage() {
       });
       const json: unknown = await response.json();
       const hasError = (v: unknown): v is { error: string } =>
-        typeof v === "object" && v !== null && "error" in v && typeof (v as Record<string, unknown>).error === "string";
+        typeof v === "object" &&
+        v !== null &&
+        "error" in v &&
+        typeof (v as Record<string, unknown>).error === "string";
       if (!response.ok) {
         setError(hasError(json) ? json.error : "Failed to remove entry");
         return;
@@ -307,295 +319,303 @@ export default function EmployeeDashboardPage() {
     .reduce((sum, ts) => sum + parseFloat(ts.total_hours.toString()), 0);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-      {/* Animated Background - Mobile Optimized */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-0 top-20 h-64 w-64 animate-pulse rounded-full bg-blue-500/5 blur-3xl md:h-80 md:w-80" />
-        <div className="absolute bottom-20 right-0 h-64 w-64 animate-pulse rounded-full bg-blue-400/5 blur-3xl md:h-80 md:w-80" />
-      </div>
-
-      {/* Header */}
-      <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100 }}
-        className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-lg"
-      >
-        <div className="container mx-auto px-4 py-4 md:px-6 md:py-6">
-          <div className="flex items-center justify-between">
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
-              <h1 className="text-2xl font-bold md:text-3xl">
-                Welcome,{" "}
-                <span className="text-primary">{employeeName}</span>
-              </h1>
-              <p className="mt-1 text-sm text-neutral-400 md:text-base">
-                Enter your hours for the week
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center gap-2"
-            >
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 rounded-xl border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800 md:px-4"
-              >
-                <LogOut className="h-4 w-4 md:h-5 md:w-5" />
-                <span className="hidden md:inline">Logout</span>
-              </button>
-            </motion.div>
-          </div>
+    <LazyMotion features={loadDomAnimation}>
+      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+        {/* Animated Background - Mobile Optimized */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-20 left-0 h-64 w-64 animate-pulse rounded-full bg-blue-500/5 blur-3xl md:h-80 md:w-80" />
+          <div className="absolute right-0 bottom-20 h-64 w-64 animate-pulse rounded-full bg-blue-400/5 blur-3xl md:h-80 md:w-80" />
         </div>
-      </motion.header>
 
-      {/* Main Content */}
-      <main className="container relative mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8">
-        {/* Week Navigation */}
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.3, type: "spring" }}
-          className="mb-6 overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-neutral-900/90 to-neutral-900/50 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-sm md:p-6"
+        {/* Header */}
+        <m.header
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 100 }}
+          className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-lg"
         >
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigateWeek("prev")}
-              className="flex items-center gap-1 rounded-xl bg-neutral-800/80 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-700 active:scale-95 md:gap-2 md:px-4 md:text-base"
-            >
-              <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
-              <span className="hidden md:inline">Previous</span>
-            </motion.button>
-
-            <div className="flex flex-col items-center gap-1">
-              <div className="flex items-center gap-2 text-neutral-400">
-                <Calendar className="h-4 w-4" />
-              </div>
-              <h2 className="text-base font-semibold md:text-xl">
-                {format(weekStart, "d MMM")} - {format(weekEnd, "d MMM yyyy")}
-              </h2>
-            </div>
-
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigateWeek("next")}
-              className="flex items-center gap-1 rounded-xl bg-neutral-800/80 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-700 active:scale-95 md:gap-2 md:px-4 md:text-base"
-            >
-              <span className="hidden md:inline">Next</span>
-              <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
-            </motion.button>
-          </div>
-
-          {/* Total Hours */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="flex justify-center"
-          >
-            <div className="relative overflow-hidden rounded-full bg-gradient-to-r from-primary to-blue-500 px-6 py-3 shadow-lg shadow-primary/30 md:px-8 md:py-4">
-              <div className="absolute inset-0 animate-pulse bg-white/10" />
-              <div className="relative flex items-center gap-2">
-                <Clock className="h-5 w-5 md:h-6 md:w-6" />
-                <p className="text-base font-bold md:text-lg">
-                  Total: {formatHoursAndMinutes(weeklyHours)}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        {/* Success/Error Messages */}
-        <AnimatePresence>
-          {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="mb-4 flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400 backdrop-blur-sm"
-            >
-              <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-              <span>{success}</span>
-            </motion.div>
-          )}
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400 backdrop-blur-sm"
-            >
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Days List */}
-        <div className="space-y-3 md:space-y-4">
-          {weekDays.map((day, index) => {
-            const dateStr = format(day.date, "yyyy-MM-dd");
-            const isLoading = loading === dateStr;
-            const isDeleting = deletingDate === dateStr;
-            const hasTime = day.startTime || day.endTime;
-            const isTodayDay = isToday(day.date);
-            const justSaved = lastSavedDate === dateStr;
-            const hasSavedEntry = timesheets.some(
-              (ts) => format(new Date(ts.work_date), "yyyy-MM-dd") === dateStr,
-            );
-
-            return (
-              <motion.div
-                key={dateStr}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                whileHover={{ scale: 1.01 }}
-                className={`group rounded-xl border p-4 backdrop-blur-sm transition-all md:p-6 ${
-                  justSaved
-                    ? "border-green-500/60 bg-green-500/5 shadow-lg shadow-green-500/10 ring-2 ring-green-400/30"
-                    : isTodayDay
-                      ? "border-primary/50 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 shadow-md shadow-primary/10"
-                      : "border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
-                }`}
+          <div className="container mx-auto px-4 py-4 md:px-6 md:py-6">
+            <div className="flex items-center justify-between">
+              <m.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
               >
-                <div className="flex items-start gap-3 md:gap-6">
-                  {/* Day Number Badge */}
-                  <motion.div
-                    whileHover={{ rotate: 5 }}
-                    className={`flex min-w-[60px] flex-col items-center justify-center rounded-xl px-3 py-2 shadow-lg transition-all md:min-w-[70px] md:px-4 ${
-                      hasTime
-                        ? "bg-linear-to-br from-primary to-blue-500 text-white shadow-primary/30"
-                        : isTodayDay
-                          ? "bg-neutral-700/80 text-white ring-2 ring-primary/60"
-                          : "bg-neutral-800/80 text-neutral-400"
-                    }`}
-                  >
-                    <div className="text-2xl font-bold md:text-3xl">
-                      {day.dayNumber}
-                    </div>
-                    <div className="text-xs uppercase tracking-wide opacity-80">
-                      {day.monthName}
-                    </div>
-                  </motion.div>
+                <h1 className="text-2xl font-bold md:text-3xl">
+                  Welcome, <span className="text-primary">{employeeName}</span>
+                </h1>
+                <p className="mt-1 text-sm text-neutral-400 md:text-base">
+                  Enter your hours for the week
+                </p>
+              </m.div>
 
-                  {/* Day Info and Times */}
-                  <div className="flex-1">
-                    <div className="mb-3 md:mb-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold md:text-xl">
-                          {day.dayName}
-                        </h3>
-                        {isTodayDay && (
-                          <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-white shadow-sm shadow-primary/50">
-                            Today
-                          </span>
+              <m.div
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-2"
+              >
+                <button
+                  onClick={handleLogout}
+                  className="hover:border-primary/50 flex items-center gap-2 rounded-xl border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-800 md:px-4"
+                >
+                  <LogOut className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="hidden md:inline">Logout</span>
+                </button>
+              </m.div>
+            </div>
+          </div>
+        </m.header>
+
+        {/* Main Content */}
+        <main className="relative container mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8">
+          {/* Week Navigation */}
+          <m.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.3, type: "spring" }}
+            className="mb-6 overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-neutral-900/90 to-neutral-900/50 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-sm md:p-6"
+          >
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <m.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigateWeek("prev")}
+                className="flex items-center gap-1 rounded-xl bg-neutral-800/80 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-700 active:scale-95 md:gap-2 md:px-4 md:text-base"
+              >
+                <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
+                <span className="hidden md:inline">Previous</span>
+              </m.button>
+
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-2 text-neutral-400">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <h2 className="text-base font-semibold md:text-xl">
+                  {format(weekStart, "d MMM")} - {format(weekEnd, "d MMM yyyy")}
+                </h2>
+              </div>
+
+              <m.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigateWeek("next")}
+                className="flex items-center gap-1 rounded-xl bg-neutral-800/80 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-700 active:scale-95 md:gap-2 md:px-4 md:text-base"
+              >
+                <span className="hidden md:inline">Next</span>
+                <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
+              </m.button>
+            </div>
+
+            {/* Total Hours */}
+            <m.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="flex justify-center"
+            >
+              <div className="from-primary shadow-primary/30 relative overflow-hidden rounded-full bg-gradient-to-r to-blue-500 px-6 py-3 shadow-lg md:px-8 md:py-4">
+                <div className="absolute inset-0 animate-pulse bg-white/10" />
+                <div className="relative flex items-center gap-2">
+                  <Clock className="h-5 w-5 md:h-6 md:w-6" />
+                  <p className="text-base font-bold md:text-lg">
+                    Total: {formatHoursAndMinutes(weeklyHours)}
+                  </p>
+                </div>
+              </div>
+            </m.div>
+          </m.div>
+
+          {/* Success/Error Messages */}
+          <AnimatePresence>
+            {success && (
+              <m.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="mb-4 flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400 backdrop-blur-sm"
+              >
+                <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+                <span>{success}</span>
+              </m.div>
+            )}
+            {error && (
+              <m.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400 backdrop-blur-sm"
+              >
+                {error}
+              </m.div>
+            )}
+          </AnimatePresence>
+
+          {/* Days List */}
+          <div className="space-y-3 md:space-y-4">
+            {weekDays.map((day, index) => {
+              const dateStr = format(day.date, "yyyy-MM-dd");
+              const isLoading = loading === dateStr;
+              const isDeleting = deletingDate === dateStr;
+              const hasTime = day.startTime || day.endTime;
+              const isTodayDay = isToday(day.date);
+              const justSaved = lastSavedDate === dateStr;
+              const hasSavedEntry = timesheets.some(
+                (ts) =>
+                  format(new Date(ts.work_date), "yyyy-MM-dd") === dateStr,
+              );
+
+              return (
+                <m.div
+                  key={dateStr}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index }}
+                  whileHover={{ scale: 1.01 }}
+                  className={`group rounded-xl border p-4 backdrop-blur-sm transition-all md:p-6 ${
+                    justSaved
+                      ? "border-green-500/60 bg-green-500/5 shadow-lg ring-2 shadow-green-500/10 ring-green-400/30"
+                      : isTodayDay
+                        ? "border-primary/50 shadow-primary/10 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 shadow-md"
+                        : "hover:border-primary/30 hover:shadow-primary/5 border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:shadow-lg"
+                  }`}
+                >
+                  <div className="flex items-start gap-3 md:gap-6">
+                    {/* Day Number Badge */}
+                    <m.div
+                      whileHover={{ rotate: 5 }}
+                      className={`flex min-w-[60px] flex-col items-center justify-center rounded-xl px-3 py-2 shadow-lg transition-all md:min-w-[70px] md:px-4 ${
+                        hasTime
+                          ? "from-primary shadow-primary/30 bg-linear-to-br to-blue-500 text-white"
+                          : isTodayDay
+                            ? "ring-primary/60 bg-neutral-700/80 text-white ring-2"
+                            : "bg-neutral-800/80 text-neutral-400"
+                      }`}
+                    >
+                      <div className="text-2xl font-bold md:text-3xl">
+                        {day.dayNumber}
+                      </div>
+                      <div className="text-xs tracking-wide uppercase opacity-80">
+                        {day.monthName}
+                      </div>
+                    </m.div>
+
+                    {/* Day Info and Times */}
+                    <div className="flex-1">
+                      <div className="mb-3 md:mb-4">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold md:text-xl">
+                            {day.dayName}
+                          </h3>
+                          {isTodayDay && (
+                            <span className="bg-primary shadow-primary/50 rounded-full px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-neutral-400 md:text-sm">
+                          {format(day.date, "EEEE, MMMM d")}
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+                        {/* Start Time */}
+                        <div>
+                          <label className="mb-2 block text-xs font-medium text-neutral-400 md:text-sm">
+                            Start Time
+                          </label>
+                          <TimePicker
+                            value={day.startTime}
+                            onChange={(value: string) =>
+                              updateDayTime(index, "startTime", value)
+                            }
+                            placeholder="--:-- --"
+                          />
+                        </div>
+
+                        {/* End Time */}
+                        <div>
+                          <label className="mb-2 block text-xs font-medium text-neutral-400 md:text-sm">
+                            End Time
+                          </label>
+                          <TimePicker
+                            value={day.endTime}
+                            onChange={(value: string) =>
+                              updateDayTime(index, "endTime", value)
+                            }
+                            placeholder="--:-- --"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Save Button + per-day saved state */}
+                      <div className="mt-4 space-y-2">
+                        <m.div whileTap={{ scale: 0.98 }}>
+                          <Button
+                            onClick={() => saveDay(day)}
+                            disabled={
+                              isLoading || (!day.startTime && !day.endTime)
+                            }
+                            className={`w-full rounded-xl py-6 text-base font-semibold shadow-lg transition-all disabled:opacity-50 md:text-lg ${
+                              justSaved
+                                ? "bg-green-600 text-white shadow-green-500/30 hover:bg-green-700"
+                                : "from-primary shadow-primary/30 hover:shadow-primary/40 bg-gradient-to-r to-blue-500 hover:shadow-xl"
+                            }`}
+                          >
+                            {isLoading ? (
+                              <span className="flex items-center justify-center gap-2">
+                                <m.div
+                                  animate={{ rotate: 360 }}
+                                  transition={{
+                                    repeat: Infinity,
+                                    duration: 1,
+                                    ease: "linear",
+                                  }}
+                                >
+                                  <Clock className="h-5 w-5" />
+                                </m.div>
+                                Saving...
+                              </span>
+                            ) : justSaved ? (
+                              <span className="flex items-center justify-center gap-2">
+                                <CheckCircle2 className="h-5 w-5" />
+                                Saved!
+                              </span>
+                            ) : (
+                              <span className="flex items-center justify-center gap-2">
+                                <CheckCircle2 className="h-5 w-5" />
+                                Save
+                              </span>
+                            )}
+                          </Button>
+                        </m.div>
+                        {/* Remove entry - for wrong day or to clear */}
+                        {hasSavedEntry && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteDayEntry(dateStr)}
+                            disabled={isDeleting || isLoading}
+                            className="w-full text-neutral-400 hover:bg-red-500/10 hover:text-red-400"
+                          >
+                            {isDeleting ? (
+                              "Removing..."
+                            ) : (
+                              <>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Remove entry
+                              </>
+                            )}
+                          </Button>
                         )}
                       </div>
-                      <p className="text-xs text-neutral-400 md:text-sm">
-                        {format(day.date, "EEEE, MMMM d")}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                      {/* Start Time */}
-                      <div>
-                        <label className="mb-2 block text-xs font-medium text-neutral-400 md:text-sm">
-                          Start Time
-                        </label>
-                        <TimePicker
-                          value={day.startTime}
-                          onChange={(value: string) =>
-                            updateDayTime(index, "startTime", value)
-                          }
-                          placeholder="--:-- --"
-                        />
-                      </div>
-
-                      {/* End Time */}
-                      <div>
-                        <label className="mb-2 block text-xs font-medium text-neutral-400 md:text-sm">
-                          End Time
-                        </label>
-                        <TimePicker
-                          value={day.endTime}
-                          onChange={(value: string) =>
-                            updateDayTime(index, "endTime", value)
-                          }
-                          placeholder="--:-- --"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Save Button + per-day saved state */}
-                    <div className="mt-4 space-y-2">
-                      <motion.div whileTap={{ scale: 0.98 }}>
-                        <Button
-                          onClick={() => saveDay(day)}
-                          disabled={isLoading || (!day.startTime && !day.endTime)}
-                          className={`w-full rounded-xl py-6 text-base font-semibold shadow-lg transition-all disabled:opacity-50 md:text-lg ${
-                            justSaved
-                              ? "bg-green-600 text-white shadow-green-500/30 hover:bg-green-700"
-                              : "bg-gradient-to-r from-primary to-blue-500 shadow-primary/30 hover:shadow-xl hover:shadow-primary/40"
-                          }`}
-                        >
-                          {isLoading ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                              >
-                                <Clock className="h-5 w-5" />
-                              </motion.div>
-                              Saving...
-                            </span>
-                          ) : justSaved ? (
-                            <span className="flex items-center justify-center gap-2">
-                              <CheckCircle2 className="h-5 w-5" />
-                              Saved!
-                            </span>
-                          ) : (
-                            <span className="flex items-center justify-center gap-2">
-                              <CheckCircle2 className="h-5 w-5" />
-                              Save
-                            </span>
-                          )}
-                        </Button>
-                      </motion.div>
-                      {/* Remove entry - for wrong day or to clear */}
-                      {hasSavedEntry && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteDayEntry(dateStr)}
-                          disabled={isDeleting || isLoading}
-                          className="w-full text-neutral-400 hover:bg-red-500/10 hover:text-red-400"
-                        >
-                          {isDeleting ? (
-                            "Removing..."
-                          ) : (
-                            <>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Remove entry
-                            </>
-                          )}
-                        </Button>
-                      )}
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </main>
-    </div>
+                </m.div>
+              );
+            })}
+          </div>
+        </main>
+      </div>
+    </LazyMotion>
   );
 }
