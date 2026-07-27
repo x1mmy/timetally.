@@ -7,8 +7,11 @@ import { getDay } from "date-fns";
 import { isPublicHoliday } from "~/lib/holidays";
 import type { Employee, TimesheetWithEmployee } from "~/types/database";
 
-export function rateForDate(dateString: string, emp: Employee): number {
-  if (isPublicHoliday(dateString)) {
+export async function rateForDate(
+  dateString: string,
+  emp: Employee,
+): Promise<number> {
+  if (await isPublicHoliday(dateString)) {
     return (emp.public_holiday_rate as number | undefined) ?? emp.weekday_rate * 2;
   }
 
@@ -22,10 +25,10 @@ export function rateForDate(dateString: string, emp: Employee): number {
  * Total pay and distinct days worked for timesheets in a period.
  * Hourly: sum of hours × rate per row. Day rate: sum of rate once per unique work_date.
  */
-export function payrollForPeriod(
+export async function payrollForPeriod(
   emp: Employee,
   sheets: TimesheetWithEmployee[],
-): { totalPay: number; daysWorked: number } {
+): Promise<{ totalPay: number; daysWorked: number }> {
   const complete = sheets.filter((r) => !!r.end_time);
   if (complete.length === 0) return { totalPay: 0, daysWorked: 0 };
 
@@ -35,7 +38,7 @@ export function payrollForPeriod(
   if (emp.pay_type === "day_rate") {
     let totalPay = 0;
     for (const d of uniqueDates) {
-      totalPay += rateForDate(d, emp);
+      totalPay += await rateForDate(d, emp);
     }
     return { totalPay, daysWorked };
   }
@@ -43,7 +46,7 @@ export function payrollForPeriod(
   let totalPay = 0;
   for (const ts of complete) {
     const h = parseFloat(ts.total_hours.toString());
-    totalPay += h * rateForDate(ts.work_date, emp);
+    totalPay += h * (await rateForDate(ts.work_date, emp));
   }
   return { totalPay, daysWorked };
 }

@@ -6,12 +6,22 @@
  *
  * This is used for pay calculations - employees get their
  * public_holiday_rate when working on a public holiday.
+ *
+ * date-holidays pulls in lodash + js-yaml + holiday data for every
+ * supported country (~11MB unpacked) — loaded lazily and cached so it
+ * never sits in a page's synchronous First Load JS.
  */
 
-import Holidays from "date-holidays";
+import type Holidays from "date-holidays";
 
-// Initialize for NSW, Australia
-const hd = new Holidays("AU", "NSW");
+let hdPromise: Promise<Holidays> | null = null;
+
+function getHolidaysInstance(): Promise<Holidays> {
+  hdPromise ??= import("date-holidays").then(
+    ({ default: HolidaysCtor }) => new HolidaysCtor("AU", "NSW"),
+  );
+  return hdPromise;
+}
 
 /**
  * Check if a given date is a NSW public holiday
@@ -19,7 +29,8 @@ const hd = new Holidays("AU", "NSW");
  * @param dateString - ISO date string (YYYY-MM-DD)
  * @returns true if the date is a public holiday
  */
-export function isPublicHoliday(dateString: string): boolean {
+export async function isPublicHoliday(dateString: string): Promise<boolean> {
+  const hd = await getHolidaysInstance();
   const date = new Date(dateString);
   const holiday = hd.isHoliday(date);
 
@@ -38,7 +49,10 @@ export function isPublicHoliday(dateString: string): boolean {
  * @param dateString - ISO date string (YYYY-MM-DD)
  * @returns Holiday name if it's a public holiday, null otherwise
  */
-export function getHolidayName(dateString: string): string | null {
+export async function getHolidayName(
+  dateString: string,
+): Promise<string | null> {
+  const hd = await getHolidaysInstance();
   const date = new Date(dateString);
   const holiday = hd.isHoliday(date);
 
@@ -59,9 +73,10 @@ export function getHolidayName(dateString: string): string | null {
  * @param year - The year to get holidays for
  * @returns Array of holidays with date and name
  */
-export function getPublicHolidaysForYear(
+export async function getPublicHolidaysForYear(
   year: number,
-): { date: string; name: string }[] {
+): Promise<{ date: string; name: string }[]> {
+  const hd = await getHolidaysInstance();
   const holidays = hd.getHolidays(year);
 
   return holidays

@@ -34,6 +34,8 @@ interface DailyBreakdown {
   totalHours: number;
   pay: number;
   timesheetId: string | null;
+  isHoliday: boolean;
+  holidayName: string | null;
 }
 
 function EmployeeDetailContent() {
@@ -105,6 +107,10 @@ function EmployeeDetailContent() {
         const dayName = daysOfWeek[dayOfWeek] ?? "";
 
         const timesheet = sheets.find((ts) => ts.work_date === dateString);
+        const [dayIsHoliday, dayHolidayName] = await Promise.all([
+          isPublicHoliday(dateString),
+          getHolidayName(dateString),
+        ]);
 
         if (timesheet?.start_time && timesheet?.end_time) {
           const rawHours =
@@ -114,7 +120,7 @@ function EmployeeDetailContent() {
 
           const totalHours = parseFloat(timesheet.total_hours.toString());
           const breakMinutes = timesheet.break_minutes ?? 0;
-          const rate = rateForDate(dateString, emp);
+          const rate = await rateForDate(dateString, emp);
 
           // For day_rate employees, pay is the rate (1 day = 1 rate)
           // For hourly employees, pay is hours * rate
@@ -130,6 +136,8 @@ function EmployeeDetailContent() {
             totalHours,
             pay,
             timesheetId: timesheet.id,
+            isHoliday: dayIsHoliday,
+            holidayName: dayHolidayName,
           });
         } else {
           breakdown.push({
@@ -142,6 +150,8 @@ function EmployeeDetailContent() {
             totalHours: 0,
             pay: 0,
             timesheetId: null,
+            isHoliday: dayIsHoliday,
+            holidayName: dayHolidayName,
           });
         }
       }
@@ -345,10 +355,10 @@ function EmployeeDetailContent() {
                             <h3 className="text-lg font-semibold">
                               {day.dayName}
                             </h3>
-                            {getHolidayName(day.date) && (
+                            {day.holidayName && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400 ring-1 ring-amber-500/30">
                                 <span className="text-[10px]">🎉</span>
-                                {getHolidayName(day.date)}
+                                {day.holidayName}
                               </span>
                             )}
                           </div>
@@ -442,21 +452,17 @@ function EmployeeDetailContent() {
                         </div>
                         <div
                           className={`rounded-lg p-3 ring-1 ${
-                            isPublicHoliday(day.date)
+                            day.isHoliday
                               ? "bg-amber-500/10 ring-amber-500/20"
                               : "bg-primary/10 ring-primary/20"
                           }`}
                         >
                           <p className="mb-1 text-xs text-neutral-400">
-                            {isPublicHoliday(day.date)
-                              ? "Pay (PH Rate)"
-                              : "Pay"}
+                            {day.isHoliday ? "Pay (PH Rate)" : "Pay"}
                           </p>
                           <p
                             className={`font-semibold ${
-                              isPublicHoliday(day.date)
-                                ? "text-amber-400"
-                                : "text-primary"
+                              day.isHoliday ? "text-amber-400" : "text-primary"
                             }`}
                           >
                             ${day.pay.toFixed(2)}

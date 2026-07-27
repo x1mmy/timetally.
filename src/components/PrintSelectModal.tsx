@@ -26,8 +26,8 @@ interface PrintSelectModalProps {
 
 type DayType = "weekday" | "saturday" | "sunday" | "public_holiday";
 
-function getDayType(dateString: string): DayType {
-  if (isPublicHoliday(dateString)) return "public_holiday";
+async function getDayType(dateString: string): Promise<DayType> {
+  if (await isPublicHoliday(dateString)) return "public_holiday";
   const d = getDay(new Date(dateString));
   if (d === 0) return "sunday";
   if (d === 6) return "saturday";
@@ -66,36 +66,40 @@ export function PrintSelectModal({
       ? employees
       : employees.filter((e) => e.category_id === selectedCategory);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (!selected) return;
 
     if (selected === "week-summary") {
-      const empData = filteredEmployees
-        .map((emp) => {
-          const empTs = timesheets.filter((ts) => ts.employee_id === emp.id);
-          let weekdayHours = 0,
-            saturdayHours = 0,
-            sundayHours = 0;
-          const workedDates = new Set<string>();
-          for (const ts of empTs) {
-            const type = getDayType(ts.work_date);
-            const h = parseFloat(ts.total_hours.toString());
-            if (type === "saturday") saturdayHours += h;
-            else if (type === "sunday") sundayHours += h;
-            else weekdayHours += h;
-            if (ts.end_time) workedDates.add(ts.work_date);
-          }
-          return {
-            firstName: emp.first_name,
-            lastName: emp.last_name,
-            weekdayHours,
-            saturdayHours,
-            sundayHours,
-            totalHours: weekdayHours + saturdayHours + sundayHours,
-            daysWorked: workedDates.size,
-          };
-        })
-        .filter((e) => e.totalHours > 0);
+      const empData = (
+        await Promise.all(
+          filteredEmployees.map(async (emp) => {
+            const empTs = timesheets.filter(
+              (ts) => ts.employee_id === emp.id,
+            );
+            let weekdayHours = 0,
+              saturdayHours = 0,
+              sundayHours = 0;
+            const workedDates = new Set<string>();
+            for (const ts of empTs) {
+              const type = await getDayType(ts.work_date);
+              const h = parseFloat(ts.total_hours.toString());
+              if (type === "saturday") saturdayHours += h;
+              else if (type === "sunday") sundayHours += h;
+              else weekdayHours += h;
+              if (ts.end_time) workedDates.add(ts.work_date);
+            }
+            return {
+              firstName: emp.first_name,
+              lastName: emp.last_name,
+              weekdayHours,
+              saturdayHours,
+              sundayHours,
+              totalHours: weekdayHours + saturdayHours + sundayHours,
+              daysWorked: workedDates.size,
+            };
+          }),
+        )
+      ).filter((e) => e.totalHours > 0);
 
       printWeekSummary({ employees: empData, weekEndingDate: weekEnd });
     } else if (selected === "day-breakdown") {
@@ -242,7 +246,7 @@ export function PrintSelectModal({
               )}
 
               <Button
-                onClick={handlePrint}
+                onClick={() => void handlePrint()}
                 disabled={!selected}
                 className="from-primary mt-6 w-full bg-gradient-to-r to-blue-500 disabled:opacity-40"
               >

@@ -223,37 +223,59 @@ function ManagerDashboardContent() {
   }, [rawTimesheets]);
 
   /**
-   * Memoized: Merge employees with pay data and sort
+   * Merge employees with pay data and sort.
+   * payrollForPeriod is async (it lazy-loads the holiday-rate library on
+   * first use), so this can't be a useMemo — it recomputes in an effect
+   * whenever the underlying data changes, guarded against stale overwrites
+   * if the user navigates weeks again before a previous computation lands.
    */
-  const employees = useMemo(() => {
-    const employeesWithPay: EmployeeWithPay[] = rawEmployees.map(
-      (emp: Employee) => {
-        const empData = payData[emp.id];
-        const weekdayHours = empData?.weekday ?? 0;
-        const saturdayHours = empData?.saturday ?? 0;
-        const sundayHours = empData?.sunday ?? 0;
-        const rawHours = empData?.rawHours ?? 0;
-        const breakMinutes = empData?.breakMinutes ?? 0;
+  const [employees, setEmployees] = useState<EmployeeWithPay[]>([]);
+  const [computingPay, setComputingPay] = useState(true);
 
-        const sheets = timesheetsByEmployeeId.get(emp.id) ?? [];
-        const { totalPay, daysWorked } = payrollForPeriod(emp, sheets);
+  useEffect(() => {
+    let cancelled = false;
+    setComputingPay(true);
 
-        return {
-          ...emp,
-          weekdayHours,
-          saturdayHours,
-          sundayHours,
-          totalHours: weekdayHours + saturdayHours + sundayHours,
-          totalPay,
-          rawHours,
-          breakMinutes,
-          daysWorked,
-        };
-      },
-    );
+    const computeEmployees = async () => {
+      const employeesWithPay: EmployeeWithPay[] = await Promise.all(
+        rawEmployees.map(async (emp: Employee) => {
+          const empData = payData[emp.id];
+          const weekdayHours = empData?.weekday ?? 0;
+          const saturdayHours = empData?.saturday ?? 0;
+          const sundayHours = empData?.sunday ?? 0;
+          const rawHours = empData?.rawHours ?? 0;
+          const breakMinutes = empData?.breakMinutes ?? 0;
 
-    // Sort by total pay (descending)
-    return employeesWithPay.sort((a, b) => b.totalPay - a.totalPay);
+          const sheets = timesheetsByEmployeeId.get(emp.id) ?? [];
+          const { totalPay, daysWorked } = await payrollForPeriod(
+            emp,
+            sheets,
+          );
+
+          return {
+            ...emp,
+            weekdayHours,
+            saturdayHours,
+            sundayHours,
+            totalHours: weekdayHours + saturdayHours + sundayHours,
+            totalPay,
+            rawHours,
+            breakMinutes,
+            daysWorked,
+          };
+        }),
+      );
+
+      if (cancelled) return;
+      // Sort by total pay (descending)
+      setEmployees(employeesWithPay.sort((a, b) => b.totalPay - a.totalPay));
+      setComputingPay(false);
+    };
+
+    void computeEmployees();
+    return () => {
+      cancelled = true;
+    };
   }, [rawEmployees, payData, timesheetsByEmployeeId]);
 
   // Update URL when view mode or date range changes
@@ -632,7 +654,7 @@ function ManagerDashboardContent() {
             )}
 
             {/* Employee Cards */}
-            {loading ? (
+            {loading || computingPay ? (
               <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
