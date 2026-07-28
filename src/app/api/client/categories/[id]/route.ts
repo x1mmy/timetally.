@@ -35,15 +35,10 @@ export async function PUT(
     const { supabase, clientId } = ctx;
     const { id } = await params;
 
-    const body = (await request.json()) as {
-      name?: string;
-      dashboardView?: string;
-      roundingMinutes?: number;
-      allowBreakLogging?: boolean;
-    };
+    const body = (await request.json()) as { name?: string; dashboardView?: string; roundingMinutes?: number };
     const { name } = body;
 
-    const updatePayload: Record<string, string | number | boolean> = {};
+    const updatePayload: Record<string, string | number> = {};
 
     if (name !== undefined) {
       if (!name.trim()) {
@@ -74,10 +69,6 @@ export async function PUT(
         );
       }
       updatePayload.clock_in_rounding_minutes = body.roundingMinutes;
-    }
-
-    if (body.allowBreakLogging !== undefined) {
-      updatePayload.allow_break_logging = body.allowBreakLogging;
     }
 
     if (Object.keys(updatePayload).length === 0) {

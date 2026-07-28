@@ -233,18 +233,7 @@ export async function POST(request: NextRequest) {
       if (existing.end_time === null && typeof endTime === "string") {
         updateData.original_end_time = endTime;
       }
-      if (timesChanged) {
-        // Only clear break_minutes to trigger the rule-based recalculation
-        // when there are no logged breaks — if the employee used the
-        // start/end break feature, break_minutes already reflects those
-        // and must be preserved.
-        const { count: loggedBreakCount } = await supabase
-          .from("timesheet_breaks")
-          .select("id", { count: "exact", head: true })
-          .eq("timesheet_id", existing.id)
-          .not("break_end_time", "is", null);
-        if (!loggedBreakCount) updateData.break_minutes = null;
-      }
+      if (timesChanged) updateData.break_minutes = null;
 
       const { data: timesheet, error } = await supabase
         .from("timesheets")

@@ -46,7 +46,6 @@ export async function GET(request: NextRequest) {
       name: cat.name,
       dashboard_view: (cat.dashboard_view ?? 'weekly') as 'weekly' | 'today_only',
       clock_in_rounding_minutes: (cat.clock_in_rounding_minutes as number | undefined) ?? 0,
-      allow_break_logging: (cat.allow_break_logging as boolean | undefined) ?? false,
       created_at: cat.created_at,
       employee_count: Array.isArray(cat.employees) ? cat.employees.length : 0,
     }));
