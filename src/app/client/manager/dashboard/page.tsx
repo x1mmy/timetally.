@@ -36,12 +36,17 @@ import {
   FileText,
 } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
-import type { Employee, EmployeeCategory, TimesheetWithEmployee } from "@/types/database";
+import type {
+  Employee,
+  EmployeeCategory,
+  TimesheetWithEmployee,
+} from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
 import { exportPayrollToCSV } from "@/lib/csvExport";
 import { PrintSelectModal } from "@/components/PrintSelectModal";
 import { payrollForPeriod } from "~/lib/payrollRates";
-import { motion, AnimatePresence } from "framer-motion";
+import { LazyMotion, m, AnimatePresence } from "framer-motion";
+import { loadDomMax } from "@/lib/motion-features";
 import { DatePicker } from "@/components/ui/date-picker";
 
 function getCalendarDayBucket(
@@ -78,7 +83,9 @@ function ManagerDashboardContent() {
   );
   // Raw data from API
   const [rawEmployees, setRawEmployees] = useState<Employee[]>([]);
-  const [rawTimesheets, setRawTimesheets] = useState<TimesheetWithEmployee[]>([]);
+  const [rawTimesheets, setRawTimesheets] = useState<TimesheetWithEmployee[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categories, setCategories] = useState<EmployeeCategory[]>([]);
@@ -87,23 +94,24 @@ function ManagerDashboardContent() {
 
   // Date range picker state - initialize from URL if available
   const [viewMode, setViewMode] = useState<"week" | "custom">(
-    urlViewMode ?? "week"
+    urlViewMode ?? "week",
   );
   const [customStartDate, setCustomStartDate] = useState<Date>(
     urlStartDate
       ? new Date(urlStartDate)
-      : startOfWeek(new Date(), { weekStartsOn: 1 })
+      : startOfWeek(new Date(), { weekStartsOn: 1 }),
   );
   const [customEndDate, setCustomEndDate] = useState<Date>(
     urlEndDate
       ? new Date(urlEndDate)
-      : endOfWeek(new Date(), { weekStartsOn: 1 })
+      : endOfWeek(new Date(), { weekStartsOn: 1 }),
   );
 
   const weekEnd = endOfWeek(currentWeekStart, { weekStartsOn: 1 });
 
   // Get the actual date range based on view mode
-  const actualStartDate = viewMode === "week" ? currentWeekStart : customStartDate;
+  const actualStartDate =
+    viewMode === "week" ? currentWeekStart : customStartDate;
   const actualEndDate = viewMode === "week" ? weekEnd : customEndDate;
 
   // Memoize date strings to use as stable dependencies
@@ -117,29 +125,39 @@ function ManagerDashboardContent() {
     const loadData = async () => {
       setLoading(true);
 
-      const [employeesData, timesheetsData, categoriesData] = await Promise.all([
-        // Fetch employees
-        fetch("/api/client/employees")
-          .then(res => res.json() as Promise<{ employees?: Employee[] }>)
-          .then(data => data?.employees ?? [])
-          .catch((error) => {
-            console.error("Error fetching employees:", error);
-            return [] as Employee[];
-          }),
-        // Fetch timesheets
-        fetch(`/api/client/timesheets?startDate=${startDateStr}&endDate=${endDateStr}`)
-          .then(res => res.json() as Promise<{ timesheets?: TimesheetWithEmployee[] }>)
-          .then(data => data?.timesheets ?? [])
-          .catch((error) => {
-            console.error("Error fetching timesheets:", error);
-            return [] as TimesheetWithEmployee[];
-          }),
-        // Fetch categories
-        fetch("/api/client/categories")
-          .then(res => res.json() as Promise<{ categories?: EmployeeCategory[] }>)
-          .then(data => data?.categories ?? [])
-          .catch(() => [] as EmployeeCategory[]),
-      ]);
+      const [employeesData, timesheetsData, categoriesData] = await Promise.all(
+        [
+          // Fetch employees
+          fetch("/api/client/employees")
+            .then((res) => res.json() as Promise<{ employees?: Employee[] }>)
+            .then((data) => data?.employees ?? [])
+            .catch((error) => {
+              console.error("Error fetching employees:", error);
+              return [] as Employee[];
+            }),
+          // Fetch timesheets
+          fetch(
+            `/api/client/timesheets?startDate=${startDateStr}&endDate=${endDateStr}`,
+          )
+            .then(
+              (res) =>
+                res.json() as Promise<{ timesheets?: TimesheetWithEmployee[] }>,
+            )
+            .then((data) => data?.timesheets ?? [])
+            .catch((error) => {
+              console.error("Error fetching timesheets:", error);
+              return [] as TimesheetWithEmployee[];
+            }),
+          // Fetch categories
+          fetch("/api/client/categories")
+            .then(
+              (res) =>
+                res.json() as Promise<{ categories?: EmployeeCategory[] }>,
+            )
+            .then((data) => data?.categories ?? [])
+            .catch(() => [] as EmployeeCategory[]),
+        ],
+      );
 
       setRawEmployees(employeesData);
       setRawTimesheets(timesheetsData);
@@ -205,37 +223,59 @@ function ManagerDashboardContent() {
   }, [rawTimesheets]);
 
   /**
-   * Memoized: Merge employees with pay data and sort
+   * Merge employees with pay data and sort.
+   * payrollForPeriod is async (it lazy-loads the holiday-rate library on
+   * first use), so this can't be a useMemo — it recomputes in an effect
+   * whenever the underlying data changes, guarded against stale overwrites
+   * if the user navigates weeks again before a previous computation lands.
    */
-  const employees = useMemo(() => {
-    const employeesWithPay: EmployeeWithPay[] = rawEmployees.map(
-      (emp: Employee) => {
-        const empData = payData[emp.id];
-        const weekdayHours = empData?.weekday ?? 0;
-        const saturdayHours = empData?.saturday ?? 0;
-        const sundayHours = empData?.sunday ?? 0;
-        const rawHours = empData?.rawHours ?? 0;
-        const breakMinutes = empData?.breakMinutes ?? 0;
+  const [employees, setEmployees] = useState<EmployeeWithPay[]>([]);
+  const [computingPay, setComputingPay] = useState(true);
 
-        const sheets = timesheetsByEmployeeId.get(emp.id) ?? [];
-        const { totalPay, daysWorked } = payrollForPeriod(emp, sheets);
+  useEffect(() => {
+    let cancelled = false;
+    setComputingPay(true);
 
-        return {
-          ...emp,
-          weekdayHours,
-          saturdayHours,
-          sundayHours,
-          totalHours: weekdayHours + saturdayHours + sundayHours,
-          totalPay,
-          rawHours,
-          breakMinutes,
-          daysWorked,
-        };
-      },
-    );
+    const computeEmployees = async () => {
+      const employeesWithPay: EmployeeWithPay[] = await Promise.all(
+        rawEmployees.map(async (emp: Employee) => {
+          const empData = payData[emp.id];
+          const weekdayHours = empData?.weekday ?? 0;
+          const saturdayHours = empData?.saturday ?? 0;
+          const sundayHours = empData?.sunday ?? 0;
+          const rawHours = empData?.rawHours ?? 0;
+          const breakMinutes = empData?.breakMinutes ?? 0;
 
-    // Sort by total pay (descending)
-    return employeesWithPay.sort((a, b) => b.totalPay - a.totalPay);
+          const sheets = timesheetsByEmployeeId.get(emp.id) ?? [];
+          const { totalPay, daysWorked } = await payrollForPeriod(
+            emp,
+            sheets,
+          );
+
+          return {
+            ...emp,
+            weekdayHours,
+            saturdayHours,
+            sundayHours,
+            totalHours: weekdayHours + saturdayHours + sundayHours,
+            totalPay,
+            rawHours,
+            breakMinutes,
+            daysWorked,
+          };
+        }),
+      );
+
+      if (cancelled) return;
+      // Sort by total pay (descending)
+      setEmployees(employeesWithPay.sort((a, b) => b.totalPay - a.totalPay));
+      setComputingPay(false);
+    };
+
+    void computeEmployees();
+    return () => {
+      cancelled = true;
+    };
   }, [rawEmployees, payData, timesheetsByEmployeeId]);
 
   // Update URL when view mode or date range changes
@@ -319,451 +359,472 @@ function ManagerDashboardContent() {
   };
 
   // Memoized: Calculate summary stats
-  const { totalPay, totalHours } = useMemo(() => ({
-    totalPay: employees.reduce((sum, emp) => sum + emp.totalPay, 0),
-    totalHours: employees.reduce((sum, emp) => sum + emp.totalHours, 0),
-  }), [employees]);
+  const { totalPay, totalHours } = useMemo(
+    () => ({
+      totalPay: employees.reduce((sum, emp) => sum + emp.totalPay, 0),
+      totalHours: employees.reduce((sum, emp) => sum + emp.totalHours, 0),
+    }),
+    [employees],
+  );
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-      {/* Animated Background */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 top-20 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
-        <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
-      </div>
-
-      {/* Header */}
-      <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100 }}
-        className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl"
-      >
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center gap-3"
-            >
-              <div className="rounded-xl bg-primary/10 p-2 ring-2 ring-primary/20">
-                <DollarSign className="h-8 w-8 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">
-                  Payroll Dashboard<span className="text-primary">.</span>
-                </h1>
-                <p className="text-sm text-neutral-400">
-                  {format(actualStartDate, "MMM dd")} -{" "}
-                  {format(actualEndDate, "MMM dd, yyyy")}
-                </p>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex gap-2"
-            >
-              <Button
-                variant="outline"
-                onClick={() => router.push("/client/manager/timesheet-activity")}
-                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Activity
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push("/client/manager/settings")}
-                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </motion.div>
-          </div>
+    <LazyMotion features={loadDomMax}>
+      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+        {/* Animated Background */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-20 -left-40 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
+          <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
         </div>
-      </motion.header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
-          {/* View Mode Toggle */}
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex gap-2">
-              <Button
-                variant={viewMode === "week" ? "default" : "outline"}
-                onClick={() => setViewMode("week")}
-                className={
-                  viewMode === "week"
-                    ? "bg-primary text-white"
-                    : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-                }
+        {/* Header */}
+        <m.header
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 100 }}
+          className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl"
+        >
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <m.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-3"
               >
-                <Calendar className="mr-2 h-4 w-4" />
-                Week View
-              </Button>
-              <Button
-                variant={viewMode === "custom" ? "default" : "outline"}
-                onClick={() => setViewMode("custom")}
-                className={
-                  viewMode === "custom"
-                    ? "bg-primary text-white"
-                    : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-                }
+                <div className="bg-primary/10 ring-primary/20 rounded-xl p-2 ring-2">
+                  <DollarSign className="text-primary h-8 w-8" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">
+                    Payroll Dashboard<span className="text-primary">.</span>
+                  </h1>
+                  <p className="text-sm text-neutral-400">
+                    {format(actualStartDate, "MMM dd")} -{" "}
+                    {format(actualEndDate, "MMM dd, yyyy")}
+                  </p>
+                </div>
+              </m.div>
+
+              <m.div
+                initial={{ x: 20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex gap-2"
               >
-                <Calendar className="mr-2 h-4 w-4" />
-                Custom Range
-              </Button>
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    router.push("/client/manager/timesheet-activity")
+                  }
+                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Activity
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/client/manager/settings")}
+                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleLogout}
+                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </m.div>
             </div>
           </div>
+        </m.header>
 
-          {/* Week Navigator - Show only in week mode */}
-          {viewMode === "week" && (
-            <WeekNavigator
-              weekStart={currentWeekStart}
-              weekEnd={weekEnd}
-              onPrevious={() =>
-                setCurrentWeekStart(addWeeks(currentWeekStart, -1))
-              }
-              onNext={() => setCurrentWeekStart(addWeeks(currentWeekStart, 1))}
-            />
-          )}
-
-          {/* Custom Date Range Picker - Show only in custom mode */}
-          {viewMode === "custom" && (
-            <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm text-neutral-400">
-                    Start Date
-                  </label>
-                  <DatePicker
-                    value={customStartDate}
-                    onChange={setCustomStartDate}
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm text-neutral-400">
-                    End Date
-                  </label>
-                  <DatePicker
-                    value={customEndDate}
-                    onChange={setCustomEndDate}
-                  />
-                </div>
+        {/* Main Content */}
+        <main className="container mx-auto px-4 py-8">
+          <div className="space-y-6">
+            {/* View Mode Toggle */}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex gap-2">
+                <Button
+                  variant={viewMode === "week" ? "default" : "outline"}
+                  onClick={() => setViewMode("week")}
+                  className={
+                    viewMode === "week"
+                      ? "bg-primary text-white"
+                      : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+                  }
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Week View
+                </Button>
+                <Button
+                  variant={viewMode === "custom" ? "default" : "outline"}
+                  onClick={() => setViewMode("custom")}
+                  className={
+                    viewMode === "custom"
+                      ? "bg-primary text-white"
+                      : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+                  }
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Custom Range
+                </Button>
               </div>
             </div>
-          )}
 
-          {/* Summary Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="grid grid-cols-1 gap-4 md:grid-cols-3"
-          >
-            {/* Total Payroll */}
-            <motion.div
-              whileHover={{ y: -5 }}
-              className="group relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
-            >
-              <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-primary/10 blur-2xl transition-all group-hover:bg-primary/20" />
-              <div className="relative flex items-center justify-between">
-                <div>
-                  <p className="mb-2 text-sm font-medium text-neutral-400">Total Payroll</p>
-                  <p className="text-4xl font-bold text-primary">
-                    ${totalPay.toFixed(2)}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-primary/10 p-3 ring-2 ring-primary/20 transition-all group-hover:scale-110 group-hover:ring-primary/40">
-                  <DollarSign className="h-8 w-8 text-primary" />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Total Hours */}
-            <motion.div
-              whileHover={{ y: -5 }}
-              transition={{ delay: 0.05 }}
-              className="group relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
-            >
-              <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-blue-500/10 blur-2xl transition-all group-hover:bg-blue-500/20" />
-              <div className="relative flex items-center justify-between">
-                <div>
-                  <p className="mb-2 text-sm font-medium text-neutral-400">Total Hours</p>
-                  <p className="text-4xl font-bold">
-                    {formatHoursAndMinutes(totalHours)}
-                  </p>
-                </div>
-                <div className="rounded-xl bg-blue-500/10 p-3 ring-2 ring-blue-500/20 transition-all group-hover:scale-110 group-hover:ring-blue-500/40">
-                  <Clock className="h-8 w-8 text-blue-400" />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Employees Count */}
-            <motion.div
-              whileHover={{ y: -5 }}
-              transition={{ delay: 0.1 }}
-              className="group relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
-            >
-              <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-purple-500/10 blur-2xl transition-all group-hover:bg-purple-500/20" />
-              <div className="relative flex items-center justify-between">
-                <div>
-                  <p className="mb-2 text-sm font-medium text-neutral-400">Employees</p>
-                  <p className="text-4xl font-bold">{employees.length}</p>
-                </div>
-                <div className="rounded-xl bg-purple-500/10 p-3 ring-2 ring-purple-500/20 transition-all group-hover:scale-110 group-hover:ring-purple-500/40">
-                  <Users className="h-8 w-8 text-purple-400" />
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-
-          {/* Search Bar and Export Buttons */}
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-              <Input
-                placeholder="Search employees by name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="border-neutral-700 bg-neutral-800 pl-10"
+            {/* Week Navigator - Show only in week mode */}
+            {viewMode === "week" && (
+              <WeekNavigator
+                weekStart={currentWeekStart}
+                weekEnd={weekEnd}
+                onPrevious={() =>
+                  setCurrentWeekStart(addWeeks(currentWeekStart, -1))
+                }
+                onNext={() =>
+                  setCurrentWeekStart(addWeeks(currentWeekStart, 1))
+                }
               />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setPrintModalOpen(true)}
-                variant="outline"
-                className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-neutral-800"
-                disabled={filteredEmployees.length === 0}
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </Button>
-              <Button
-                onClick={handleExportCSV}
-                className="bg-primary hover:bg-primary/90 text-white"
-                disabled={filteredEmployees.length === 0}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export to CSV
-              </Button>
-            </div>
-          </div>
+            )}
 
-          {/* Category filter pills */}
-          {categories.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => setSelectedCategory(null)}
-                className={`rounded-full border px-3 py-1 text-sm font-medium transition-all ${
-                  selectedCategory === null
-                    ? "border-blue-500 bg-blue-500 text-white"
-                    : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
-                }`}
+            {/* Custom Date Range Picker - Show only in custom mode */}
+            {viewMode === "custom" && (
+              <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-sm text-neutral-400">
+                      Start Date
+                    </label>
+                    <DatePicker
+                      value={customStartDate}
+                      onChange={setCustomStartDate}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-2 block text-sm text-neutral-400">
+                      End Date
+                    </label>
+                    <DatePicker
+                      value={customEndDate}
+                      onChange={setCustomEndDate}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Summary Stats */}
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="grid grid-cols-1 gap-4 md:grid-cols-3"
+            >
+              {/* Total Payroll */}
+              <m.div
+                whileHover={{ y: -5 }}
+                className="group hover:border-primary/30 hover:shadow-primary/10 relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
               >
-                All
-              </button>
-              {categories.map((cat) => (
+                <div className="bg-primary/10 group-hover:bg-primary/20 absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full blur-2xl transition-all" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-neutral-400">
+                      Total Payroll
+                    </p>
+                    <p className="text-primary text-4xl font-bold">
+                      ${totalPay.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="bg-primary/10 ring-primary/20 group-hover:ring-primary/40 rounded-xl p-3 ring-2 transition-all group-hover:scale-110">
+                    <DollarSign className="text-primary h-8 w-8" />
+                  </div>
+                </div>
+              </m.div>
+
+              {/* Total Hours */}
+              <m.div
+                whileHover={{ y: -5 }}
+                transition={{ delay: 0.05 }}
+                className="group hover:border-primary/30 hover:shadow-primary/10 relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
+              >
+                <div className="absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-blue-500/10 blur-2xl transition-all group-hover:bg-blue-500/20" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-neutral-400">
+                      Total Hours
+                    </p>
+                    <p className="text-4xl font-bold">
+                      {formatHoursAndMinutes(totalHours)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-blue-500/10 p-3 ring-2 ring-blue-500/20 transition-all group-hover:scale-110 group-hover:ring-blue-500/40">
+                    <Clock className="h-8 w-8 text-blue-400" />
+                  </div>
+                </div>
+              </m.div>
+
+              {/* Employees Count */}
+              <m.div
+                whileHover={{ y: -5 }}
+                transition={{ delay: 0.1 }}
+                className="group hover:border-primary/30 hover:shadow-primary/10 relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
+              >
+                <div className="absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-purple-500/10 blur-2xl transition-all group-hover:bg-purple-500/20" />
+                <div className="relative flex items-center justify-between">
+                  <div>
+                    <p className="mb-2 text-sm font-medium text-neutral-400">
+                      Employees
+                    </p>
+                    <p className="text-4xl font-bold">{employees.length}</p>
+                  </div>
+                  <div className="rounded-xl bg-purple-500/10 p-3 ring-2 ring-purple-500/20 transition-all group-hover:scale-110 group-hover:ring-purple-500/40">
+                    <Users className="h-8 w-8 text-purple-400" />
+                  </div>
+                </div>
+              </m.div>
+            </m.div>
+
+            {/* Search Bar and Export Buttons */}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                <Input
+                  placeholder="Search employees by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="border-neutral-700 bg-neutral-800 pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setPrintModalOpen(true)}
+                  variant="outline"
+                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
+                  disabled={filteredEmployees.length === 0}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </Button>
+                <Button
+                  onClick={handleExportCSV}
+                  className="bg-primary hover:bg-primary/90 text-white"
+                  disabled={filteredEmployees.length === 0}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export to CSV
+                </Button>
+              </div>
+            </div>
+
+            {/* Category filter pills */}
+            {categories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
                 <button
-                  key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id === selectedCategory ? null : cat.id)}
+                  onClick={() => setSelectedCategory(null)}
                   className={`rounded-full border px-3 py-1 text-sm font-medium transition-all ${
-                    selectedCategory === cat.id
+                    selectedCategory === null
                       ? "border-blue-500 bg-blue-500 text-white"
                       : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
                   }`}
                 >
-                  {cat.name}
+                  All
                 </button>
-              ))}
-              <p className="w-full text-xs italic text-neutral-600">
-                * Filter by department. Manage categories in Settings.
-              </p>
-            </div>
-          )}
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() =>
+                      setSelectedCategory(
+                        cat.id === selectedCategory ? null : cat.id,
+                      )
+                    }
+                    className={`rounded-full border px-3 py-1 text-sm font-medium transition-all ${
+                      selectedCategory === cat.id
+                        ? "border-blue-500 bg-blue-500 text-white"
+                        : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+                <p className="w-full text-xs text-neutral-600 italic">
+                  * Filter by department. Manage categories in Settings.
+                </p>
+              </div>
+            )}
 
-          {/* Employee Cards */}
-          {loading ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-12"
-            >
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+            {/* Employee Cards */}
+            {loading || computingPay ? (
+              <m.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-12"
               >
-                <Clock className="h-12 w-12 text-primary" />
-              </motion.div>
-              <p className="mt-4 text-neutral-400">Loading employees...</p>
-            </motion.div>
-          ) : filteredEmployees.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-12 text-center text-neutral-400 backdrop-blur-sm"
-            >
-              <Users className="mx-auto mb-4 h-16 w-16 text-neutral-600" />
-              <p className="text-lg">
-                {searchQuery
-                  ? "No employees found matching your search"
-                  : "No employees yet. Add your first employee to get started."}
-              </p>
-            </motion.div>
-          ) : (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <AnimatePresence mode="popLayout">
-                {filteredEmployees.map((emp, index) => {
-                  const params = new URLSearchParams({
-                    viewMode,
-                    startDate: format(actualStartDate, "yyyy-MM-dd"),
-                    endDate: format(actualEndDate, "yyyy-MM-dd"),
-                  });
-                  return (
-                    <motion.div
-                      key={emp.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      transition={{ delay: index * 0.05 }}
-                      whileHover={{ y: -5 }}
-                      onClick={() =>
-                        router.push(
-                          `/client/manager/employee/${emp.id}?${params.toString()}`,
-                        )
-                      }
-                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:border-primary/30 hover:shadow-2xl hover:shadow-primary/10"
-                    >
-                      {/* Gradient overlay */}
-                      <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                        <div className="absolute inset-0 bg-linear-to-br from-primary/5 to-transparent" />
-                      </div>
-
-                      {/* Employee Header with Total Pay */}
-                      <div className="relative mb-4 flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="mb-1 flex items-center gap-2">
-                            <h3 className="text-xl font-bold">
-                              {emp.first_name} {emp.last_name}
-                            </h3>
-                            {emp.category ? (
-                              <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-blue-400">
-                                {emp.category.name}
-                              </span>
-                            ) : (
-                              <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-500">
-                                Uncategorised
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-neutral-400">
-                            Weekday: ${emp.weekday_rate.toFixed(2)}
-                            {emp.pay_type === "day_rate" ? "/day" : "/hr"} | Sat: $
-                            {emp.saturday_rate.toFixed(2)}
-                            {emp.pay_type === "day_rate" ? "/day" : "/hr"} | Sun: $
-                            {emp.sunday_rate.toFixed(2)}
-                            {emp.pay_type === "day_rate" ? "/day" : "/hr"}
-                          </p>
+                <m.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                >
+                  <Clock className="text-primary h-12 w-12" />
+                </m.div>
+                <p className="mt-4 text-neutral-400">Loading employees...</p>
+              </m.div>
+            ) : filteredEmployees.length === 0 ? (
+              <m.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-12 text-center text-neutral-400 backdrop-blur-sm"
+              >
+                <Users className="mx-auto mb-4 h-16 w-16 text-neutral-600" />
+                <p className="text-lg">
+                  {searchQuery
+                    ? "No employees found matching your search"
+                    : "No employees yet. Add your first employee to get started."}
+                </p>
+              </m.div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <AnimatePresence mode="popLayout">
+                  {filteredEmployees.map((emp, index) => {
+                    const params = new URLSearchParams({
+                      viewMode,
+                      startDate: format(actualStartDate, "yyyy-MM-dd"),
+                      endDate: format(actualEndDate, "yyyy-MM-dd"),
+                    });
+                    return (
+                      <m.div
+                        key={emp.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ delay: index * 0.05 }}
+                        whileHover={{ y: -5 }}
+                        onClick={() =>
+                          router.push(
+                            `/client/manager/employee/${emp.id}?${params.toString()}`,
+                          )
+                        }
+                        className="group hover:border-primary/30 hover:shadow-primary/10 relative cursor-pointer overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
+                      >
+                        {/* Gradient overlay */}
+                        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                          <div className="from-primary/5 absolute inset-0 bg-linear-to-br to-transparent" />
                         </div>
-                        <div className="text-right">
-                          <div className="mb-1 text-3xl font-bold text-primary">
-                            ${emp.totalPay.toFixed(2)}
+
+                        {/* Employee Header with Total Pay */}
+                        <div className="relative mb-4 flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <h3 className="text-xl font-bold">
+                                {emp.first_name} {emp.last_name}
+                              </h3>
+                              {emp.category ? (
+                                <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-blue-400">
+                                  {emp.category.name}
+                                </span>
+                              ) : (
+                                <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-500">
+                                  Uncategorised
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-neutral-400">
+                              Weekday: ${emp.weekday_rate.toFixed(2)}
+                              {emp.pay_type === "day_rate" ? "/day" : "/hr"} |
+                              Sat: ${emp.saturday_rate.toFixed(2)}
+                              {emp.pay_type === "day_rate" ? "/day" : "/hr"} |
+                              Sun: ${emp.sunday_rate.toFixed(2)}
+                              {emp.pay_type === "day_rate" ? "/day" : "/hr"}
+                            </p>
                           </div>
-                          <div className="text-xs text-neutral-500">
-                            {formatHoursAndMinutes(emp.rawHours)} →{" "}
-                            {formatHoursAndMinutes(emp.totalHours)}
-                          </div>
-                          <div className="text-xs text-neutral-500">
-                            ({emp.breakMinutes} min break)
+                          <div className="text-right">
+                            <div className="text-primary mb-1 text-3xl font-bold">
+                              ${emp.totalPay.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-neutral-500">
+                              {formatHoursAndMinutes(emp.rawHours)} →{" "}
+                              {formatHoursAndMinutes(emp.totalHours)}
+                            </div>
+                            <div className="text-xs text-neutral-500">
+                              ({emp.breakMinutes} min break)
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Day boxes: calendar Sat/Sun; PH dates still use PH rate in pay */}
-                      <div className="relative grid grid-cols-3 gap-3">
-                        <motion.div
-                          whileHover={{ y: -3 }}
-                          className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
-                        >
-                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
-                            Weekday
-                          </div>
-                          <div className="text-xl font-bold">
-                            {formatHoursAndMinutes(emp.weekdayHours)}
-                          </div>
-                        </motion.div>
-                        <motion.div
-                          whileHover={{ y: -3 }}
-                          className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-purple-500/50 hover:bg-purple-500/20"
-                        >
-                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
-                            Saturday
-                          </div>
-                          <div className="text-xl font-bold">
-                            {formatHoursAndMinutes(emp.saturdayHours)}
-                          </div>
-                        </motion.div>
-                        <motion.div
-                          whileHover={{ y: -3 }}
-                          className="rounded-xl border border-pink-500/30 bg-pink-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-pink-500/50 hover:bg-pink-500/20"
-                        >
-                          <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
-                            Sunday
-                          </div>
-                          <div className="text-xl font-bold">
-                            {formatHoursAndMinutes(emp.sundayHours)}
-                          </div>
-                        </motion.div>
-                      </div>
-
-                      {/* Day-rate staff totals — only shown for day_rate employees */}
-                      {emp.pay_type === "day_rate" && (
-                        <div className="relative mt-3 border-t border-neutral-800 pt-2 text-sm text-blue-400">
-                          {emp.daysWorked} {emp.daysWorked === 1 ? "day" : "days"} worked &middot; {emp.totalHours.toFixed(1)}h total
+                        {/* Day boxes: calendar Sat/Sun; PH dates still use PH rate in pay */}
+                        <div className="relative grid grid-cols-3 gap-3">
+                          <m.div
+                            whileHover={{ y: -3 }}
+                            className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
+                          >
+                            <div className="mb-2 text-xs font-medium tracking-wide text-neutral-400 uppercase">
+                              Weekday
+                            </div>
+                            <div className="text-xl font-bold">
+                              {formatHoursAndMinutes(emp.weekdayHours)}
+                            </div>
+                          </m.div>
+                          <m.div
+                            whileHover={{ y: -3 }}
+                            className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-purple-500/50 hover:bg-purple-500/20"
+                          >
+                            <div className="mb-2 text-xs font-medium tracking-wide text-neutral-400 uppercase">
+                              Saturday
+                            </div>
+                            <div className="text-xl font-bold">
+                              {formatHoursAndMinutes(emp.saturdayHours)}
+                            </div>
+                          </m.div>
+                          <m.div
+                            whileHover={{ y: -3 }}
+                            className="rounded-xl border border-pink-500/30 bg-pink-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-pink-500/50 hover:bg-pink-500/20"
+                          >
+                            <div className="mb-2 text-xs font-medium tracking-wide text-neutral-400 uppercase">
+                              Sunday
+                            </div>
+                            <div className="text-xl font-bold">
+                              {formatHoursAndMinutes(emp.sundayHours)}
+                            </div>
+                          </m.div>
                         </div>
-                      )}
 
-                      {/* View Details Indicator */}
-                      <div className="relative mt-4 flex items-center justify-end gap-2 text-sm text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                        <span>View Details</span>
-                        <motion.div
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.5 }}
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                        </motion.div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-      </main>
-      <PrintSelectModal
-        open={printModalOpen}
-        onClose={() => setPrintModalOpen(false)}
-        employees={rawEmployees}
-        timesheets={rawTimesheets}
-        weekStart={actualStartDate}
-        weekEnd={actualEndDate}
-      />
-    </div>
+                        {/* Day-rate staff totals — only shown for day_rate employees */}
+                        {emp.pay_type === "day_rate" && (
+                          <div className="relative mt-3 border-t border-neutral-800 pt-2 text-sm text-blue-400">
+                            {emp.daysWorked}{" "}
+                            {emp.daysWorked === 1 ? "day" : "days"} worked
+                            &middot; {emp.totalHours.toFixed(1)}h total
+                          </div>
+                        )}
+
+                        {/* View Details Indicator */}
+                        <div className="text-primary relative mt-4 flex items-center justify-end gap-2 text-sm opacity-0 transition-opacity group-hover:opacity-100">
+                          <span>View Details</span>
+                          <m.div
+                            animate={{ x: [0, 5, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.5 }}
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </m.div>
+                        </div>
+                      </m.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+        </main>
+        <PrintSelectModal
+          open={printModalOpen}
+          onClose={() => setPrintModalOpen(false)}
+          employees={rawEmployees}
+          timesheets={rawTimesheets}
+          weekStart={actualStartDate}
+          weekEnd={actualEndDate}
+        />
+      </div>
+    </LazyMotion>
   );
 }
 

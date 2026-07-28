@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, FileText, LogOut, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
-import { motion } from "framer-motion";
+import { LazyMotion, m } from "framer-motion";
+import { loadDomAnimation } from "@/lib/motion-features";
 import { convert24to12 } from "@/lib/timeUtils";
 import type { Employee } from "@/types/database";
 
@@ -121,212 +122,241 @@ export default function TimesheetActivityPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 top-20 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
-        <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
-      </div>
-
-      <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push("/client/manager/dashboard")}
-                className="text-neutral-400 hover:bg-neutral-800 hover:text-white"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="rounded-xl bg-primary/10 p-2 ring-2 ring-primary/20">
-                <FileText className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">
-                  Timesheet activity
-                </h1>
-                <p className="text-sm text-neutral-400">
-                  Edits and deletions by staff or manager
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={handleLogout}
-              className="border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+    <LazyMotion features={loadDomAnimation}>
+      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-20 -left-40 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
+          <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-400">
-            {error}
-          </div>
-        )}
-
-        {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
-        >
-          <div className="flex items-center gap-2 text-neutral-400">
-            <Filter className="h-4 w-4" />
-            <span className="text-sm font-medium">Filter</span>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-neutral-500">Employee</label>
-            <select
-              value={filterEmployeeId}
-              onChange={(e) => setFilterEmployeeId(e.target.value)}
-              className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="">All employees</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.first_name} {emp.last_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-neutral-500">Work day from</label>
-            <input
-              type="date"
-              value={filterStartDate}
-              onChange={(e) => setFilterStartDate(e.target.value)}
-              className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-neutral-500">Work day to</label>
-            <input
-              type="date"
-              value={filterEndDate}
-              onChange={(e) => setFilterEndDate(e.target.value)}
-              className="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickRange("week")}
-              className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-            >
-              This week
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickRange("2weeks")}
-              className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-            >
-              Last 14 days
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQuickRange("month")}
-              className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-            >
-              Last 30 days
-            </Button>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="text-neutral-400 hover:text-white"
-          >
-            Clear
-          </Button>
-        </motion.div>
-
-        {loading ? (
-          <div className="flex justify-center py-12 text-neutral-400">
-            Loading...
-          </div>
-        ) : logs.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-8 text-center text-neutral-400"
-          >
-            No timesheet edits or deletions match the filters.
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50"
-          >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px] text-left text-sm">
-                <thead>
-                  <tr className="border-b border-neutral-700 bg-neutral-800/80">
-                    <th className="px-4 py-3 font-medium text-neutral-300">Date</th>
-                    <th className="px-4 py-3 font-medium text-neutral-300">Employee</th>
-                    <th className="px-4 py-3 font-medium text-neutral-300">Work day</th>
-                    <th className="px-4 py-3 font-medium text-neutral-300">Action</th>
-                    <th className="px-4 py-3 font-medium text-neutral-300">By</th>
-                    <th className="px-4 py-3 font-medium text-neutral-300">Previous times</th>
-                    <th className="px-4 py-3 font-medium text-neutral-300">New times</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => {
-                    const name = log.employee
-                      ? `${log.employee.first_name} ${log.employee.last_name}`.trim()
-                      : "—";
-                    return (
-                      <tr
-                        key={log.id}
-                        className="border-b border-neutral-800 hover:bg-neutral-800/50"
-                      >
-                        <td className="whitespace-nowrap px-4 py-3 text-neutral-400">
-                          {format(new Date(log.edited_at), "dd MMM yyyy, h:mm a")}
-                        </td>
-                        <td className="px-4 py-3 font-medium">{name}</td>
-                        <td className="whitespace-nowrap px-4 py-3 text-neutral-300">
-                          {format(new Date(log.work_date), "EEE d MMM")}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                              log.action === "delete"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-primary/20 text-primary"
-                            }`}
-                          >
-                            {log.action === "delete" ? "Deleted" : "Edited"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 capitalize text-neutral-400">
-                          {log.edited_by}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-neutral-400">
-                          {timeRangeAmPm(log.previous_start_time, log.previous_end_time)}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-neutral-300">
-                          {log.action === "delete"
-                            ? "—"
-                            : timeRangeAmPm(log.new_start_time, log.new_end_time)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+        <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.push("/client/manager/dashboard")}
+                  className="text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div className="bg-primary/10 ring-primary/20 rounded-xl p-2 ring-2">
+                  <FileText className="text-primary h-6 w-6" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold">Timesheet activity</h1>
+                  <p className="text-sm text-neutral-400">
+                    Edits and deletions by staff or manager
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
-          </motion.div>
-        )}
-      </main>
-    </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-400">
+              {error}
+            </div>
+          )}
+
+          {/* Filters */}
+          <m.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
+          >
+            <div className="flex items-center gap-2 text-neutral-400">
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium">Filter</span>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-neutral-500">
+                Employee
+              </label>
+              <select
+                value={filterEmployeeId}
+                onChange={(e) => setFilterEmployeeId(e.target.value)}
+                className="focus:border-primary focus:ring-primary rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:ring-1 focus:outline-none"
+              >
+                <option value="">All employees</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.first_name} {emp.last_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-neutral-500">
+                Work day from
+              </label>
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="focus:border-primary focus:ring-primary rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-neutral-500">
+                Work day to
+              </label>
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="focus:border-primary focus:ring-primary rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:ring-1 focus:outline-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickRange("week")}
+                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+              >
+                This week
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickRange("2weeks")}
+                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+              >
+                Last 14 days
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQuickRange("month")}
+                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+              >
+                Last 30 days
+              </Button>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="text-neutral-400 hover:text-white"
+            >
+              Clear
+            </Button>
+          </m.div>
+
+          {loading ? (
+            <div className="flex justify-center py-12 text-neutral-400">
+              Loading...
+            </div>
+          ) : logs.length === 0 ? (
+            <m.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-8 text-center text-neutral-400"
+            >
+              No timesheet edits or deletions match the filters.
+            </m.div>
+          ) : (
+            <m.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50"
+            >
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-700 bg-neutral-800/80">
+                      <th className="px-4 py-3 font-medium text-neutral-300">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 font-medium text-neutral-300">
+                        Employee
+                      </th>
+                      <th className="px-4 py-3 font-medium text-neutral-300">
+                        Work day
+                      </th>
+                      <th className="px-4 py-3 font-medium text-neutral-300">
+                        Action
+                      </th>
+                      <th className="px-4 py-3 font-medium text-neutral-300">
+                        By
+                      </th>
+                      <th className="px-4 py-3 font-medium text-neutral-300">
+                        Previous times
+                      </th>
+                      <th className="px-4 py-3 font-medium text-neutral-300">
+                        New times
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {logs.map((log) => {
+                      const name = log.employee
+                        ? `${log.employee.first_name} ${log.employee.last_name}`.trim()
+                        : "—";
+                      return (
+                        <tr
+                          key={log.id}
+                          className="border-b border-neutral-800 hover:bg-neutral-800/50"
+                        >
+                          <td className="px-4 py-3 whitespace-nowrap text-neutral-400">
+                            {format(
+                              new Date(log.edited_at),
+                              "dd MMM yyyy, h:mm a",
+                            )}
+                          </td>
+                          <td className="px-4 py-3 font-medium">{name}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-neutral-300">
+                            {format(new Date(log.work_date), "EEE d MMM")}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                                log.action === "delete"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-primary/20 text-primary"
+                              }`}
+                            >
+                              {log.action === "delete" ? "Deleted" : "Edited"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-neutral-400 capitalize">
+                            {log.edited_by}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-neutral-400">
+                            {timeRangeAmPm(
+                              log.previous_start_time,
+                              log.previous_end_time,
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-neutral-300">
+                            {log.action === "delete"
+                              ? "—"
+                              : timeRangeAmPm(
+                                  log.new_start_time,
+                                  log.new_end_time,
+                                )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </m.div>
+          )}
+        </main>
+      </div>
+    </LazyMotion>
   );
 }

@@ -1,9 +1,7 @@
 import "~/styles/globals.css";
 
-import { type Metadata } from "next";
+import { type Metadata, type Viewport } from "next";
 import localFont from "next/font/local";
-
-import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
   title: "TimeTally - Simple Timesheet Management",
@@ -13,6 +11,11 @@ export const metadata: Metadata = {
     { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
     { rel: "icon", url: "/favicon.ico", sizes: "any" }, // Fallback
   ],
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 const satoshi = localFont({
@@ -37,9 +40,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${satoshi.variable}`}>
-      <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

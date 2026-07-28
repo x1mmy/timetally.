@@ -8,12 +8,20 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Edit, DollarSign, Clock, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { startOfWeek, endOfWeek, format, getDay, addDays, differenceInDays } from "date-fns";
+import {
+  startOfWeek,
+  endOfWeek,
+  format,
+  getDay,
+  addDays,
+  differenceInDays,
+} from "date-fns";
 import type { Employee, TimesheetWithEmployee } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
 import { rateForDate } from "~/lib/payrollRates";
 import { EditTimesheetDialog } from "./components/EditTimesheetDialog";
-import { motion } from "framer-motion";
+import { LazyMotion, m } from "framer-motion";
+import { loadDomAnimation } from "@/lib/motion-features";
 import { isPublicHoliday, getHolidayName } from "@/lib/holidays";
 
 interface DailyBreakdown {
@@ -26,6 +34,8 @@ interface DailyBreakdown {
   totalHours: number;
   pay: number;
   timesheetId: string | null;
+  isHoliday: boolean;
+  holidayName: string | null;
 }
 
 function EmployeeDetailContent() {
@@ -42,7 +52,10 @@ function EmployeeDetailContent() {
   // Get date range and view mode from URL params or default to current week
   const startDateParam = searchParams.get("startDate");
   const endDateParam = searchParams.get("endDate");
-  const viewModeParam = searchParams.get("viewMode") as "week" | "custom" | null;
+  const viewModeParam = searchParams.get("viewMode") as
+    | "week"
+    | "custom"
+    | null;
 
   const currentWeekStart = startDateParam
     ? new Date(startDateParam)
@@ -94,6 +107,10 @@ function EmployeeDetailContent() {
         const dayName = daysOfWeek[dayOfWeek] ?? "";
 
         const timesheet = sheets.find((ts) => ts.work_date === dateString);
+        const [dayIsHoliday, dayHolidayName] = await Promise.all([
+          isPublicHoliday(dateString),
+          getHolidayName(dateString),
+        ]);
 
         if (timesheet?.start_time && timesheet?.end_time) {
           const rawHours =
@@ -103,12 +120,11 @@ function EmployeeDetailContent() {
 
           const totalHours = parseFloat(timesheet.total_hours.toString());
           const breakMinutes = timesheet.break_minutes ?? 0;
-          const rate = rateForDate(dateString, emp);
+          const rate = await rateForDate(dateString, emp);
 
           // For day_rate employees, pay is the rate (1 day = 1 rate)
           // For hourly employees, pay is hours * rate
-          const pay =
-            emp.pay_type === "day_rate" ? rate : totalHours * rate;
+          const pay = emp.pay_type === "day_rate" ? rate : totalHours * rate;
 
           breakdown.push({
             date: dateString,
@@ -120,6 +136,8 @@ function EmployeeDetailContent() {
             totalHours,
             pay,
             timesheetId: timesheet.id,
+            isHoliday: dayIsHoliday,
+            holidayName: dayHolidayName,
           });
         } else {
           breakdown.push({
@@ -132,6 +150,8 @@ function EmployeeDetailContent() {
             totalHours: 0,
             pay: 0,
             timesheetId: null,
+            isHoliday: dayIsHoliday,
+            holidayName: dayHolidayName,
           });
         }
       }
@@ -166,7 +186,9 @@ function EmployeeDetailContent() {
     (sum, day) => sum + day.breakMinutes,
     0,
   );
-  const daysWorked = dailyBreakdown.filter((day) => day.endTime !== null).length;
+  const daysWorked = dailyBreakdown.filter(
+    (day) => day.endTime !== null,
+  ).length;
 
   // Function to navigate back with URL params
   const handleBackToDashboard = () => {
@@ -179,348 +201,376 @@ function EmployeeDetailContent() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-      {/* Animated Background */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -left-40 top-20 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
-        <div className="absolute -right-40 bottom-20 h-96 w-96 animate-pulse rounded-full bg-purple-500/5 blur-3xl" />
-      </div>
-
-      {/* Header */}
-      <motion.header
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100 }}
-        className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl"
-      >
-        <div className="container relative mx-auto px-4 py-4">
-          <motion.div
-            initial={{ x: -20, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Button
-              variant="ghost"
-              onClick={handleBackToDashboard}
-              className="mb-4 text-primary transition-all hover:bg-neutral-800 hover:text-primary/80"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </motion.div>
-
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center justify-between"
-          >
-            <div>
-              <h1 className="text-3xl font-bold md:text-4xl">
-                {employee.first_name} {employee.last_name}
-              </h1>
-              <div className="mt-2 flex items-center gap-2 text-sm text-neutral-400">
-                <Calendar className="h-4 w-4" />
-                <span>
-                  {format(currentWeekStart, "MMM d")} -{" "}
-                  {format(weekEnd, "MMM d, yyyy")}
-                </span>
-              </div>
-            </div>
-          </motion.div>
+    <LazyMotion features={loadDomAnimation}>
+      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
+        {/* Animated Background */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-20 -left-40 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
+          <div className="absolute -right-40 bottom-20 h-96 w-96 animate-pulse rounded-full bg-purple-500/5 blur-3xl" />
         </div>
-      </motion.header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mx-auto max-w-4xl space-y-6">
-          {/* Summary Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
-          >
-            <motion.div
-              whileHover={{ scale: 1.05, y: -3 }}
-              className="rounded-xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-4 backdrop-blur-sm"
+        {/* Header */}
+        <m.header
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ type: "spring", stiffness: 100 }}
+          className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl"
+        >
+          <div className="relative container mx-auto px-4 py-4">
+            <m.div
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
             >
-              <p className="mb-1 text-xs font-medium text-neutral-400">Weekday Rate</p>
-              <p className="text-lg font-bold md:text-xl">
-                ${employee.weekday_rate.toFixed(2)}
-                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
-              </p>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, y: -3 }}
-              className="rounded-xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-4 backdrop-blur-sm"
+              <Button
+                variant="ghost"
+                onClick={handleBackToDashboard}
+                className="text-primary hover:text-primary/80 mb-4 transition-all hover:bg-neutral-800"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Dashboard
+              </Button>
+            </m.div>
+
+            <m.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex items-center justify-between"
             >
-              <p className="mb-1 text-xs font-medium text-neutral-400">Saturday Rate</p>
-              <p className="text-lg font-bold md:text-xl">
-                ${employee.saturday_rate.toFixed(2)}
-                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
-              </p>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, y: -3 }}
-              className="rounded-xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-4 backdrop-blur-sm"
-            >
-              <p className="mb-1 text-xs font-medium text-neutral-400">Sunday Rate</p>
-              <p className="text-lg font-bold md:text-xl">
-                ${employee.sunday_rate.toFixed(2)}
-                {employee.pay_type === "day_rate" ? "/day" : "/hr"}
-              </p>
-            </motion.div>
-            <motion.div
-              whileHover={{ scale: 1.05, y: -3 }}
-              className="relative overflow-hidden rounded-xl border border-primary/40 bg-linear-to-br from-primary/20 to-primary/5 p-4 backdrop-blur-sm"
-            >
-              <div className="absolute right-0 top-0 h-20 w-20 -translate-y-4 translate-x-4 rounded-full bg-primary/20 blur-2xl" />
-              <div className="relative">
-                <div className="mb-1 flex items-center gap-1 text-xs font-medium text-neutral-400">
-                  <DollarSign className="h-3 w-3" />
-                  <span>Total Pay</span>
+              <div>
+                <h1 className="text-3xl font-bold md:text-4xl">
+                  {employee.first_name} {employee.last_name}
+                </h1>
+                <div className="mt-2 flex items-center gap-2 text-sm text-neutral-400">
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    {format(currentWeekStart, "MMM d")} -{" "}
+                    {format(weekEnd, "MMM d, yyyy")}
+                  </span>
                 </div>
-                <p className="text-lg font-bold text-primary md:text-xl">
-                  ${totalPay.toFixed(2)}
-                </p>
-                <p className="mt-1 text-xs text-neutral-400">
-                  {formatHoursAndMinutes(totalHours)}
-                </p>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </div>
+        </m.header>
 
-          {/* Daily Breakdown */}
-          <div className="space-y-3">
-            {dailyBreakdown.map((day, index) => {
-              const hasHours = day.startTime && day.endTime;
-              return (
-                <motion.div
-                  key={day.date}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 + index * 0.05 }}
-                  whileHover={{ scale: 1.01 }}
-                  className={`group rounded-xl border p-5 backdrop-blur-sm transition-all ${
-                    hasHours
-                      ? "border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
-                      : "border-neutral-800/50 bg-neutral-900/30"
-                  }`}
-                >
-                  <div className="mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-12 w-12 items-center justify-center rounded-lg ${
-                          hasHours
-                            ? "bg-primary/10 ring-2 ring-primary/20"
-                            : "bg-neutral-800/50"
-                        }`}
-                      >
-                        <span className="text-lg font-bold">
-                          {format(new Date(day.date), "d")}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold">
-                            {day.dayName}
-                          </h3>
-                          {getHolidayName(day.date) && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400 ring-1 ring-amber-500/30">
-                              <span className="text-[10px]">🎉</span>
-                              {getHolidayName(day.date)}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-400">
-                          {format(new Date(day.date), "MMMM d, yyyy")}
-                        </p>
-                      </div>
-                    </div>
-                    {hasHours ? (
+        {/* Main Content */}
+        <main className="container mx-auto px-4 py-8">
+          <div className="mx-auto max-w-4xl space-y-6">
+            {/* Summary Cards */}
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
+            >
+              <m.div
+                whileHover={{ scale: 1.05, y: -3 }}
+                className="rounded-xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-4 backdrop-blur-sm"
+              >
+                <p className="mb-1 text-xs font-medium text-neutral-400">
+                  Weekday Rate
+                </p>
+                <p className="text-lg font-bold md:text-xl">
+                  ${employee.weekday_rate.toFixed(2)}
+                  {employee.pay_type === "day_rate" ? "/day" : "/hr"}
+                </p>
+              </m.div>
+              <m.div
+                whileHover={{ scale: 1.05, y: -3 }}
+                className="rounded-xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-4 backdrop-blur-sm"
+              >
+                <p className="mb-1 text-xs font-medium text-neutral-400">
+                  Saturday Rate
+                </p>
+                <p className="text-lg font-bold md:text-xl">
+                  ${employee.saturday_rate.toFixed(2)}
+                  {employee.pay_type === "day_rate" ? "/day" : "/hr"}
+                </p>
+              </m.div>
+              <m.div
+                whileHover={{ scale: 1.05, y: -3 }}
+                className="rounded-xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-4 backdrop-blur-sm"
+              >
+                <p className="mb-1 text-xs font-medium text-neutral-400">
+                  Sunday Rate
+                </p>
+                <p className="text-lg font-bold md:text-xl">
+                  ${employee.sunday_rate.toFixed(2)}
+                  {employee.pay_type === "day_rate" ? "/day" : "/hr"}
+                </p>
+              </m.div>
+              <m.div
+                whileHover={{ scale: 1.05, y: -3 }}
+                className="border-primary/40 from-primary/20 to-primary/5 relative overflow-hidden rounded-xl border bg-linear-to-br p-4 backdrop-blur-sm"
+              >
+                <div className="bg-primary/20 absolute top-0 right-0 h-20 w-20 translate-x-4 -translate-y-4 rounded-full blur-2xl" />
+                <div className="relative">
+                  <div className="mb-1 flex items-center gap-1 text-xs font-medium text-neutral-400">
+                    <DollarSign className="h-3 w-3" />
+                    <span>Total Pay</span>
+                  </div>
+                  <p className="text-primary text-lg font-bold md:text-xl">
+                    ${totalPay.toFixed(2)}
+                  </p>
+                  <p className="mt-1 text-xs text-neutral-400">
+                    {formatHoursAndMinutes(totalHours)}
+                  </p>
+                </div>
+              </m.div>
+            </m.div>
+
+            {/* Daily Breakdown */}
+            <div className="space-y-3">
+              {dailyBreakdown.map((day, index) => {
+                const hasHours = day.startTime && day.endTime;
+                return (
+                  <m.div
+                    key={day.date}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + index * 0.05 }}
+                    whileHover={{ scale: 1.01 }}
+                    className={`group rounded-xl border p-5 backdrop-blur-sm transition-all ${
+                      hasHours
+                        ? "hover:border-primary/30 hover:shadow-primary/5 border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:shadow-lg"
+                        : "border-neutral-800/50 bg-neutral-900/30"
+                    }`}
+                  >
+                    <div className="mb-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 text-right">
-                          <Clock className="h-4 w-4 text-neutral-400" />
-                          <p className="text-sm text-neutral-400">
-                            {format(
-                              new Date(`2000-01-01T${day.startTime}`),
-                              "h:mm a",
-                            )}{" "}
-                            -{" "}
-                            {format(
-                              new Date(`2000-01-01T${day.endTime}`),
-                              "h:mm a",
+                        <div
+                          className={`flex h-12 w-12 items-center justify-center rounded-lg ${
+                            hasHours
+                              ? "bg-primary/10 ring-primary/20 ring-2"
+                              : "bg-neutral-800/50"
+                          }`}
+                        >
+                          <span className="text-lg font-bold">
+                            {format(new Date(day.date), "d")}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-semibold">
+                              {day.dayName}
+                            </h3>
+                            {day.holidayName && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400 ring-1 ring-amber-500/30">
+                                <span className="text-[10px]">🎉</span>
+                                {day.holidayName}
+                              </span>
                             )}
+                          </div>
+                          <p className="text-xs text-neutral-400">
+                            {format(new Date(day.date), "MMMM d, yyyy")}
                           </p>
                         </div>
-                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingDay(day)}
-                            className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-primary/50 hover:bg-primary/20"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </motion.div>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-neutral-500">No hours logged</p>
-                        <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingDay(day)}
-                            className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-green-500/50 hover:bg-green-500/10 hover:text-green-400"
+                      {hasHours ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 text-right">
+                            <Clock className="h-4 w-4 text-neutral-400" />
+                            <p className="text-sm text-neutral-400">
+                              {format(
+                                new Date(`2000-01-01T${day.startTime}`),
+                                "h:mm a",
+                              )}{" "}
+                              -{" "}
+                              {format(
+                                new Date(`2000-01-01T${day.endTime}`),
+                                "h:mm a",
+                              )}
+                            </p>
+                          </div>
+                          <m.div
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
                           >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </motion.div>
-                      </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingDay(day)}
+                              className="hover:border-primary/50 hover:bg-primary/20 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </m.div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-neutral-500">
+                            No hours logged
+                          </p>
+                          <m.div
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingDay(day)}
+                              className="border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:border-green-500/50 hover:bg-green-500/10 hover:text-green-400"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </m.div>
+                        </div>
+                      )}
+                    </div>
+
+                    {hasHours && (
+                      <m.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="grid grid-cols-2 gap-3 md:grid-cols-4"
+                      >
+                        <div className="rounded-lg bg-neutral-800/50 p-3">
+                          <p className="mb-1 text-xs text-neutral-400">
+                            Raw Hours
+                          </p>
+                          <p className="font-semibold">
+                            {formatHoursAndMinutes(day.rawHours)}
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-neutral-800/50 p-3">
+                          <p className="mb-1 text-xs text-neutral-400">
+                            Break Time
+                          </p>
+                          <p className="font-semibold">
+                            {day.breakMinutes} min
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-blue-500/10 p-3 ring-1 ring-blue-500/20">
+                          <p className="mb-1 text-xs text-neutral-400">
+                            Paid Hours
+                          </p>
+                          <p className="font-semibold text-blue-400">
+                            {formatHoursAndMinutes(day.totalHours)}
+                          </p>
+                        </div>
+                        <div
+                          className={`rounded-lg p-3 ring-1 ${
+                            day.isHoliday
+                              ? "bg-amber-500/10 ring-amber-500/20"
+                              : "bg-primary/10 ring-primary/20"
+                          }`}
+                        >
+                          <p className="mb-1 text-xs text-neutral-400">
+                            {day.isHoliday ? "Pay (PH Rate)" : "Pay"}
+                          </p>
+                          <p
+                            className={`font-semibold ${
+                              day.isHoliday ? "text-amber-400" : "text-primary"
+                            }`}
+                          >
+                            ${day.pay.toFixed(2)}
+                          </p>
+                        </div>
+                      </m.div>
                     )}
-                  </div>
+                  </m.div>
+                );
+              })}
+            </div>
 
-                  {hasHours && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
-                      className="grid grid-cols-2 gap-3 md:grid-cols-4"
+            {/* Week Summary */}
+            <m.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="border-primary/20 relative overflow-hidden rounded-2xl border bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
+            >
+              <div className="bg-primary/10 absolute top-0 right-0 h-40 w-40 translate-x-8 -translate-y-8 rounded-full blur-3xl" />
+              <div className="relative">
+                <h3 className="mb-6 text-xl font-semibold">Week Summary</h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  {employee.pay_type === "day_rate" && (
+                    <m.div
+                      whileHover={{ scale: 1.05 }}
+                      className="rounded-xl bg-blue-500/10 p-4 ring-1 ring-blue-500/20"
                     >
-                      <div className="rounded-lg bg-neutral-800/50 p-3">
-                        <p className="mb-1 text-xs text-neutral-400">Raw Hours</p>
-                        <p className="font-semibold">
-                          {formatHoursAndMinutes(day.rawHours)}
-                        </p>
+                      <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
+                        <Calendar className="h-4 w-4" />
+                        <span>Days Worked</span>
                       </div>
-                      <div className="rounded-lg bg-neutral-800/50 p-3">
-                        <p className="mb-1 text-xs text-neutral-400">Break Time</p>
-                        <p className="font-semibold">{day.breakMinutes} min</p>
-                      </div>
-                      <div className="rounded-lg bg-blue-500/10 p-3 ring-1 ring-blue-500/20">
-                        <p className="mb-1 text-xs text-neutral-400">Paid Hours</p>
-                        <p className="font-semibold text-blue-400">
-                          {formatHoursAndMinutes(day.totalHours)}
-                        </p>
-                      </div>
-                      <div className={`rounded-lg p-3 ring-1 ${
-                        isPublicHoliday(day.date)
-                          ? "bg-amber-500/10 ring-amber-500/20"
-                          : "bg-primary/10 ring-primary/20"
-                      }`}>
-                        <p className="mb-1 text-xs text-neutral-400">
-                          {isPublicHoliday(day.date) ? "Pay (PH Rate)" : "Pay"}
-                        </p>
-                        <p className={`font-semibold ${
-                          isPublicHoliday(day.date) ? "text-amber-400" : "text-primary"
-                        }`}>
-                          ${day.pay.toFixed(2)}
-                        </p>
-                      </div>
-                    </motion.div>
+                      <p className="text-2xl font-bold text-blue-400">
+                        {daysWorked} {daysWorked === 1 ? "day" : "days"}
+                      </p>
+                    </m.div>
                   )}
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Week Summary */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8 }}
-            className="relative overflow-hidden rounded-2xl border border-primary/20 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
-          >
-            <div className="absolute right-0 top-0 h-40 w-40 -translate-y-8 translate-x-8 rounded-full bg-primary/10 blur-3xl" />
-            <div className="relative">
-              <h3 className="mb-6 text-xl font-semibold">Week Summary</h3>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {employee.pay_type === "day_rate" && (
-                  <motion.div
+                  <m.div
                     whileHover={{ scale: 1.05 }}
                     className="rounded-xl bg-blue-500/10 p-4 ring-1 ring-blue-500/20"
                   >
                     <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
-                      <Calendar className="h-4 w-4" />
-                      <span>Days Worked</span>
+                      <Clock className="h-4 w-4" />
+                      <span>Total Paid Hours</span>
                     </div>
                     <p className="text-2xl font-bold text-blue-400">
-                      {daysWorked} {daysWorked === 1 ? "day" : "days"}
+                      {formatHoursAndMinutes(totalHours)}
                     </p>
-                  </motion.div>
-                )}
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="rounded-xl bg-blue-500/10 p-4 ring-1 ring-blue-500/20"
-                >
-                  <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
-                    <Clock className="h-4 w-4" />
-                    <span>Total Paid Hours</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-400">
-                    {formatHoursAndMinutes(totalHours)}
-                  </p>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="rounded-xl bg-purple-500/10 p-4 ring-1 ring-purple-500/20"
-                >
-                  <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
-                    <Clock className="h-4 w-4" />
-                    <span>Break Time</span>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-400">
-                    {totalBreakMinutes} min
-                  </p>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  className="rounded-xl bg-primary/10 p-4 ring-1 ring-primary/20"
-                >
-                  <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
-                    <DollarSign className="h-4 w-4" />
-                    <span>Total Pay</span>
-                  </div>
-                  <p className="text-2xl font-bold text-primary">
-                    ${totalPay.toFixed(2)}
-                  </p>
-                </motion.div>
+                  </m.div>
+                  <m.div
+                    whileHover={{ scale: 1.05 }}
+                    className="rounded-xl bg-purple-500/10 p-4 ring-1 ring-purple-500/20"
+                  >
+                    <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
+                      <Clock className="h-4 w-4" />
+                      <span>Break Time</span>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-400">
+                      {totalBreakMinutes} min
+                    </p>
+                  </m.div>
+                  <m.div
+                    whileHover={{ scale: 1.05 }}
+                    className="bg-primary/10 ring-primary/20 rounded-xl p-4 ring-1"
+                  >
+                    <div className="mb-2 flex items-center gap-2 text-sm text-neutral-400">
+                      <DollarSign className="h-4 w-4" />
+                      <span>Total Pay</span>
+                    </div>
+                    <p className="text-primary text-2xl font-bold">
+                      ${totalPay.toFixed(2)}
+                    </p>
+                  </m.div>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        </div>
-      </main>
+            </m.div>
+          </div>
+        </main>
 
-      {/* Edit Timesheet Dialog */}
-      {/* // Show EditTimesheetDialog only when both an editingDay and employee are set */}
-      {editingDay && employee && (
-        <EditTimesheetDialog
-          // Dialog is open if editingDay is not null
-          open={editingDay !== null}
-          // When dialog is closed, clear the editingDay to hide the dialog
-          onOpenChange={(open) => {
-            if (!open) {
+        {/* Edit Timesheet Dialog */}
+        {/* // Show EditTimesheetDialog only when both an editingDay and employee are set */}
+        {editingDay && employee && (
+          <EditTimesheetDialog
+            // Dialog is open if editingDay is not null
+            open={editingDay !== null}
+            // When dialog is closed, clear the editingDay to hide the dialog
+            onOpenChange={(open) => {
+              if (!open) {
+                setEditingDay(null);
+              }
+            }}
+            // Pass the employee ID for whom the timesheet is being edited
+            employeeId={employeeId}
+            // The work date of the timesheet entry being edited
+            workDate={editingDay.date}
+            // Current start time (can be null if not set)
+            startTime={editingDay.startTime}
+            // Current end time (can be null if not set)
+            endTime={editingDay.endTime}
+            // On successful dialog update, close the dialog and reload employee data
+            onSuccess={() => {
               setEditingDay(null);
-            }
-          }}
-          // Pass the employee ID for whom the timesheet is being edited
-          employeeId={employeeId}
-          // The work date of the timesheet entry being edited
-          workDate={editingDay.date}
-          // Current start time (can be null if not set)
-          startTime={editingDay.startTime}
-          // Current end time (can be null if not set)
-          endTime={editingDay.endTime}
-          // On successful dialog update, close the dialog and reload employee data
-          onSuccess={() => {
-            setEditingDay(null);
-            void loadData();
-          }}
-        />
-      )}
-    </div>
+              void loadData();
+            }}
+          />
+        )}
+      </div>
+    </LazyMotion>
   );
 }
 
