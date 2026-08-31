@@ -160,11 +160,13 @@ RETURNS INTEGER AS $$
 DECLARE
   v_break_minutes INTEGER := 0;
 BEGIN
-  -- Find the applicable break rule (highest min_hours that's <= total_hours)
+  -- Find the applicable break rule (highest min_hours that's strictly
+  -- less than total_hours — a shift of exactly min_hours does NOT
+  -- trigger that tier's break).
   SELECT break_minutes INTO v_break_minutes
   FROM break_rules
   WHERE client_id = p_client_id
-    AND min_hours <= p_total_hours
+    AND min_hours < p_total_hours
   ORDER BY min_hours DESC
   LIMIT 1;
 
