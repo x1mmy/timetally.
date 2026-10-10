@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { isManagerSession } from "@/lib/auth";
 
 /**
  * GET - List all employees for current client
@@ -31,6 +32,13 @@ export async function GET(request: NextRequest) {
 
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    if (!isManagerSession(request, client.id)) {
+      return NextResponse.json(
+        { error: "Manager access required" },
+        { status: 401 },
+      );
     }
 
     // Fetch all employees for this client, joining category info
@@ -73,12 +81,39 @@ export async function GET(request: NextRequest) {
  *
  * Error Responses:
  * - 400: Validation error (missing fields, invalid PIN format, negative rates, duplicate PIN)
+ * - 401: Manager access required (no valid manager session)
  * - 404: Client not found (invalid subdomain)
  * - 500: Server error
  */
 export async function POST(request: NextRequest) {
   try {
     const supabase = createSupabaseAdmin();
+
+    // Get subdomain from request
+    const subdomain = getSubdomainFromRequest(request);
+
+    if (!subdomain) {
+      return NextResponse.json({ error: "Invalid subdomain" }, { status: 400 });
+    }
+
+    // Resolve client ID from subdomain
+    const { data: client } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("subdomain", subdomain)
+      .single();
+
+    if (!client) {
+      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    if (!isManagerSession(request, client.id)) {
+      return NextResponse.json(
+        { error: "Manager access required" },
+        { status: 401 },
+      );
+    }
+
     const {
       firstName,
       lastName,
@@ -121,24 +156,6 @@ export async function POST(request: NextRequest) {
         { error: "Pay rates must be positive numbers" },
         { status: 400 },
       );
-    }
-
-    // Get subdomain from request
-    const subdomain = getSubdomainFromRequest(request);
-
-    if (!subdomain) {
-      return NextResponse.json({ error: "Invalid subdomain" }, { status: 400 });
-    }
-
-    // Resolve client ID from subdomain
-    const { data: client } = await supabase
-      .from("clients")
-      .select("id")
-      .eq("subdomain", subdomain)
-      .single();
-
-    if (!client) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
     // Insert new employee record

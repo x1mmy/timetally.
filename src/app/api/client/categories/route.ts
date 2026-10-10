@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { isManagerSession } from "@/lib/auth";
 
 async function getClientId(request: NextRequest) {
   const supabase = createSupabaseAdmin();
@@ -30,6 +31,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
     const { supabase, clientId } = ctx;
+
+    if (!isManagerSession(request, clientId)) {
+      return NextResponse.json(
+        { error: "Manager access required" },
+        { status: 401 },
+      );
+    }
 
     const { data: categories, error } = await supabase
       .from("employee_categories")
@@ -72,6 +80,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
     const { supabase, clientId } = ctx;
+
+    if (!isManagerSession(request, clientId)) {
+      return NextResponse.json(
+        { error: "Manager access required" },
+        { status: 401 },
+      );
+    }
 
     const body = (await request.json()) as { name?: string; dashboardView?: string };
     const { name } = body;
