@@ -46,7 +46,9 @@ export function middleware(request: NextRequest) {
 
   console.log("[Middleware] Detected subdomain:", subdomain);
 
-  // Store subdomain in header for use in app
+  // Store subdomain in a request header for use in app.
+  // Always pass these as `{ request: { headers } }` - a bare `{ headers }`
+  // sets response headers and echoes the whole request back to the browser.
   const headers = new Headers(request.headers);
   headers.set("x-subdomain", subdomain ?? "");
 
@@ -58,36 +60,36 @@ export function middleware(request: NextRequest) {
   if (subdomain === "admin") {
     // Don't rewrite API routes or Next.js internal routes
     if (url.pathname.startsWith("/api") || url.pathname.startsWith("/_next")) {
-      return NextResponse.next({ headers });
+      return NextResponse.next({ request: { headers } });
     }
     // Admin portal routes start with /admin
     if (!url.pathname.startsWith("/admin")) {
       url.pathname = `/admin${url.pathname}`;
       console.log("[Middleware] Rewriting to admin portal:", url.pathname);
-      return NextResponse.rewrite(url, { headers });
+      return NextResponse.rewrite(url, { request: { headers } });
     }
-    return NextResponse.next({ headers });
+    return NextResponse.next({ request: { headers } });
   }
 
   // Route 2: Client portal (any other subdomain)
   if (subdomain && subdomain !== "www") {
     // Don't rewrite API routes or Next.js internal routes
     if (url.pathname.startsWith("/api") || url.pathname.startsWith("/_next")) {
-      return NextResponse.next({ headers });
+      return NextResponse.next({ request: { headers } });
     }
     // Client portal routes start with /client
     if (!url.pathname.startsWith("/client")) {
       url.pathname = `/client${url.pathname}`;
       console.log("[Middleware] Rewriting to client portal:", url.pathname);
-      return NextResponse.rewrite(url, { headers });
+      return NextResponse.rewrite(url, { request: { headers } });
     }
-    return NextResponse.next({ headers });
+    return NextResponse.next({ request: { headers } });
   }
 
   // Route 3: Root domain (marketing/landing page)
   // No rewrite needed, serve from root
   console.log("[Middleware] Serving root domain");
-  return NextResponse.next({ headers });
+  return NextResponse.next({ request: { headers } });
 }
 
 /**
