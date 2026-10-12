@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Find employee by PIN and client ID
     const { data: employee, error: employeeError } = await supabase
       .from("employees")
-      .select("*")
+      .select("id, first_name, last_name, status")
       .eq("client_id", client.id)
       .eq("pin", pin)
       .single();

@@ -37,7 +37,9 @@ export async function GET(request: NextRequest) {
     // Fetch employee by id constrained to client
     const { data: employee, error: employeeError } = await supabase
       .from("employees")
-      .select("*, employee_categories(name, dashboard_view)")
+      .select(
+        "id, first_name, last_name, status, employee_categories(name, dashboard_view)",
+      )
       .eq("id", sessionCookie)
       .eq("client_id", client.id)
       .single();

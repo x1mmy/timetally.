@@ -48,13 +48,13 @@ export type DashboardView = 'weekly' | 'today_only';
 /**
  * Employee entity
  * Belongs to a specific client
+ * The pin column is deliberately absent: it is never selected into API responses
  */
 export interface Employee {
   id: string;
   client_id: string;
   first_name: string;
   last_name: string;
-  pin: string; // 4-digit PIN (plain text, client-isolated)
   weekday_rate: number; // Rate for Monday-Friday (hourly or daily based on pay_type)
   saturday_rate: number; // Rate for Saturday (hourly or daily based on pay_type)
   sunday_rate: number; // Rate for Sunday (hourly or daily based on pay_type)
@@ -169,7 +169,7 @@ export interface CreateEmployeeInput {
 export interface UpdateEmployeeInput {
   firstName?: string;
   lastName?: string;
-  pin?: string;
+  pin?: string; // New PIN; omit to keep the current one
   weekdayRate?: number;
   saturdayRate?: number;
   sundayRate?: number;

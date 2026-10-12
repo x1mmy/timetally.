@@ -7,7 +7,7 @@
  * Features:
  * - Form validation (required fields, PIN format, pay rates)
  * - PIN uniqueness validation via API
- * - Automatic form population in edit mode
+ * - Automatic form population in edit mode (except the PIN, which is write-only)
  * - Loading states and error handling
  * - Responsive design with Tailwind CSS
  * - Support for hourly and day rate pay types
@@ -84,7 +84,8 @@ export function EmployeeDialog({
       // Pre-populate form with existing employee data
       setFirstName(employee.first_name);
       setLastName(employee.last_name);
-      setPin(employee.pin);
+      // The API never returns the PIN, so the field starts empty and means "set a new PIN"
+      setPin("");
       setPayType((employee.pay_type as "hourly" | "day_rate" | undefined) ?? "hourly");
       setApplyBreakRules((employee.apply_break_rules as boolean | undefined) ?? true);
       setCategoryId(employee.category_id ?? null);
@@ -128,7 +129,9 @@ export function EmployeeDialog({
     }
 
     // Validate PIN format: must be exactly 4 digits
-    if (!/^\d{4}$/.test(pin)) {
+    // In edit mode a blank PIN keeps the current one
+    const keepCurrentPin = mode === "edit" && pin === "";
+    if (!keepCurrentPin && !/^\d{4}$/.test(pin)) {
       setError("PIN must be exactly 4 digits");
       return;
     }
@@ -163,7 +166,7 @@ export function EmployeeDialog({
       const payload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        pin,
+        ...(keepCurrentPin ? {} : { pin }),
         payType,
         applyBreakRules,
         categoryId,
@@ -312,20 +315,25 @@ export function EmployeeDialog({
 
             {/* PIN */}
             <div className="grid gap-2">
-              <Label htmlFor="pin">4-Digit PIN</Label>
+              <Label htmlFor="pin">
+                {mode === "edit" ? "New 4-Digit PIN" : "4-Digit PIN"}
+              </Label>
               <Input
                 id="pin"
                 type="text"
                 inputMode="numeric"
                 value={pin}
                 onChange={handlePinChange}
-                placeholder="1234"
+                placeholder={mode === "edit" ? "Leave blank to keep current PIN" : "1234"}
                 maxLength={4}
-                required
+                required={mode === "add"}
+                autoComplete="off"
                 className="border-neutral-600 bg-neutral-700"
               />
               <p className="text-xs text-neutral-400">
-                Used for employee clock in/out
+                {mode === "edit"
+                  ? "The current PIN is hidden. Enter a new one to replace it."
+                  : "Used for employee clock in/out"}
               </p>
             </div>
 

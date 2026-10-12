@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
 import { isManagerSession } from "@/lib/auth";
+import { EMPLOYEE_PUBLIC_COLUMNS } from "@/lib/employeeColumns";
 import type { UpdateEmployeeInput } from "@/types/database";
 
 /**
@@ -23,7 +24,7 @@ import type { UpdateEmployeeInput } from "@/types/database";
  * Request Body (UpdateEmployeeInput):
  * - firstName?: string - Employee's first name
  * - lastName?: string - Employee's last name
- * - pin?: string - 4-digit PIN (must be unique within client)
+ * - pin?: string - New 4-digit PIN (must be unique within client); omit to keep the current PIN
  * - weekdayRate?: number - Rate for Monday-Friday (must be >= 0)
  * - saturdayRate?: number - Rate for Saturday (must be >= 0)
  * - sundayRate?: number - Rate for Sunday (must be >= 0)
@@ -32,7 +33,7 @@ import type { UpdateEmployeeInput } from "@/types/database";
  * - applyBreakRules?: boolean - Whether break time rules apply
  * - status?: 'active' | 'inactive' - Employee status
  *
- * Returns: { employee: Employee } - Updated employee object
+ * Returns: { employee: Employee } - Updated employee object without the PIN
  *
  * Error Responses:
  * - 401: Manager access required (no valid manager session)
@@ -196,7 +197,7 @@ export async function PUT(
       .update(updates)
       .eq("id", employeeId)
       .eq("client_id", client.id)
-      .select()
+      .select(EMPLOYEE_PUBLIC_COLUMNS)
       .single();
 
     if (error) {

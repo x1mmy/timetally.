@@ -91,7 +91,7 @@ export async function GET(request: Request) {
 
 ## Known Issues (Do Not Regress)
 
-1. **Employee PINs are plain text** — stored as-is in the DB, isolated only by `client_id`. Manager PINs are bcrypt-hashed. This is a known security gap, not an accident.
+1. **Employee PINs are plain text at rest** — stored as-is in the DB, isolated only by `client_id`. Manager PINs are bcrypt-hashed. This is a known security gap, not an accident (hashing is tracked in #49). PINs are write-only over the API: never `select("*")` on `employees` — use `EMPLOYEE_PUBLIC_COLUMNS` from `src/lib/employeeColumns.ts` or an explicit column list without `pin`.
 2. **No rate limiting on auth endpoints** — 4-digit PINs are brute-forceable. Don't make this worse.
 3. **No test coverage** — zero tests in the codebase. Be careful with refactors.
 4. **Console.logs in middleware** — debug logs exist in production code, don't add more.
