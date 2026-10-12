@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { isManagerSession } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,8 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const managerSession = request.cookies.get("manager_session")?.value;
-    if (managerSession !== client.id) {
+    if (!(await isManagerSession(request, client.id))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },

@@ -35,7 +35,7 @@ export async function PUT(
     }
     const { supabase, clientId } = ctx;
 
-    if (!isManagerSession(request, clientId)) {
+    if (!(await isManagerSession(request, clientId))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },
@@ -130,7 +130,7 @@ export async function DELETE(
     }
     const { supabase, clientId } = ctx;
 
-    if (!isManagerSession(request, clientId)) {
+    if (!(await isManagerSession(request, clientId))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },

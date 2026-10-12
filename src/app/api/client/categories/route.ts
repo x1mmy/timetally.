@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
     const { supabase, clientId } = ctx;
 
-    if (!isManagerSession(request, clientId)) {
+    if (!(await isManagerSession(request, clientId))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
     const { supabase, clientId } = ctx;
 
-    if (!isManagerSession(request, clientId)) {
+    if (!(await isManagerSession(request, clientId))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },

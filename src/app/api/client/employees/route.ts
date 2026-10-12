@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    if (!isManagerSession(request, client.id)) {
+    if (!(await isManagerSession(request, client.id))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    if (!isManagerSession(request, client.id)) {
+    if (!(await isManagerSession(request, client.id))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },

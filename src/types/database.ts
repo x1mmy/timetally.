@@ -31,6 +31,26 @@ export interface Client {
 }
 
 /**
+ * Role a login session was issued for
+ */
+export type SessionRole = "manager" | "employee" | "admin";
+
+/**
+ * Login session
+ * The cookie holds a random token; only its hash is stored
+ */
+export interface Session {
+  id: string;
+  token_hash: string; // SHA-256 of the cookie token
+  role: SessionRole;
+  client_id: string | null; // Set for manager and employee sessions
+  employee_id: string | null; // Set for employee sessions
+  admin_id: string | null; // Set for admin sessions
+  created_at: string;
+  expires_at: string;
+}
+
+/**
  * Employee category
  * Organises employees by department (e.g. Deli, Register, Fruit)
  */

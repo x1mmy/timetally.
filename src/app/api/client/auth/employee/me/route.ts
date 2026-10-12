@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { SESSION_COOKIES, getSession } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,9 +18,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid subdomain" }, { status: 400 });
     }
 
-    // Read employee session cookie
-    const sessionCookie = request.cookies.get("employee_session")?.value;
-    if (!sessionCookie) {
+    // Resolve the employee session from its cookie
+    const session = await getSession(
+      "employee",
+      request.cookies.get(SESSION_COOKIES.employee)?.value,
+    );
+    if (!session?.employee_id) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
@@ -40,7 +44,7 @@ export async function GET(request: NextRequest) {
       .select(
         "id, first_name, last_name, status, employee_categories(name, dashboard_view)",
       )
-      .eq("id", sessionCookie)
+      .eq("id", session.employee_id)
       .eq("client_id", client.id)
       .single();
 
