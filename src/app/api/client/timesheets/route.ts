@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { SESSION_COOKIES, getSession } from "@/lib/auth";
 
 type SessionType = "manager" | "employee" | null;
 
@@ -25,18 +26,31 @@ function roundTime(time: string, intervalMinutes: number): string {
   return `${String(rh).padStart(2, "0")}:${String(rm).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-function getClientSession(request: NextRequest): {
+// Resolves the caller's session. A manager session wins when both cookies are valid.
+// loggedInEmployeeId is the employee session's employee even then, so edits a logged-in
+// employee makes to their own timesheet are still attributed to them in the edit log.
+async function getClientSession(request: NextRequest): Promise<{
   type: SessionType;
   clientId: string | null;
   employeeId: string | null;
-} {
+  loggedInEmployeeId: string | null;
+}> {
   const subdomain = getSubdomainFromRequest(request);
-  if (!subdomain) return { type: null, clientId: null, employeeId: null };
-  const managerSession = request.cookies.get("manager_session")?.value;
-  const employeeSession = request.cookies.get("employee_session")?.value;
-  if (managerSession) return { type: "manager", clientId: managerSession, employeeId: null };
-  if (employeeSession) return { type: "employee", clientId: null, employeeId: employeeSession };
-  return { type: null, clientId: null, employeeId: null };
+  if (!subdomain) {
+    return { type: null, clientId: null, employeeId: null, loggedInEmployeeId: null };
+  }
+  const [managerSession, employeeSession] = await Promise.all([
+    getSession("manager", request.cookies.get(SESSION_COOKIES.manager)?.value),
+    getSession("employee", request.cookies.get(SESSION_COOKIES.employee)?.value),
+  ]);
+  const loggedInEmployeeId = employeeSession?.employee_id ?? null;
+  if (managerSession) {
+    return { type: "manager", clientId: managerSession.client_id, employeeId: null, loggedInEmployeeId };
+  }
+  if (employeeSession) {
+    return { type: "employee", clientId: null, employeeId: loggedInEmployeeId, loggedInEmployeeId };
+  }
+  return { type: null, clientId: null, employeeId: null, loggedInEmployeeId: null };
 }
 
 /**
@@ -63,7 +77,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const session = getClientSession(request);
+    const session = await getClientSession(request);
     if (!session.type) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -149,7 +163,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const session = getClientSession(request);
+    const session = await getClientSession(request);
     if (!session.type) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -245,10 +259,9 @@ export async function POST(request: NextRequest) {
       if (error) throw error;
 
       if (timesChanged) {
-        // Attribute to employee when they edited their own (by cookie), else manager
-        const employeeSession = request.cookies.get("employee_session")?.value;
+        // Attribute to employee when they edited their own (by session), else manager
         const editedBy =
-          employeeSession && employeeSession === employeeId ? "employee" : "manager";
+          session.loggedInEmployeeId === employeeId ? "employee" : "manager";
         await supabase.from("timesheet_edit_log").insert({
           timesheet_id: existing.id,
           client_id: employee.client_id,
@@ -323,7 +336,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const session = getClientSession(request);
+    const session = await getClientSession(request);
     if (!session.type) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
@@ -392,9 +405,8 @@ export async function DELETE(request: NextRequest) {
 
     if (deleteError) throw deleteError;
 
-    const employeeSession = request.cookies.get("employee_session")?.value;
     const editedBy =
-      employeeSession && employeeSession === timesheet.employee_id
+      session.loggedInEmployeeId === timesheet.employee_id
         ? "employee"
         : "manager";
     await supabase.from("timesheet_edit_log").insert({

@@ -66,7 +66,7 @@ export async function PUT(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    if (!isManagerSession(request, client.id)) {
+    if (!(await isManagerSession(request, client.id))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },
@@ -283,7 +283,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    if (!isManagerSession(request, client.id)) {
+    if (!(await isManagerSession(request, client.id))) {
       return NextResponse.json(
         { error: "Manager access required" },
         { status: 401 },

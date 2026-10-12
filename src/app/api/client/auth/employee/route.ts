@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { endSession, startSession } from "@/lib/auth";
 import { pinColumns, pinLookup } from "@/lib/employeePin";
 
 /**
@@ -114,12 +115,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set session cookie
-    response.cookies.set("employee_session", employee.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+    // Start the employee session and set its cookie
+    await startSession(response, "employee", {
+      client_id: clientId,
+      employee_id: employee.id as string,
     });
 
     return response;
@@ -134,18 +133,20 @@ export async function POST(request: NextRequest) {
 
 /**
  * DELETE - Employee logout
- * Clears the session cookie
+ * Deletes the session server-side and clears the session cookie
  */
-export async function DELETE() {
-  const response = NextResponse.json({ success: true });
+export async function DELETE(request: NextRequest) {
+  try {
+    const response = NextResponse.json({ success: true });
 
-  // Clear the session cookie
-  response.cookies.set("employee_session", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 0,
-  });
+    await endSession(request, response, "employee");
 
-  return response;
+    return response;
+  } catch (error) {
+    console.error("Employee logout error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
 }

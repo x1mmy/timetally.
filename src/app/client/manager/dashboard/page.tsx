@@ -329,7 +329,7 @@ function ManagerDashboardContent() {
    */
   const handleLogout = async () => {
     try {
-      document.cookie = "manager_session=; Max-Age=0; path=/";
+      await fetch("/api/client/auth/manager", { method: "DELETE" });
       router.push("/client");
     } catch (error) {
       console.error("Logout error:", error);

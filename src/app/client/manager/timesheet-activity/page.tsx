@@ -116,9 +116,13 @@ export default function TimesheetActivityPage() {
     setFilterEndDate("");
   };
 
-  const handleLogout = () => {
-    document.cookie = "manager_session=; Max-Age=0; path=/";
-    router.push("/client");
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/client/auth/manager", { method: "DELETE" });
+      router.push("/client");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   return (

@@ -1,11 +1,12 @@
 /**
  * Manager Authentication API Route
  * POST /api/client/auth/manager - Manager PIN login
+ * DELETE /api/client/auth/manager - Manager logout
  * Validates manager PIN for current subdomain
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
-import { verifyPIN } from "@/lib/auth";
+import { endSession, startSession, verifyPIN } from "@/lib/auth";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
 
 /**
@@ -64,17 +65,34 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set manager session cookie
-    response.cookies.set("manager_session", client.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+    // Start the manager session and set its cookie
+    await startSession(response, "manager", {
+      client_id: client.id as string,
     });
 
     return response;
   } catch (error) {
     console.error("Manager auth error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * DELETE - Manager logout
+ * Deletes the session server-side and clears the session cookie
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const response = NextResponse.json({ success: true });
+
+    await endSession(request, response, "manager");
+
+    return response;
+  } catch (error) {
+    console.error("Manager logout error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

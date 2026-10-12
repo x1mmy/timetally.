@@ -2,12 +2,17 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomain } from "@/lib/subdomain";
+import { SESSION_COOKIES, getSession } from "@/lib/auth";
 import { ClockClient } from "./ClockClient";
 
 export default async function ClockPage() {
   const subdomain = await getSubdomain();
   const cookieStore = await cookies();
-  const employeeSessionId = cookieStore.get("employee_session")?.value;
+  const session = await getSession(
+    "employee",
+    cookieStore.get(SESSION_COOKIES.employee)?.value,
+  );
+  const employeeSessionId = session?.employee_id;
 
   if (!subdomain || !employeeSessionId) {
     redirect("/client/employee/login");

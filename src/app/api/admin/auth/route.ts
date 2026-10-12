@@ -1,11 +1,11 @@
 /**
  * Admin Authentication API Route
  * POST /api/admin/auth - Admin login (validates credentials and creates session cookie)
- * DELETE /api/admin/auth - Admin logout (clears session cookie)
+ * DELETE /api/admin/auth - Admin logout (deletes the session and clears its cookie)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { verifyPassword } from "@/lib/auth";
+import { endSession, startSession, verifyPassword } from "@/lib/auth";
 import { validateEmail } from "@/lib/utils";
 
 /**
@@ -59,12 +59,9 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set session cookie
-    response.cookies.set("admin_session", admin.id, {
-      httpOnly: true, // Cannot be accessed by JavaScript
-      secure: process.env.NODE_ENV === "production", // HTTPS only in production
-      sameSite: "lax", // CSRF protection
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+    // Start the admin session and set its cookie
+    await startSession(response, "admin", {
+      admin_id: admin.id as string,
     });
 
     return response;
@@ -79,22 +76,16 @@ export async function POST(request: NextRequest) {
 
 /**
  * DELETE - Admin logout
- * Clears the admin session cookie
+ * Deletes the session server-side and clears the admin session cookie
  */
-export async function DELETE() {
+export async function DELETE(request: NextRequest) {
   try {
     const response = NextResponse.json({
       success: true,
       message: "Logged out successfully",
     });
 
-    // Clear the session cookie by setting it to expire immediately
-    response.cookies.set("admin_session", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 0, // Expire immediately
-    });
+    await endSession(request, response, "admin");
 
     return response;
   } catch (error) {
