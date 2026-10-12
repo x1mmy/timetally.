@@ -3,10 +3,25 @@
  * Uses bcrypt for secure hashing with 10 salt rounds
  */
 import bcrypt from "bcryptjs";
+import type { NextRequest } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import type { AdminUser } from "@/types/database";
 
 const SALT_ROUNDS = 10;
+
+/**
+ * Check that the request carries a manager session for the given client
+ * Interim check: the cookie value is the client ID (see issue #47 for the session rework)
+ * @param request - Incoming API request
+ * @param clientId - Client ID resolved from the request's subdomain (unknown because Supabase rows are untyped)
+ * @returns True if the manager session belongs to this client, false otherwise
+ */
+export function isManagerSession(
+  request: NextRequest,
+  clientId: unknown,
+): boolean {
+  return request.cookies.get("manager_session")?.value === clientId;
+}
 
 /**
  * Hash a password using bcrypt

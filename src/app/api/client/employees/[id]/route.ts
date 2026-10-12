@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { isManagerSession } from "@/lib/auth";
 import type { UpdateEmployeeInput } from "@/types/database";
 
 /**
@@ -34,7 +35,7 @@ import type { UpdateEmployeeInput } from "@/types/database";
  * Returns: { employee: Employee } - Updated employee object
  *
  * Error Responses:
- * - 401: Unauthorized (not logged in)
+ * - 401: Manager access required (no valid manager session)
  * - 400: Validation error (invalid PIN format, duplicate PIN, negative rates)
  * - 500: Server error
  */
@@ -61,6 +62,13 @@ export async function PUT(
 
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    if (!isManagerSession(request, client.id)) {
+      return NextResponse.json(
+        { error: "Manager access required" },
+        { status: 401 },
+      );
     }
 
     // Parse request body with UpdateEmployeeInput type
@@ -187,6 +195,7 @@ export async function PUT(
       .from("employees")
       .update(updates)
       .eq("id", employeeId)
+      .eq("client_id", client.id)
       .select()
       .single();
 
@@ -243,7 +252,7 @@ export async function PUT(
  * Returns: { success: true } - Confirmation of deletion
  *
  * Error Responses:
- * - 401: Unauthorized (not logged in)
+ * - 401: Manager access required (no valid manager session)
  * - 500: Server error (e.g., foreign key constraint issues)
  */
 export async function DELETE(
@@ -269,6 +278,13 @@ export async function DELETE(
 
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    if (!isManagerSession(request, client.id)) {
+      return NextResponse.json(
+        { error: "Manager access required" },
+        { status: 401 },
+      );
     }
 
     // Execute deletion in database (only for employees belonging to this client)

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import { isManagerSession } from "@/lib/auth";
 
 /**
  * POST - Assign category to multiple employees
@@ -28,6 +29,13 @@ export async function POST(request: NextRequest) {
 
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    }
+
+    if (!isManagerSession(request, client.id)) {
+      return NextResponse.json(
+        { error: "Manager access required" },
+        { status: 401 },
+      );
     }
 
     const { employeeIds, categoryId } = (await request.json()) as {
