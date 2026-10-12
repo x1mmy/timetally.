@@ -2,12 +2,14 @@
  * Client Employees API Route
  * GET /api/client/employees - List all employees for current client
  * POST /api/client/employees - Create new employee
- * Note: Employee PINs are stored as plain text (4 digits) and isolated by client_id
+ * Note: Employee PINs are stored as plain text (4 digits) and isolated by client_id.
+ * They are write-only here: no response includes the PIN.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
 import { isManagerSession } from "@/lib/auth";
+import { EMPLOYEE_PUBLIC_COLUMNS } from "@/lib/employeeColumns";
 
 /**
  * GET - List all employees for current client
@@ -44,7 +46,7 @@ export async function GET(request: NextRequest) {
     // Fetch all employees for this client, joining category info
     const { data: employees, error } = await supabase
       .from("employees")
-      .select("*, category:employee_categories(id, name)")
+      .select(`${EMPLOYEE_PUBLIC_COLUMNS}, category:employee_categories(id, name)`)
       .eq("client_id", client.id)
       .order("first_name", { ascending: true });
 
@@ -77,7 +79,7 @@ export async function GET(request: NextRequest) {
  * - payType: 'hourly' | 'day_rate' - How employee is paid (optional, defaults to 'hourly')
  * - applyBreakRules: boolean - Whether break rules apply (optional, defaults to true)
  *
- * Returns: { employee: Employee } - Created employee object (status 201)
+ * Returns: { employee: Employee } - Created employee object without the PIN (status 201)
  *
  * Error Responses:
  * - 400: Validation error (missing fields, invalid PIN format, negative rates, duplicate PIN)
@@ -174,7 +176,7 @@ export async function POST(request: NextRequest) {
         pay_type: payType ?? "hourly",
         apply_break_rules: applyBreakRules ?? true,
       })
-      .select()
+      .select(EMPLOYEE_PUBLIC_COLUMNS)
       .single();
 
     if (error) {
