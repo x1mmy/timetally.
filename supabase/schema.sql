@@ -42,7 +42,7 @@ CREATE INDEX idx_clients_status ON clients(status);
 -- =====================================================
 -- TABLE: employees
 -- Stores employees for each client
--- Each employee has a 4-digit PIN for login (plain text, isolated by client_id)
+-- Each employee has a 4-digit PIN for login (stored as keyed hash + ciphertext, isolated by client_id)
 -- Pay rates vary by day type (weekday/saturday/sunday)
 -- =====================================================
 CREATE TABLE employees (
@@ -50,14 +50,21 @@ CREATE TABLE employees (
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
-  pin VARCHAR(4) NOT NULL, -- 4-digit PIN (plain text, client-isolated)
+  pin VARCHAR(4), -- Legacy plain text PIN; NULL once converted (see migrations/20261012_employee_pin_encryption.sql)
+  pin_lookup TEXT, -- Keyed hash of the PIN for login lookup (src/lib/employeePin.ts)
+  pin_encrypted TEXT, -- AES-256-GCM ciphertext of the PIN
   weekday_rate DECIMAL(10,2) NOT NULL, -- Hourly rate for Monday-Friday
   saturday_rate DECIMAL(10,2) NOT NULL, -- Hourly rate for Saturday
   sunday_rate DECIMAL(10,2) NOT NULL, -- Hourly rate for Sunday
   status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(client_id, pin) -- PIN unique within client (for PIN-only login)
+  UNIQUE(client_id, pin), -- Legacy rows only
+  CONSTRAINT employees_client_pin_lookup_key UNIQUE (client_id, pin_lookup), -- PIN unique within client (for PIN-only login)
+  CONSTRAINT employees_pin_present_check CHECK (
+    (pin_lookup IS NULL) = (pin_encrypted IS NULL)
+    AND (pin IS NOT NULL OR pin_lookup IS NOT NULL)
+  )
 );
 
 -- Create index on client_id for efficient client-specific queries

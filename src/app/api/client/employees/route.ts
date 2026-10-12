@@ -2,7 +2,7 @@
  * Client Employees API Route
  * GET /api/client/employees - List all employees for current client
  * POST /api/client/employees - Create new employee
- * Note: Employee PINs are stored as plain text (4 digits) and isolated by client_id.
+ * Note: Employee PINs are stored as a keyed hash plus ciphertext (see src/lib/employeePin.ts).
  * They are write-only here: no response includes the PIN.
  */
 import { NextRequest, NextResponse } from "next/server";
@@ -10,6 +10,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
 import { isManagerSession } from "@/lib/auth";
 import { EMPLOYEE_PUBLIC_COLUMNS } from "@/lib/employeeColumns";
+import { pinColumns } from "@/lib/employeePin";
 
 /**
  * GET - List all employees for current client
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate PIN format: must be exactly 4 digits
-    if (!/^\d{4}$/.test(pin)) {
+    if (typeof pin !== "string" || !/^\d{4}$/.test(pin)) {
       return NextResponse.json(
         { error: "PIN must be 4 digits" },
         { status: 400 },
@@ -160,15 +161,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const clientId = client.id as string;
+    const duplicatePinError = `PIN ${pin} is already in use. Please choose a different 4-digit PIN.`;
+
+    // Rows not yet backfilled still hold a plain text PIN (issue #49), which the
+    // (client_id, pin_lookup) constraint cannot see, so check those here
+    const { data: legacyEmployee } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("client_id", clientId)
+      .eq("pin", pin)
+      .maybeSingle();
+
+    if (legacyEmployee) {
+      return NextResponse.json({ error: duplicatePinError }, { status: 400 });
+    }
+
     // Insert new employee record
-    // Note: PIN is stored as plain text, but isolated per client via unique constraint (client_id, pin)
+    // Note: PIN is stored as pin_lookup + pin_encrypted, unique per client via (client_id, pin_lookup)
     const { data: employee, error } = await supabase
       .from("employees")
       .insert({
-        client_id: client.id,
+        client_id: clientId,
         first_name: firstName,
         last_name: lastName,
-        pin: pin,
+        ...pinColumns(clientId, pin),
         weekday_rate: weekdayRate,
         saturday_rate: saturdayRate,
         sunday_rate: sundayRate,
@@ -181,17 +198,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       // Check for duplicate PIN error (PostgreSQL unique constraint violation)
-      // Error code 23505 = unique_violation on (client_id, pin)
+      // Error code 23505 = unique_violation on (client_id, pin_lookup)
       if (
         error.code === "23505" &&
-        error.message?.includes("employees_client_pin_key")
+        error.message?.includes("employees_client_pin_lookup_key")
       ) {
-        return NextResponse.json(
-          {
-            error: `PIN ${pin} is already in use. Please choose a different 4-digit PIN.`,
-          },
-          { status: 400 },
-        );
+        return NextResponse.json({ error: duplicatePinError }, { status: 400 });
       }
       throw error;
     }
