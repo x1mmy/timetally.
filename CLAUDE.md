@@ -60,6 +60,7 @@ export async function GET(request: Request) {
 | `src/lib/supabase/server.ts` | Server Supabase clients (server + admin) |
 | `src/lib/supabase/client.ts` | Browser Supabase client |
 | `src/lib/auth.ts` | Auth utilities |
+| `src/lib/employeePin.ts` | Employee PIN lookup hash + encryption |
 | `src/lib/timeUtils.ts` | Time calculations |
 | `src/lib/csvExport.ts` | CSV export logic |
 | `supabase/migrations/` | DB migrations (apply in order) |
@@ -91,7 +92,7 @@ export async function GET(request: Request) {
 
 ## Known Issues (Do Not Regress)
 
-1. **Employee PINs are plain text at rest** — stored as-is in the DB, isolated only by `client_id`. Manager PINs are bcrypt-hashed. This is a known security gap, not an accident (hashing is tracked in #49). PINs are write-only over the API: never `select("*")` on `employees` — use `EMPLOYEE_PUBLIC_COLUMNS` from `src/lib/employeeColumns.ts` or an explicit column list without `pin`.
+1. **Employee PINs are not hashed with bcrypt** — they are stored as `pin_lookup` (keyed HMAC, used for login and uniqueness) plus `pin_encrypted` (AES-256-GCM), both keyed by `EMPLOYEE_PIN_SECRET` via `src/lib/employeePin.ts`. Manager PINs are bcrypt-hashed. The legacy plain text `pin` column still exists for rows not yet backfilled; the fallbacks that read it are marked "issue #49" and go away when the column is dropped. PINs are write-only over the API: never `select("*")` on `employees` — use `EMPLOYEE_PUBLIC_COLUMNS` from `src/lib/employeeColumns.ts` or an explicit column list without the PIN columns.
 2. **No rate limiting on auth endpoints** — 4-digit PINs are brute-forceable. Don't make this worse.
 3. **No test coverage** — zero tests in the codebase. Be careful with refactors.
 4. **Console.logs in middleware** — debug logs exist in production code, don't add more.
@@ -111,6 +112,7 @@ Required env vars:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=   # Server-side only, never expose to client
+EMPLOYEE_PIN_SECRET=         # Server-side only, 32+ chars; changing it invalidates every employee PIN
 NEXT_PUBLIC_APP_URL=
 ```
 

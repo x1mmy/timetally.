@@ -13,6 +13,7 @@ import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
 import { isManagerSession } from "@/lib/auth";
 import { EMPLOYEE_PUBLIC_COLUMNS } from "@/lib/employeeColumns";
+import { pinColumns } from "@/lib/employeePin";
 import type { UpdateEmployeeInput } from "@/types/database";
 
 /**
@@ -92,15 +93,16 @@ export async function PUT(
     // Update PIN if provided (with validation)
     if (body.pin !== undefined) {
       // Validate PIN format: must be exactly 4 digits
-      if (!/^\d{4}$/.test(body.pin)) {
+      if (typeof body.pin !== "string" || !/^\d{4}$/.test(body.pin)) {
         return NextResponse.json(
           { error: "PIN must be exactly 4 digits" },
           { status: 400 },
         );
       }
 
-      // Check if PIN is already in use by another employee in the same client
-      // Uses maybeSingle() to avoid errors when no match is found
+      // Rows not yet backfilled still hold a plain text PIN (issue #49), which the
+      // (client_id, pin_lookup) constraint cannot see, so check those here.
+      // Converted rows are covered by that constraint when the update runs.
       const { data: existingEmployee } = await supabase
         .from("employees")
         .select("id")
@@ -118,7 +120,8 @@ export async function PUT(
         );
       }
 
-      updates.pin = body.pin;
+      // Store the new PIN as pin_lookup + pin_encrypted and clear any plain text copy
+      Object.assign(updates, pinColumns(client.id as string, body.pin));
     }
     // Update weekday pay rate if provided (Monday-Friday)
     if (body.weekdayRate !== undefined) {
@@ -201,11 +204,10 @@ export async function PUT(
       .single();
 
     if (error) {
-      // Handle database constraint errors (e.g., duplicate PIN in race condition)
-      // PostgreSQL error code 23505 = unique_violation
+      // Handle duplicate PIN: unique_violation (23505) on (client_id, pin_lookup)
       if (
         error.code === "23505" &&
-        error.message?.includes("employees_client_pin_key")
+        error.message?.includes("employees_client_pin_lookup_key")
       ) {
         return NextResponse.json(
           {
