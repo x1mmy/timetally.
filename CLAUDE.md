@@ -92,8 +92,8 @@ export async function GET(request: Request) {
 
 ## Known Issues (Do Not Regress)
 
-1. **Employee PINs are not hashed with bcrypt** — they are stored as `pin_lookup` (keyed HMAC, used for login and uniqueness) plus `pin_encrypted` (AES-256-GCM), both keyed by `EMPLOYEE_PIN_SECRET` via `src/lib/employeePin.ts`. Manager PINs are bcrypt-hashed. The legacy plain text `pin` column still exists for rows not yet backfilled; the fallbacks that read it are marked "issue #49" and go away when the column is dropped. PINs are write-only over the API: never `select("*")` on `employees` — use `EMPLOYEE_PUBLIC_COLUMNS` from `src/lib/employeeColumns.ts` or an explicit column list without the PIN columns.
-2. **No rate limiting on auth endpoints** — 4-digit PINs are brute-forceable. Don't make this worse.
+1. **Employee PINs are not hashed with bcrypt** — they are stored as `pin_lookup` (keyed HMAC, used for login and uniqueness) plus `pin_encrypted` (AES-256-GCM), both keyed by `EMPLOYEE_PIN_SECRET` via `src/lib/employeePin.ts`. Manager PINs are bcrypt-hashed. The legacy plain text `pin` column still exists for rows not yet backfilled; the fallbacks that read it are marked "issue #49" and go away when the column is dropped. The only route that returns a PIN is the reveal endpoint, `POST /api/client/employees/[id]/pin` (manager session + manager PIN re-check, rate limited via `src/lib/authAttempts.ts`). Everywhere else: never `select("*")` on `employees` — use `EMPLOYEE_PUBLIC_COLUMNS` from `src/lib/employeeColumns.ts` or an explicit column list without the PIN columns.
+2. **No rate limiting on the login endpoints** — 4-digit PINs are brute-forceable. Don't make this worse. Only the PIN reveal re-check is limited (5 attempts per client per 15 minutes, `auth_attempts` table); `registerAttempt` in `src/lib/authAttempts.ts` is reusable for the logins (#41).
 3. **No test coverage** — zero tests in the codebase. Be careful with refactors.
 4. **Console.logs in middleware** — debug logs exist in production code, don't add more.
 

@@ -7,7 +7,8 @@
  * Features:
  * - Form validation (required fields, PIN format, pay rates)
  * - PIN uniqueness validation via API
- * - Automatic form population in edit mode (except the PIN, which is write-only)
+ * - Automatic form population in edit mode (except the PIN, which is never pre-filled)
+ * - Reveal of the current PIN on demand, after re-entering the manager PIN
  * - Loading states and error handling
  * - Responsive design with Tailwind CSS
  * - Support for hourly and day rate pay types
@@ -21,6 +22,7 @@
  * API Endpoints:
  * - POST /api/client/employees - Creates new employee
  * - PUT /api/client/employees/[id] - Updates existing employee
+ * - POST /api/client/employees/[id]/pin - Reveals the current PIN
  */
 
 "use client";
@@ -38,7 +40,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Edit, Loader2, Clock, Calendar, Coffee } from "lucide-react";
+import {
+  UserPlus,
+  Edit,
+  Loader2,
+  Clock,
+  Calendar,
+  Coffee,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import type { Employee, EmployeeCategory } from "@/types/database";
 
 interface EmployeeDialogProps {
@@ -74,12 +85,25 @@ export function EmployeeDialog({
   const [sundayRate, setSundayRate] = useState("35.00");
   const [publicHolidayRate, setPublicHolidayRate] = useState("50.00");
 
+  // Reveal-current-PIN state (edit mode only)
+  const [revealOpen, setRevealOpen] = useState(false);
+  const [managerPin, setManagerPin] = useState("");
+  const [revealedPin, setRevealedPin] = useState<string | null>(null);
+  const [revealError, setRevealError] = useState<string | null>(null);
+  const [revealLoading, setRevealLoading] = useState(false);
+
   /**
    * Initialize or reset form based on mode and dialog state
    * - Edit mode: Pre-populate with employee data
    * - Add mode: Reset to default values
    */
   useEffect(() => {
+    // Never keep a revealed PIN or a typed manager PIN around between openings
+    setRevealOpen(false);
+    setManagerPin("");
+    setRevealedPin(null);
+    setRevealError(null);
+
     if (mode === "edit" && employee) {
       // Pre-populate form with existing employee data
       setFirstName(employee.first_name);
@@ -246,6 +270,39 @@ export function EmployeeDialog({
     }
   };
 
+  /**
+   * Fetch the employee's current PIN
+   * The manager PIN is sent along so the server can confirm who is asking
+   */
+  const handleReveal = async () => {
+    if (!employee || !managerPin) return;
+    setRevealError(null);
+    setRevealLoading(true);
+
+    try {
+      const response = await fetch(`/api/client/employees/${employee.id}/pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ managerPin }),
+      });
+      const data = (await response.json()) as { pin?: string; error?: string };
+
+      if (!response.ok || !data.pin) {
+        setRevealError(data.error ?? "Failed to show PIN");
+        return;
+      }
+
+      setRevealedPin(data.pin);
+      setRevealOpen(false);
+    } catch (err) {
+      console.error("Error revealing PIN:", err);
+      setRevealError("Failed to show PIN");
+    } finally {
+      setManagerPin("");
+      setRevealLoading(false);
+    }
+  };
+
   const rateLabel = payType === "hourly" ? "per hour" : "per day";
 
   return (
@@ -335,6 +392,93 @@ export function EmployeeDialog({
                   ? "The current PIN is hidden. Enter a new one to replace it."
                   : "Used for employee clock in/out"}
               </p>
+
+              {/* Reveal current PIN (edit mode only) */}
+              {mode === "edit" &&
+                (revealedPin ? (
+                  <div className="flex items-center justify-between rounded-lg border border-neutral-600 bg-neutral-700 px-3 py-2">
+                    <span className="text-sm text-neutral-300">
+                      Current PIN:{" "}
+                      <span className="font-mono text-base font-semibold tracking-widest text-white">
+                        {revealedPin}
+                      </span>
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setRevealedPin(null)}
+                      className="text-neutral-300 hover:bg-neutral-600 hover:text-white"
+                    >
+                      <EyeOff className="mr-2 h-4 w-4" />
+                      Hide
+                    </Button>
+                  </div>
+                ) : revealOpen ? (
+                  <div className="grid gap-2 rounded-lg border border-neutral-600 bg-neutral-700/50 p-3">
+                    <Label htmlFor="managerPin" className="text-sm font-normal">
+                      Enter the manager PIN to show this employee&apos;s PIN
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="managerPin"
+                        type="password"
+                        inputMode="numeric"
+                        value={managerPin}
+                        onChange={(e) => setManagerPin(e.target.value)}
+                        onKeyDown={(e) => {
+                          // Enter must not submit the employee form
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleReveal();
+                          }
+                        }}
+                        autoComplete="off"
+                        autoFocus
+                        className="border-neutral-600 bg-neutral-700"
+                      />
+                      <Button
+                        type="button"
+                        onClick={() => void handleReveal()}
+                        disabled={revealLoading || !managerPin}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      >
+                        {revealLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Show"
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setRevealOpen(false);
+                          setManagerPin("");
+                          setRevealError(null);
+                        }}
+                        disabled={revealLoading}
+                        className="border-neutral-600 bg-neutral-700 hover:bg-neutral-600"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                    {revealError && (
+                      <p className="text-xs text-red-400">{revealError}</p>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setRevealOpen(true)}
+                    className="w-fit border-neutral-600 bg-neutral-700 hover:bg-neutral-600"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    Show current PIN
+                  </Button>
+                ))}
             </div>
 
             {/* Pay Type Selector */}
