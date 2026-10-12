@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const PIN_REVEAL_ACTION = "pin_reveal";
+export const MANAGER_LOGIN_ACTION = "manager_login";
 
 /** Attempts allowed per client within the window before requests are refused */
 export const MAX_ATTEMPTS = 5;

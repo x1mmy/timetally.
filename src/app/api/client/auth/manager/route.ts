@@ -3,11 +3,18 @@
  * POST /api/client/auth/manager - Manager PIN login
  * DELETE /api/client/auth/manager - Manager logout
  * Validates manager PIN for current subdomain
+ * Login attempts are rate limited per client (issue #41)
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseAdmin } from "@/lib/supabase/server";
 import { endSession, startSession, verifyPIN } from "@/lib/auth";
 import { getSubdomainFromRequest } from "@/lib/subdomain";
+import {
+  ATTEMPT_WINDOW_SECONDS,
+  MANAGER_LOGIN_ACTION,
+  clearAttempts,
+  registerAttempt,
+} from "@/lib/authAttempts";
 
 /**
  * POST - Manager login with PIN
@@ -49,12 +56,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const clientId = client.id as string;
+
+    // Count the attempt before checking the PIN so guesses cannot outrun the limit
+    const allowed = await registerAttempt(
+      supabase,
+      clientId,
+      MANAGER_LOGIN_ACTION,
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many attempts. Please try again in 15 minutes." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(ATTEMPT_WINDOW_SECONDS) },
+        },
+      );
+    }
+
     // Verify manager PIN
     const isValid = await verifyPIN(pin, client.manager_pin);
 
     if (!isValid) {
       return NextResponse.json({ error: "Invalid PIN" }, { status: 401 });
     }
+
+    await clearAttempts(supabase, clientId, MANAGER_LOGIN_ACTION);
 
     // Create success response
     const response = NextResponse.json({
@@ -66,9 +93,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Start the manager session and set its cookie
-    await startSession(response, "manager", {
-      client_id: client.id as string,
-    });
+    await startSession(response, "manager", { client_id: clientId });
 
     return response;
   } catch (error) {
