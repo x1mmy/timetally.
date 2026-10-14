@@ -1,0 +1,58 @@
+name: Migrate database
+
+# Applies pending files in supabase/migrations to the matching database:
+#   push to staging -> testing Supabase project    (GitHub environment "staging")
+#   push to main    -> production Supabase project (GitHub environment "production")
+#
+# Each GitHub environment needs these secrets:
+#   SUPABASE_ACCESS_TOKEN  personal access token (supabase.com/dashboard/account/tokens)
+#   SUPABASE_PROJECT_ID    project ref of that environment's Supabase project
+#   SUPABASE_DB_PASSWORD   database password of that project
+on:
+  push:
+    branches: [staging, main]
+    paths:
+      - "supabase/migrations/**"
+  # Lets you re-run it by hand from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    # Off by default. Each database is only migrated once its switch is set to
+    # "true" under Settings -> Secrets and variables -> Actions -> Variables:
+    #   MIGRATE_STAGING_ENABLED     for pushes to staging
+    #   MIGRATE_PRODUCTION_ENABLED  for pushes to main
+    # Only turn on production AFTER the baseline migration has been marked as
+    # applied there (supabase migration repair), or it will try to re-create
+    # the existing schema.
+    if: >-
+      (github.ref_name == 'staging' && vars.MIGRATE_STAGING_ENABLED == 'true') ||
+      (github.ref_name == 'main' && vars.MIGRATE_PRODUCTION_ENABLED == 'true')
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    # Never run two migrations against the same database at once
+    concurrency:
+      group: migrate-${{ github.ref_name }}
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check migration filenames
+        run: node scripts/check-migrations.cjs
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Show applied vs pending migrations
+        run: supabase migration list
+
+      - name: Apply pending migrations
+        run: supabase db push

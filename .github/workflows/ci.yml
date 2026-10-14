@@ -1,0 +1,30 @@
+name: CI
+
+# Runs on every pull request into staging or main.
+# Lint is not included yet: `pnpm lint` has pre-existing errors, so it would
+# fail every PR. Add it here once those are cleaned up.
+on:
+  pull_request:
+    branches: [staging, main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from "packageManager" in package.json
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check migration filenames
+        run: pnpm check:migrations
+
+      - name: Typecheck
+        run: pnpm typecheck

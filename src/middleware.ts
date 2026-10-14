@@ -31,11 +31,12 @@ export function middleware(request: NextRequest) {
   if (hostname.includes(".timetally.local")) {
     subdomain = hostParts[0] ?? null;
   }
-  // For production (*.timetally.com)
+  // For production (*.timetally.com) and staging (*.staging.timetally.com)
   else if (hostname.includes(".timetally.com")) {
     subdomain = hostParts[0] ?? null;
-    // Ignore 'www' subdomain
-    if (subdomain === "www") {
+    // Ignore 'www' subdomain, and the bare staging host (staging.timetally.com)
+    // which is the staging root domain, not a client called "staging"
+    if (subdomain === "www" || subdomain === "staging") {
       subdomain = null;
     }
   }

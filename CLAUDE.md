@@ -62,7 +62,7 @@ export async function GET(request: Request) {
 | `src/lib/auth.ts` | Auth utilities |
 | `src/lib/timeUtils.ts` | Time calculations |
 | `src/lib/csvExport.ts` | CSV export logic |
-| `supabase/migrations/` | DB migrations (apply in order) |
+| `supabase/migrations/` | DB migrations, applied by CI (see Release Flow) |
 
 ---
 
@@ -86,6 +86,23 @@ export async function GET(request: Request) {
 - Conditional classes via `cn()` from `~/lib/utils`
 - Component variants via `cva` (class-variance-authority)
 - Prettier auto-sorts Tailwind classes on format
+
+---
+
+## Release Flow
+
+Ticket branch → `staging` → `main`.
+
+- `staging` deploys to Vercel Preview and uses the testing Supabase project
+- `main` deploys to Vercel Production and uses the production Supabase project
+- `.github/workflows/migrate.yml` runs `supabase db push` on push to `staging` / `main`, gated by the repo variables `MIGRATE_STAGING_ENABLED` / `MIGRATE_PRODUCTION_ENABLED`
+
+### Migrations
+- Create with `pnpm --allow-build=supabase dlx supabase migration new <description>` — never hand-name files. Names must be `YYYYMMDDHHMMSS_description.sql` (`pnpm check:migrations` enforces this)
+- Never edit a migration after it has been merged to `staging`; write a new one
+- Keep migrations additive (add first, remove in a later release) — code and SQL deploy independently, so either can land first
+- Never run SQL by hand against production
+- `supabase/migrations_legacy/` and `supabase/schema.sql` are historical reference only — do not run or extend them
 
 ---
 

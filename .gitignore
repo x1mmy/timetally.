@@ -50,3 +50,5 @@ yarn-error.log*
 /.claude
 /.superpowers
 /.planning
+# supabase cli
+supabase/.temp
