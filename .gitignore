@@ -52,3 +52,5 @@ yarn-error.log*
 /.planning
 # supabase cli
 supabase/.temp
+# production data copies for the testing database - never commit
+supabase/prod-data.sql
