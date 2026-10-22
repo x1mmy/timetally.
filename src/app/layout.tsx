@@ -3,10 +3,15 @@ import "~/styles/globals.css";
 import { type Metadata, type Viewport } from "next";
 import localFont from "next/font/local";
 
+const title = "TimeTally: timesheets and payroll for Australian small businesses";
+const description =
+  "Timesheets and payroll for Australian small businesses. PIN clock-in, automatic breaks, weekend rates, CSV export.";
+
 export const metadata: Metadata = {
-  title: "TimeTally — Timesheets and payroll, already added up",
-  description:
-    "Staff clock in with a four-digit PIN. TimeTally deducts breaks, applies weekday, Saturday and Sunday rates, and exports a payroll-ready CSV. Built by Stash Labs.",
+  title,
+  description,
+  openGraph: { title, description, type: "website" },
+  twitter: { card: "summary" },
   icons: [
     { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
     { rel: "icon", url: "/favicon.ico", sizes: "any" }, // Fallback
