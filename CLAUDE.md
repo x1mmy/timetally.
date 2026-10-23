@@ -112,6 +112,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=   # Server-side only, never expose to client
 NEXT_PUBLIC_APP_URL=
+DISCORD_WEBHOOK_URL=         # Landing page demo requests are posted here
 ```
 
 ---
