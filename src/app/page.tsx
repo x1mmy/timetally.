@@ -812,7 +812,16 @@ export default function Home(): React.JSX.Element {
           </p>
         </div>
 
-        <Panel title="Payroll dashboard: week of 21 Sep 2026" meta={shown < 7 ? "Tallying…" : "Ready to export ✓"}>
+        <Panel
+          title="Payroll dashboard: week of 21 Sep 2026"
+          meta={
+            // Both labels stacked in one cell so the width (and the title's wrap) never changes.
+            <span style={{ display: "grid", textAlign: "right" }}>
+              <span style={{ gridArea: "1/1", visibility: shown < 7 ? "visible" : "hidden" }}>Tallying…</span>
+              <span style={{ gridArea: "1/1", visibility: shown < 7 ? "hidden" : "visible" }}>Ready to export ✓</span>
+            </span>
+          }
+        >
           {/* desktop: full week table */}
           <div data-hide-tab="" style={{ overflowX: "auto" }}>
             <div style={{ minWidth: 760 }}>
@@ -932,10 +941,11 @@ export default function Home(): React.JSX.Element {
                 padding: "16px",
               }}
             >
-              <span>
+              {/* one line only: a wrap here changes the panel height every tick and jumps the page on iOS */}
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 Total: {ledgerHours}, {shown ? "Mon to " + DAY_HEAD[shown - 1] : "Tallying"}
               </span>
-              <span style={bigNumber}>{ledgerTotal}</span>
+              <span style={{ ...bigNumber, whiteSpace: "nowrap" }}>{ledgerTotal}</span>
             </div>
           </div>
         </Panel>

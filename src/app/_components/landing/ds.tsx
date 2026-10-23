@@ -437,7 +437,7 @@ export function Ticker({ items, separator = "—" }: { items: string[]; separato
 
 interface PanelProps {
   title?: string;
-  meta?: string;
+  meta?: ReactNode;
   surface?: "surface" | "bg";
   padded?: boolean;
   style?: CSSProperties;
