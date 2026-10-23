@@ -4,7 +4,6 @@
 "use client";
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import {
@@ -953,38 +952,6 @@ export default function Home(): React.JSX.Element {
       </section>
 
       <Ticker items={TICKER} separator="/" />
-
-      {/* ---------- customers ---------- */}
-      <section style={{ borderTop: "var(--border-panel)", background: "var(--bg)" }}>
-        <div
-          style={{
-            ...container,
-            padding: "clamp(28px,4vw,44px) var(--gutter)",
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: "18px 28px",
-          }}
-        >
-          <span style={label}>In use at</span>
-          <span style={{ flex: "1 1 40px", minWidth: 40, height: 1, background: "var(--line)" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
-            <Image
-              src="/trims-fresh-logo-144.png"
-              alt="Trim’s Fresh & Co."
-              width={72}
-              height={72}
-              style={{ borderRadius: 999, display: "block", background: "#fff" }}
-            />
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-              <span style={{ fontWeight: 600, fontSize: "17px", letterSpacing: "-.01em" }}>Trim’s Fresh &amp; Co.</span>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--size-micro)", color: "var(--ink-3)" }}>
-                Staff clock in with TimeTally
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* ---------- 01 problem ---------- */}
       <LabelledSection
