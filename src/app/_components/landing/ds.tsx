@@ -205,7 +205,38 @@ export function ThemeToggle({ theme, onToggle }: { theme: "paper" | "ink"; onTog
   );
 }
 
-/** Four PIN dots, the last one blue, plus the wordmark. */
+/** The TimeTally mark: four PIN dots in a 2×2 grid, the last one blue. Sizes take px numbers or CSS (e.g. clamp()). */
+export function LogoMark({
+  dot,
+  gap,
+  pinAnimation,
+  style,
+}: {
+  dot: number | string;
+  gap: number | string;
+  pinAnimation?: string;
+  style?: CSSProperties;
+}): React.JSX.Element {
+  return (
+    <span aria-hidden style={{ display: "grid", gridTemplateColumns: "auto auto", gap, flexShrink: 0, ...style }}>
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          data-pin-dot={i === 3 ? "" : undefined}
+          style={{
+            width: dot,
+            height: dot,
+            borderRadius: 999,
+            background: i === 3 ? "var(--tt)" : "var(--ink)",
+            animation: i === 3 ? pinAnimation : undefined,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** The mark plus the wordmark. */
 export function Logo({
   size = 19,
   animated = false,
@@ -216,34 +247,14 @@ export function Logo({
   byline?: boolean;
 }): React.JSX.Element {
   const dot = Math.round(size * 0.42);
-  const d = (bg: string, pin = false): React.JSX.Element => (
-    <span
-      {...(pin && animated ? { "data-pin-dot": "" } : {})}
-      style={{
-        width: dot,
-        height: dot,
-        borderRadius: 999,
-        background: bg,
-        animation: pin && animated ? "tt-pin 5.4s cubic-bezier(.16,1,.3,1) infinite" : undefined,
-      }}
-    />
-  );
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: "14px" }}>
       <span style={{ display: "inline-flex", alignItems: "center", gap: dot, color: "var(--ink)" }}>
-        <span
-          style={{
-            display: "grid",
-            gridTemplateColumns: `${dot}px ${dot}px`,
-            gap: Math.max(3, Math.round(size * 0.21)),
-            flexShrink: 0,
-          }}
-        >
-          {d("var(--ink)")}
-          {d("var(--ink)")}
-          {d("var(--ink)")}
-          {d("var(--tt)", true)}
-        </span>
+        <LogoMark
+          dot={dot}
+          gap={Math.max(3, Math.round(size * 0.21))}
+          pinAnimation={animated ? "tt-pin 5.4s cubic-bezier(.16,1,.3,1) infinite" : undefined}
+        />
         <span style={{ fontSize: size, fontWeight: 600, letterSpacing: "-.02em", lineHeight: 1 }}>
           TimeTally
           <Stop />

@@ -15,6 +15,7 @@ import {
   InlineLink,
   LabelledSection,
   Logo,
+  LogoMark,
   NEXT_STEPS,
   Panel,
   PinPad,
@@ -638,31 +639,17 @@ export default function Home(): React.JSX.Element {
             padding: "clamp(16px,4vw,48px) 0 clamp(48px,6vw,88px)",
           }}
         >
-          <div
-            aria-hidden
+          <LogoMark
+            dot="clamp(18px,2.1vw,27px)"
+            gap="clamp(8px,1vw,12px)"
+            pinAnimation="tt-hero-pulse 3.5s cubic-bezier(.16,1,.3,1) .6s 1 both"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2,clamp(18px,2.1vw,27px))",
-              gap: "clamp(8px,1vw,12px)",
               marginBottom: "clamp(36px,5vw,56px)",
               opacity: intro.dots ? 1 : 0,
               transform: intro.dots ? "none" : "translateY(10px) scale(.92)",
               transition: "opacity .8s var(--ease-out-expo), transform .9s var(--ease-out-expo)",
             }}
-          >
-            {[0, 1, 2, 3].map((i) => (
-              <span
-                key={i}
-                {...(i === 3 ? { "data-pin-dot": "" } : {})}
-                style={{
-                  aspectRatio: 1,
-                  borderRadius: 999,
-                  background: i === 3 ? "var(--tt)" : "var(--ink)",
-                  animation: i === 3 ? "tt-hero-pulse 3.5s cubic-bezier(.16,1,.3,1) .6s 1 both" : undefined,
-                }}
-              />
-            ))}
-          </div>
+          />
           <h1
             aria-label="The week’s hours, already added up."
             style={{
