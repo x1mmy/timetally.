@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   twitter: { card: "summary" },
   icons: [
     { rel: "icon", url: "/icon.svg", type: "image/svg+xml" },
-    { rel: "icon", url: "/favicon.ico", sizes: "any" }, // Fallback
   ],
 };
 
