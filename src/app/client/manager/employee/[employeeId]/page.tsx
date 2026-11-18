@@ -220,7 +220,7 @@ function EmployeeDetailContent() {
             <m.div
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
+              transition={{ duration: 0.2 }}
             >
               <Button
                 variant="ghost"
@@ -235,7 +235,7 @@ function EmployeeDetailContent() {
             <m.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ duration: 0.2 }}
               className="flex items-center justify-between"
             >
               <div>
@@ -261,7 +261,7 @@ function EmployeeDetailContent() {
             <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
+              transition={{ duration: 0.2 }}
               className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
             >
               <m.div
@@ -329,7 +329,7 @@ function EmployeeDetailContent() {
                     key={day.date}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.05 }}
+                    transition={{ duration: 0.2 }}
                     whileHover={{ scale: 1.01 }}
                     className={`group rounded-xl border p-5 backdrop-blur-sm transition-all ${
                       hasHours
@@ -479,7 +479,7 @@ function EmployeeDetailContent() {
             <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
+              transition={{ duration: 0.2 }}
               className="border-primary/20 relative overflow-hidden rounded-2xl border bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
             >
               <div className="bg-primary/10 absolute top-0 right-0 h-40 w-40 translate-x-8 -translate-y-8 rounded-full blur-3xl" />

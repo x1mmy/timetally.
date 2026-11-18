@@ -299,7 +299,7 @@ export function EmployeeDashboardClient({
               <m.div
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ duration: 0.2 }}
               >
                 <h1 className="text-2xl font-bold md:text-3xl">
                   Welcome, <span className="text-primary">{employeeName}</span>
@@ -312,7 +312,7 @@ export function EmployeeDashboardClient({
               <m.div
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ duration: 0.2 }}
                 className="flex items-center gap-2"
               >
                 <button
@@ -333,7 +333,7 @@ export function EmployeeDashboardClient({
           <m.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3, type: "spring" }}
+            transition={{ type: "spring" }}
             className="mb-6 overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-neutral-900/90 to-neutral-900/50 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-sm md:p-6"
           >
             <div className="mb-4 flex items-center justify-between gap-2">
@@ -369,7 +369,7 @@ export function EmployeeDashboardClient({
             <m.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
+              transition={{ duration: 0.2 }}
               className="flex justify-center"
             >
               <div className="from-primary shadow-primary/30 relative overflow-hidden rounded-full bg-gradient-to-r to-blue-500 px-6 py-3 shadow-lg md:px-8 md:py-4">
@@ -428,7 +428,7 @@ export function EmployeeDashboardClient({
                   key={dateStr}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index }}
+                  transition={{ duration: 0.2 }}
                   whileHover={{ scale: 1.01 }}
                   className={`group rounded-xl border p-4 backdrop-blur-sm transition-all md:p-6 ${
                     justSaved

@@ -77,7 +77,7 @@ export default function ClientLandingPage() {
             <m.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              transition={{ type: "spring", stiffness: 200 }}
               className="mb-6 flex justify-center"
             >
               <div className="relative">
@@ -85,7 +85,7 @@ export default function ClientLandingPage() {
                 <m.div
                   initial={{ scale: 1, opacity: 1 }}
                   animate={{ scale: 1.5, opacity: 0 }}
-                  transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
+                  transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
                   className="absolute inset-0"
                 >
                   <Clock className="text-primary/30 h-20 w-20" />
@@ -96,7 +96,7 @@ export default function ClientLandingPage() {
             <m.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ duration: 0.2 }}
               className="mb-3 text-5xl font-bold tracking-tight md:text-6xl"
             >
               TimeTally<span className="text-primary">.</span>
@@ -105,7 +105,7 @@ export default function ClientLandingPage() {
             <m.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
+              transition={{ duration: 0.2 }}
               className="flex items-center justify-center gap-2 text-xl text-neutral-400"
             >
               <Sparkles className="h-5 w-5" />
@@ -119,7 +119,7 @@ export default function ClientLandingPage() {
             <m.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5, type: "spring", stiffness: 100 }}
+              transition={{ type: "spring", stiffness: 100 }}
             >
               <Link
                 href="/client/employee/login"
@@ -171,7 +171,7 @@ export default function ClientLandingPage() {
             <m.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6, type: "spring", stiffness: 100 }}
+              transition={{ type: "spring", stiffness: 100 }}
             >
               <Link href="/client/manager/login" className="group block h-full">
                 <Card className="hover:border-primary/50 hover:shadow-primary/20 relative h-full overflow-hidden border-neutral-800 bg-neutral-900/50 p-8 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:bg-neutral-900/80 hover:shadow-2xl">
@@ -221,7 +221,7 @@ export default function ClientLandingPage() {
           <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
+            transition={{ duration: 0.2 }}
             className="mt-16 text-center text-sm text-neutral-500"
           >
             <p>
