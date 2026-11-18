@@ -443,7 +443,7 @@ export default function ManagerSettingsPage() {
               <m.div
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ duration: 0.2 }}
                 className="flex items-center gap-3"
               >
                 <div className="bg-primary/10 ring-primary/20 rounded-xl p-2 ring-2">
@@ -462,7 +462,7 @@ export default function ManagerSettingsPage() {
               <m.div
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ duration: 0.2 }}
               >
                 <Button
                   variant="outline"
@@ -484,7 +484,7 @@ export default function ManagerSettingsPage() {
             <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ duration: 0.2 }}
               className="rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
             >
               <div className="mb-6 flex items-center gap-3">
@@ -588,7 +588,7 @@ export default function ManagerSettingsPage() {
             <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
+              transition={{ duration: 0.2 }}
               className="rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
             >
               <div className="mb-1 flex items-center gap-3">
@@ -1154,7 +1154,7 @@ export default function ManagerSettingsPage() {
             <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
+              transition={{ duration: 0.2 }}
               className="rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm"
             >
               <div className="mb-6 flex items-center justify-between">
@@ -1223,7 +1223,7 @@ export default function ManagerSettingsPage() {
                       key={emp.id}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ duration: 0.2 }}
                       whileHover={{ scale: 1.01, x: 5 }}
                       className="hover:border-primary/30 flex items-center justify-between rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 backdrop-blur-sm transition-all hover:bg-neutral-900/80"
                     >

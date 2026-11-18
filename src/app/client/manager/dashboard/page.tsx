@@ -388,7 +388,7 @@ function ManagerDashboardContent() {
               <m.div
                 initial={{ x: -20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ duration: 0.2 }}
                 className="flex items-center gap-3"
               >
                 <div className="bg-primary/10 ring-primary/20 rounded-xl p-2 ring-2">
@@ -408,7 +408,7 @@ function ManagerDashboardContent() {
               <m.div
                 initial={{ x: 20, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ duration: 0.2 }}
                 className="flex gap-2"
               >
                 <Button
@@ -518,7 +518,7 @@ function ManagerDashboardContent() {
             <m.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ duration: 0.2 }}
               className="grid grid-cols-1 gap-4 md:grid-cols-3"
             >
               {/* Total Payroll */}
@@ -697,7 +697,7 @@ function ManagerDashboardContent() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ delay: index * 0.05 }}
+                        transition={{ duration: 0.2 }}
                         whileHover={{ y: -5 }}
                         onClick={() =>
                           router.push(

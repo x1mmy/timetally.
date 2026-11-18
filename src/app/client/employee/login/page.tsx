@@ -107,7 +107,7 @@ export default function EmployeeLoginPage() {
             <m.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              transition={{ type: "spring", stiffness: 200 }}
               className="flex justify-center"
             >
               <div className="relative">
@@ -117,7 +117,7 @@ export default function EmployeeLoginPage() {
                 <m.div
                   initial={{ scale: 1, opacity: 1 }}
                   animate={{ scale: 1.5, opacity: 0 }}
-                  transition={{ delay: 0.4, duration: 0.8, ease: "easeOut" }}
+                  transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
                   className="absolute inset-0"
                 >
                   <div className="bg-primary/20 rounded-2xl p-6">
@@ -129,7 +129,7 @@ export default function EmployeeLoginPage() {
             <m.h1
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ duration: 0.2 }}
               className="text-4xl font-bold"
             >
               Employee Login
@@ -137,7 +137,7 @@ export default function EmployeeLoginPage() {
             <m.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
+              transition={{ duration: 0.2 }}
               className="text-neutral-400"
             >
               Enter your 4-digit PIN to access your timesheet
@@ -148,7 +148,7 @@ export default function EmployeeLoginPage() {
           <m.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ duration: 0.2 }}
             className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 backdrop-blur-sm"
           >
             <Label className="mb-4 block text-center text-lg font-semibold">
@@ -199,7 +199,7 @@ export default function EmployeeLoginPage() {
           <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
+            transition={{ duration: 0.2 }}
             className="text-center"
           >
             <Link
