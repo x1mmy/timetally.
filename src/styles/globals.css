@@ -1,7 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * Themes
+ * ------
+ * Light ("paper") and dark ("ink") come from the landing page palette in
+ * src/styles/landing.css. The staff and manager portals render inside
+ * `[data-portal]` (src/app/client/layout.tsx) and default to dark. The theme
+ * switch in each portal header sets <html data-theme="light|dark"> and keeps
+ * the choice on that device. Tokens live on <html>, so Radix dialogs, selects
+ * and popovers (rendered into <body>) get the same values as the page.
+ */
+@custom-variant dark (&:where(:root:has([data-portal]):not([data-theme="light"]) *));
 
 @theme {
   --font-sans: var(--font-epilogue), ui-sans-serif, system-ui, sans-serif,
@@ -33,24 +43,19 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  /* TimeTally-specific: day rates, clock buttons, status */
+  --color-wk: var(--wk);
+  --color-sat: var(--sat);
+  --color-sun: var(--sun);
+  --color-ph: var(--ph);
+  --color-go: var(--go);
+  --color-stop: var(--stop);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
 }
 
-/*
- * Colours come from the landing page's two ramps (src/styles/landing.css):
- * "paper" for light, "ink" for dark. The client portals render inside
- * `.dark` (src/app/client/layout.tsx), so they read the ink values.
- *
- * Primary stays #2563eb in both themes for now: several portal screens put
- * `text-white` on `bg-primary`, and white on the lighter ink blue (#60a5fa)
- * would be unreadable. Move dark primary to #60a5fa once those screens use
- * `text-primary-foreground`.
- *
- * `:root:has(.dark)` repeats the dark values on <html> whenever a page has
- * the `.dark` wrapper. Radix dialogs, selects and popovers render into
- * <body>, outside that wrapper, so without it they would read the light set.
- */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.25rem;
   --background: #f2eee7;
   --foreground: #16130f;
   --card: #fbf9f5;
@@ -69,28 +74,44 @@
   --border: rgba(22, 19, 15, 0.14);
   --input: rgba(22, 19, 15, 0.28);
   --ring: #2563eb;
+  --wk: #2563eb;
+  --sat: #7c3aed;
+  --sun: #db2777;
+  --ph: #b45309;
+  --go: #1f7a45;
+  --stop: #b42318;
+  --ok: #1f7a45;
+  --warn: #c2410c;
 }
 
-.dark,
-:root:has(.dark) {
+:root:has([data-portal]):not([data-theme="light"]) {
   --background: #0c0b0a;
   --foreground: #f4f1eb;
   --card: #141210;
   --card-foreground: #f4f1eb;
   --popover: #141210;
   --popover-foreground: #f4f1eb;
-  --primary: #2563eb;
-  --primary-foreground: #ffffff;
+  --primary: #60a5fa;
+  --primary-foreground: #0c0b0a;
   --secondary: #242019;
   --secondary-foreground: #f4f1eb;
   --muted: #242019;
   --muted-foreground: #9d958c;
   --accent: #242019;
   --accent-foreground: #f4f1eb;
-  --destructive: #dc2626;
+  --destructive: #f87171;
   --border: rgba(244, 241, 235, 0.12);
   --input: rgba(244, 241, 235, 0.24);
   --ring: #60a5fa;
+  --wk: #60a5fa;
+  --sat: #c084fc;
+  --sun: #f472b6;
+  --ph: #fbbf24;
+  --go: #22803f;
+  --stop: #c0392b;
+  --ok: #6fcf97;
+  --warn: #fb923c;
+  color-scheme: dark;
 }
 
 @layer base {
@@ -101,20 +122,21 @@
     @apply bg-background text-foreground;
     font-size: 16px;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
   }
   h1 {
     font-size: 48px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.2;
   }
   h2 {
     font-size: 36px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.2;
   }
   h3 {
     font-size: 24px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.2;
   }
   h4,
@@ -128,5 +150,13 @@
     font-size: 14px;
     font-weight: 400;
     line-height: 1.5;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

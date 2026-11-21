@@ -28,7 +28,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={landingFonts}>
+    <html lang="en" className={landingFonts} suppressHydrationWarning>
       <body>
         {children}
         <SpeedInsights />
