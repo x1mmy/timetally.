@@ -9,7 +9,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Clock } from "lucide-react";
 import { parseTimeString } from "@/lib/timeUtils";
 import {
   Select,
@@ -39,29 +38,34 @@ export function TimePickerDesktopSimple({
 
   // Generate options
   const hours = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
-  const minutes = Array.from({ length: 12 }, (_, i) => (i * 5).toString().padStart(2, "0"));
+  const minutes = Array.from({ length: 12 }, (_, i) =>
+    (i * 5).toString().padStart(2, "0"),
+  );
 
   // Helper function to convert and emit time
-  const emitTime = useCallback((hour: string, minute: string, timePeriod: "AM" | "PM") => {
-    if (!hour || !minute) {
-      onChange("");
-      return;
-    }
+  const emitTime = useCallback(
+    (hour: string, minute: string, timePeriod: "AM" | "PM") => {
+      if (!hour || !minute) {
+        onChange("");
+        return;
+      }
 
-    const hours = parseInt(hour, 10);
-    const minutes = parseInt(minute, 10);
+      const hours = parseInt(hour, 10);
+      const minutes = parseInt(minute, 10);
 
-    // Convert to 24-hour format
-    let hours24 = hours;
-    if (timePeriod === "AM") {
-      if (hours === 12) hours24 = 0;
-    } else {
-      if (hours !== 12) hours24 = hours + 12;
-    }
+      // Convert to 24-hour format
+      let hours24 = hours;
+      if (timePeriod === "AM") {
+        if (hours === 12) hours24 = 0;
+      } else {
+        if (hours !== 12) hours24 = hours + 12;
+      }
 
-    const formatted = `${hours24.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
-    onChange(formatted);
-  }, [onChange]);
+      const formatted = `${hours24.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+      onChange(formatted);
+    },
+    [onChange],
+  );
 
   // Initialize from 24-hour value
   useEffect(() => {
@@ -70,9 +74,13 @@ export function TimePickerDesktopSimple({
       if (parsed) {
         const hourStr = parsed.hours.toString();
         const minuteStr = parsed.minutes.toString().padStart(2, "0");
-        
+
         // Only update if values actually changed to prevent loops
-        if (selectedHour !== hourStr || selectedMinute !== minuteStr || period !== parsed.period) {
+        if (
+          selectedHour !== hourStr ||
+          selectedMinute !== minuteStr ||
+          period !== parsed.period
+        ) {
           setSelectedHour(hourStr);
           setSelectedMinute(minuteStr);
           setPeriod(parsed.period);
@@ -91,10 +99,9 @@ export function TimePickerDesktopSimple({
   }, [value]);
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       {/* Hour Select */}
-      <div className="relative flex-1">
-        <Clock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 z-10 text-neutral-400 pointer-events-none" />
+      <div className="min-w-[68px] flex-1">
         <Select
           value={selectedHour}
           onValueChange={(val) => {
@@ -102,12 +109,15 @@ export function TimePickerDesktopSimple({
             emitTime(val, selectedMinute, period);
           }}
         >
-          <SelectTrigger className="border-neutral-700 bg-neutral-800 pl-10 text-white">
+          <SelectTrigger
+            aria-label="Hour"
+            className="w-full px-2.5 tabular-nums"
+          >
             <SelectValue placeholder="Hour" />
           </SelectTrigger>
-          <SelectContent className="bg-neutral-800 border-neutral-700">
+          <SelectContent>
             {hours.map((hour) => (
-              <SelectItem key={hour} value={hour} className="text-white hover:bg-neutral-700">
+              <SelectItem key={hour} value={hour} className="font-mono">
                 {hour}
               </SelectItem>
             ))}
@@ -116,7 +126,7 @@ export function TimePickerDesktopSimple({
       </div>
 
       {/* Minute Select */}
-      <div className="flex-1">
+      <div className="min-w-[68px] flex-1">
         <Select
           value={selectedMinute}
           onValueChange={(val) => {
@@ -124,12 +134,15 @@ export function TimePickerDesktopSimple({
             emitTime(selectedHour, val, period);
           }}
         >
-          <SelectTrigger className="border-neutral-700 bg-neutral-800 text-white">
+          <SelectTrigger
+            aria-label="Minutes"
+            className="w-full px-2.5 tabular-nums"
+          >
             <SelectValue placeholder="Min" />
           </SelectTrigger>
-          <SelectContent className="bg-neutral-800 border-neutral-700">
+          <SelectContent>
             {minutes.map((minute) => (
-              <SelectItem key={minute} value={minute} className="text-white hover:bg-neutral-700">
+              <SelectItem key={minute} value={minute} className="font-mono">
                 {minute}
               </SelectItem>
             ))}
@@ -138,31 +151,37 @@ export function TimePickerDesktopSimple({
       </div>
 
       {/* AM/PM Toggle */}
-      <div className="flex overflow-hidden rounded-lg border border-neutral-700 bg-neutral-800">
+      <div
+        role="group"
+        aria-label="AM or PM"
+        className="border-input bg-card flex h-10 overflow-hidden rounded-lg border"
+      >
         <button
           type="button"
+          aria-pressed={period === "AM"}
           onClick={() => {
             setPeriod("AM");
             emitTime(selectedHour, selectedMinute, "AM");
           }}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
+          className={`px-2.5 font-mono text-[13px] transition-colors ${
             period === "AM"
-              ? "bg-blue-600 text-white"
-              : "text-neutral-400 hover:bg-neutral-700 hover:text-white"
+              ? "bg-secondary text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           AM
         </button>
         <button
           type="button"
+          aria-pressed={period === "PM"}
           onClick={() => {
             setPeriod("PM");
             emitTime(selectedHour, selectedMinute, "PM");
           }}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
+          className={`border-input border-l px-2.5 font-mono text-[13px] transition-colors ${
             period === "PM"
-              ? "bg-blue-600 text-white"
-              : "text-neutral-400 hover:bg-neutral-700 hover:text-white"
+              ? "bg-secondary text-foreground"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           PM
@@ -171,4 +190,3 @@ export function TimePickerDesktopSimple({
     </div>
   );
 }
-

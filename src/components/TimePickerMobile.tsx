@@ -137,10 +137,13 @@ export function TimePickerMobile({
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="hover:bg-neutral-750 relative flex w-full items-center gap-3 rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-left transition-colors"
+        className="border-input bg-card hover:border-primary focus-visible:ring-ring relative flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-left font-mono text-sm tabular-nums transition-colors outline-none focus-visible:ring-2"
       >
-        <Clock className="h-5 w-5 flex-shrink-0 text-neutral-400" />
-        <span className={value ? "text-white" : "text-neutral-500"}>
+        <Clock
+          className="text-muted-foreground size-4 shrink-0"
+          strokeWidth={1.5}
+        />
+        <span className={value ? "text-foreground" : "text-muted-foreground"}>
           {displayValue}
         </span>
       </button>
@@ -150,35 +153,37 @@ export function TimePickerMobile({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="bg-background/80 absolute inset-0"
             onClick={() => setIsOpen(false)}
           />
 
           {/* Picker Content */}
-          <div className="relative w-full max-w-md rounded-3xl bg-neutral-900 shadow-2xl ring-1 ring-blue-500/40">
+          <div className="bg-background border-input relative w-full max-w-md rounded-xl border">
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
+            <div className="border-border flex items-center justify-between border-b px-4 py-3">
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="rounded-lg p-2 transition-colors hover:bg-neutral-800"
+                aria-label="Cancel"
+                className="text-muted-foreground hover:bg-secondary hover:text-foreground inline-flex size-10 items-center justify-center rounded-lg transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="size-[18px]" strokeWidth={1.5} />
               </button>
-              <h3 className="text-lg font-semibold">Select Time</h3>
+              <h3 className="text-lg font-semibold">Select time</h3>
               <button
                 type="button"
                 onClick={handleDone}
-                className="rounded-lg bg-blue-600 p-2 transition-colors hover:bg-blue-700"
+                aria-label="Done"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex size-10 items-center justify-center rounded-lg transition-colors"
               >
-                <Check className="h-5 w-5" />
+                <Check className="size-[18px]" strokeWidth={1.5} />
               </button>
             </div>
 
             {/* Scroll Wheels */}
             <div className="relative px-4 py-6">
               {/* Selection Indicator */}
-              <div className="pointer-events-none absolute top-1/2 right-0 left-0 h-12 -translate-y-1/2 border-y-2 border-blue-500/30 bg-blue-500/5" />
+              <div className="border-input pointer-events-none absolute top-1/2 right-0 left-0 h-12 -translate-y-1/2 border-y" />
 
               <div className="flex gap-2">
                 {/* Hours Wheel */}
@@ -196,7 +201,7 @@ export function TimePickerMobile({
                   {hours.map((hour) => (
                     <div
                       key={hour}
-                      className="flex h-12 snap-center scroll-my-24 items-center justify-center text-2xl font-medium"
+                      className="flex h-12 snap-center scroll-my-24 items-center justify-center font-mono text-2xl tabular-nums"
                       style={{ scrollSnapAlign: "center" }}
                     >
                       {hour}
@@ -206,7 +211,7 @@ export function TimePickerMobile({
                 </div>
 
                 {/* Colon Separator */}
-                <div className="flex items-center justify-center px-1 text-2xl font-bold">
+                <div className="text-muted-foreground flex items-center justify-center px-1 font-mono text-2xl">
                   :
                 </div>
 
@@ -225,7 +230,7 @@ export function TimePickerMobile({
                   {minutes.map((minute) => (
                     <div
                       key={minute}
-                      className="flex h-12 snap-center scroll-my-24 items-center justify-center text-2xl font-medium"
+                      className="flex h-12 snap-center scroll-my-24 items-center justify-center font-mono text-2xl tabular-nums"
                       style={{ scrollSnapAlign: "center" }}
                     >
                       {minute.toString().padStart(2, "0")}
@@ -249,7 +254,7 @@ export function TimePickerMobile({
                   {periods.map((period) => (
                     <div
                       key={period}
-                      className="flex h-12 snap-center scroll-my-24 items-center justify-center text-2xl font-medium"
+                      className="flex h-12 snap-center scroll-my-24 items-center justify-center font-mono text-2xl tabular-nums"
                       style={{ scrollSnapAlign: "center" }}
                     >
                       {period}

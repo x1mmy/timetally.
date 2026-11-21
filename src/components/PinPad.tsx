@@ -10,8 +10,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Delete } from "lucide-react";
 
 interface PinPadProps {
   /** Length of PIN (default 4) */
@@ -39,7 +37,7 @@ export function PinPad({ length = 4, onComplete, onClear }: PinPadProps) {
         return currentPin;
       });
     },
-    [length]
+    [length],
   );
 
   /**
@@ -96,73 +94,70 @@ export function PinPad({ length = 4, onComplete, onClear }: PinPadProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleNumberInput, handleBackspaceInput, handleClearInput]);
 
+  const keyClass =
+    "border-border bg-card text-foreground hover:border-primary focus-visible:ring-ring h-15 rounded-lg border font-mono text-xl transition-colors outline-none focus-visible:ring-2 active:bg-secondary [@media(orientation:landscape)_and_(max-height:540px)]:h-12 [@media(orientation:portrait)_and_(max-height:700px)]:h-13";
+  const smallKeyClass = `${keyClass} text-muted-foreground text-[11px] tracking-[0.1em] uppercase`;
+
   return (
-    <div className="rounded-2xl p-6 shadow-xl ring-1 shadow-blue-500/50 ring-blue-500/40">
-      <div className="flex flex-col items-center gap-6">
-        {/* PIN Display - Shows filled/empty dots */}
-        <div className="flex gap-4">
-          {Array.from({ length }).map((_, i) => (
-            <div
-              key={i}
-              className={`flex h-14 w-14 items-center justify-center rounded-full border-2 transition-colors ${
-                i < pin.length
-                  ? "bg-primary border-primary"
-                  : "border-neutral-700 bg-neutral-800"
-              }`}
-            >
-              {/* Show dot when digit is entered */}
-              {i < pin.length && (
-                <div className="h-4 w-4 rounded-full bg-white" />
-              )}
-            </div>
-          ))}
-        </div>
+    <div className="flex w-full flex-col items-center gap-6 [@media(orientation:portrait)_and_(max-height:700px)]:gap-4">
+      {/* PIN Display - Shows filled/empty dots */}
+      <div
+        className="flex gap-4"
+        role="img"
+        aria-label={`${pin.length} of ${length} digits entered`}
+      >
+        {Array.from({ length }).map((_, i) => (
+          <span
+            key={i}
+            className={`size-4 rounded-full border transition-colors ${
+              i < pin.length ? "bg-primary border-primary" : "border-input"
+            }`}
+          />
+        ))}
+      </div>
 
-        {/* Number Pad Grid */}
-        <div className="grid w-full max-w-xs grid-cols-3 gap-4">
-          {/* Numbers 1-9 */}
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-            <Button
-              key={num}
-              variant="outline"
-              size="lg"
-              onClick={() => handleNumberInput(num)}
-              className="h-16 border-neutral-700 bg-neutral-800 text-2xl hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
-            >
-              {num}
-            </Button>
-          ))}
-
-          {/* Backspace Button */}
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleBackspaceInput}
-            className="h-16 border-neutral-700 bg-neutral-800 hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
+      {/* Number Pad Grid */}
+      <div className="grid w-full max-w-xs grid-cols-3 gap-2.5 [@media(orientation:portrait)_and_(max-height:700px)]:gap-2">
+        {/* Numbers 1-9 */}
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+          <button
+            key={num}
+            type="button"
+            onClick={() => handleNumberInput(num)}
+            className={keyClass}
           >
-            <ArrowLeft className="h-6 w-6" />
-          </Button>
+            {num}
+          </button>
+        ))}
 
-          {/* Zero Button */}
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => handleNumberInput(0)}
-            className="h-16 border-neutral-700 bg-neutral-800 text-2xl hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
-          >
-            0
-          </Button>
+        {/* Clear Button */}
+        <button
+          type="button"
+          onClick={handleClearInput}
+          aria-label="Clear PIN"
+          className={smallKeyClass}
+        >
+          Clear
+        </button>
 
-          {/* Clear Button */}
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={handleClearInput}
-            className="h-16 border-neutral-700 bg-neutral-800 hover:border-blue-500 hover:bg-blue-600/20 focus-visible:ring-blue-500/50"
-          >
-            <Delete className="h-6 w-6" />
-          </Button>
-        </div>
+        {/* Zero Button */}
+        <button
+          type="button"
+          onClick={() => handleNumberInput(0)}
+          className={keyClass}
+        >
+          0
+        </button>
+
+        {/* Delete (backspace) Button */}
+        <button
+          type="button"
+          onClick={handleBackspaceInput}
+          aria-label="Delete last digit"
+          className={smallKeyClass}
+        >
+          Delete
+        </button>
       </div>
     </div>
   );

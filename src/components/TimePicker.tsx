@@ -60,9 +60,13 @@ export function TimePicker({
   const isMobileOrTablet = useMediaQuery("(max-width: 1023px)");
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {/* Optional label */}
-      {label && <label className="block text-sm font-medium">{label}</label>}
+      {label && (
+        <label className="text-muted-foreground block text-[13px]">
+          {label}
+        </label>
+      )}
 
       {/* Render appropriate picker based on screen size */}
       {isMobileOrTablet ? (
