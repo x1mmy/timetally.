@@ -101,7 +101,7 @@ export function TimePickerDesktopSimple({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {/* Hour Select */}
-      <div className="min-w-[68px] flex-1">
+      <div className="min-w-[84px] flex-1">
         <Select
           value={selectedHour}
           onValueChange={(val) => {
@@ -126,7 +126,7 @@ export function TimePickerDesktopSimple({
       </div>
 
       {/* Minute Select */}
-      <div className="min-w-[68px] flex-1">
+      <div className="min-w-[84px] flex-1">
         <Select
           value={selectedMinute}
           onValueChange={(val) => {
@@ -163,7 +163,7 @@ export function TimePickerDesktopSimple({
             setPeriod("AM");
             emitTime(selectedHour, selectedMinute, "AM");
           }}
-          className={`px-2.5 font-mono text-[13px] transition-colors ${
+          className={`min-w-11 px-3 font-mono text-[13px] transition-colors ${
             period === "AM"
               ? "bg-secondary text-foreground"
               : "text-muted-foreground hover:text-foreground"
@@ -178,7 +178,7 @@ export function TimePickerDesktopSimple({
             setPeriod("PM");
             emitTime(selectedHour, selectedMinute, "PM");
           }}
-          className={`border-input border-l px-2.5 font-mono text-[13px] transition-colors ${
+          className={`border-input min-w-11 border-l px-3 font-mono text-[13px] transition-colors ${
             period === "PM"
               ? "bg-secondary text-foreground"
               : "text-muted-foreground hover:text-foreground"

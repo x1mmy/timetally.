@@ -277,7 +277,7 @@ function EmployeeDetailContent() {
     <button
       type="button"
       onClick={() => setEditingDay(day)}
-      className="text-primary focus-visible:ring-ring inline-block rounded-sm py-2 text-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2"
+      className="text-primary focus-visible:ring-ring -mx-2 inline-block rounded-sm px-2 py-2 text-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2"
     >
       {hasHours ? "Edit" : "Add hours"}
     </button>

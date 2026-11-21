@@ -267,7 +267,7 @@ export function EmployeeDialog({
           (mode === "edit" ? (
             <button
               type="button"
-              className="text-muted-foreground hover:text-primary inline-block py-2 text-sm transition-colors"
+              className="text-muted-foreground hover:text-primary -mx-2 inline-block px-2 py-2 text-sm transition-colors"
             >
               Edit
             </button>
