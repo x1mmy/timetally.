@@ -4,8 +4,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif,
+  --font-sans: var(--font-epilogue), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo,
+    monospace;
 }
 
 @theme inline {
@@ -31,95 +33,59 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * Colours come from the landing page's two ramps (src/styles/landing.css):
+ * "paper" for light, "ink" for dark. The client portals render inside
+ * `.dark` (src/app/client/layout.tsx), so they read the ink values.
+ *
+ * Primary stays #2563eb in both themes for now: several portal screens put
+ * `text-white` on `bg-primary`, and white on the lighter ink blue (#60a5fa)
+ * would be unreadable. Move dark primary to #60a5fa once those screens use
+ * `text-primary-foreground`.
+ */
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  /* Primary color: #0066FF (blue accent) */
-  --primary: oklch(0.547 0.261 265);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  /* Accent color: #0066FF (blue accent) */
-  --accent: oklch(0.547 0.261 265);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  /* Ring color: #0066FF (focus states) */
-  --ring: oklch(0.547 0.261 265);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #f2eee7;
+  --foreground: #16130f;
+  --card: #fbf9f5;
+  --card-foreground: #16130f;
+  --popover: #fbf9f5;
+  --popover-foreground: #16130f;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #e7e0d5;
+  --secondary-foreground: #16130f;
+  --muted: #e7e0d5;
+  --muted-foreground: #6e675d;
+  --accent: #e7e0d5;
+  --accent-foreground: #16130f;
+  --destructive: #b42318;
+  --border: rgba(22, 19, 15, 0.14);
+  --input: rgba(22, 19, 15, 0.28);
+  --ring: #2563eb;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  /* Primary color: #0066FF (blue accent) */
-  --primary: oklch(0.547 0.261 265);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  /* Accent color: #0066FF (blue accent) */
-  --accent: oklch(0.547 0.261 265);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  /* Ring color: #0066FF (focus states) */
-  --ring: oklch(0.547 0.261 265);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  /* Sidebar primary: #0066FF (blue accent) */
-  --sidebar-primary: oklch(0.547 0.261 265);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.547 0.261 265);
+  --background: #0c0b0a;
+  --foreground: #f4f1eb;
+  --card: #141210;
+  --card-foreground: #f4f1eb;
+  --popover: #141210;
+  --popover-foreground: #f4f1eb;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #242019;
+  --secondary-foreground: #f4f1eb;
+  --muted: #242019;
+  --muted-foreground: #9d958c;
+  --accent: #242019;
+  --accent-foreground: #f4f1eb;
+  --destructive: #dc2626;
+  --border: rgba(244, 241, 235, 0.12);
+  --input: rgba(244, 241, 235, 0.24);
+  --ring: #60a5fa;
 }
 
 @layer base {
