@@ -1,0 +1,31 @@
+# Keeps the employee login and clock routes warm during opening hours, so the
+# first employee of the morning does not wait on Vercel cold starts.
+# WARM_URL is a repository variable holding a demo tenant address. Every tenant
+# shares the same functions, so warming one warms them all. Never put a
+# customer's address here: this repo and its Actions logs are public.
+# ponytail: GitHub's schedule can run late or skip under load, so a route can still go cold.
+# If morning logins are still slow after a week, move to Vercel Pro or a paid uptime pinger.
+name: keep-warm
+
+on:
+  schedule:
+    - cron: "*/5 18-23,0-12 * * *" # every 5 minutes, at least 5 am to 10 pm Sydney, summer and winter
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - env:
+          WARM_URL: ${{ vars.WARM_URL }}
+        run: |
+          # The login page itself is served from Vercel's cache; pinging it still runs the
+          # middleware that every employee request goes through.
+          for u in /client/employee/login /api/client/auth/employee/me /client/employee/clock /client/employee/dashboard /api/client/timesheets; do
+            curl -s -o /dev/null --max-time 20 -w "$u %{http_code} %{time_starttransfer}\n" "$WARM_URL$u"
+          done
+          # Empty body: the route answers 400 before any PIN check.
+          curl -s -o /dev/null --max-time 20 -w "login %{http_code} %{time_starttransfer}\n" -X POST -H "content-type: application/json" -d '{}' "$WARM_URL/api/client/auth/employee"
