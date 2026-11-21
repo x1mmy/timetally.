@@ -6,11 +6,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, FileText, LogOut, Filter } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, subDays, startOfWeek, endOfWeek } from "date-fns";
-import { LazyMotion, m } from "framer-motion";
-import { loadDomAnimation } from "@/lib/motion-features";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { cn } from "~/lib/utils";
 import { convert24to12 } from "@/lib/timeUtils";
 import type { Employee } from "@/types/database";
 
@@ -121,242 +122,299 @@ export default function TimesheetActivityPage() {
     router.push("/client");
   };
 
+  const hasFilters = !!(filterEmployeeId || filterStartDate || filterEndDate);
+
   return (
-    <LazyMotion features={loadDomAnimation}>
-      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-20 -left-40 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
-          <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
+    <>
+      <header className="bg-card border-border border-b">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <Logo />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/client/manager/settings")}
+            >
+              Settings
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Log out
+            </Button>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        <div>
+          <button
+            type="button"
+            onClick={() => router.push("/client/manager/dashboard")}
+            className="text-muted-foreground hover:text-primary focus-visible:ring-ring inline-block rounded-sm py-2 text-sm transition-colors outline-none focus-visible:ring-2"
+          >
+            ‹ Back to payroll
+          </button>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
+            Timesheet activity
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm">
+            Edits and deletions by staff or manager
+          </p>
         </div>
 
-        <header className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => router.push("/client/manager/dashboard")}
-                  className="text-neutral-400 hover:bg-neutral-800 hover:text-white"
-                >
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-                <div className="bg-primary/10 ring-primary/20 rounded-xl p-2 ring-2">
-                  <FileText className="text-primary h-6 w-6" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold">Timesheet activity</h1>
-                  <p className="text-sm text-neutral-400">
-                    Edits and deletions by staff or manager
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleLogout}
-                className="border-neutral-700 bg-neutral-800/50 hover:bg-neutral-800"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 py-8">
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-400">
-              {error}
-            </div>
-          )}
-
-          {/* Filters */}
-          <m.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-neutral-800 bg-neutral-900/50 p-4"
+        {error && (
+          <p
+            role="alert"
+            className="bg-warn/10 text-warn rounded-lg px-3 py-2 text-sm"
           >
-            <div className="flex items-center gap-2 text-neutral-400">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">Filter</span>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-neutral-500">
-                Employee
-              </label>
-              <select
-                value={filterEmployeeId}
-                onChange={(e) => setFilterEmployeeId(e.target.value)}
-                className="focus:border-primary focus:ring-primary rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:ring-1 focus:outline-none"
-              >
-                <option value="">All employees</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-neutral-500">
-                Work day from
-              </label>
-              <input
-                type="date"
-                value={filterStartDate}
-                onChange={(e) => setFilterStartDate(e.target.value)}
-                className="focus:border-primary focus:ring-primary rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:ring-1 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-neutral-500">
-                Work day to
-              </label>
-              <input
-                type="date"
-                value={filterEndDate}
-                onChange={(e) => setFilterEndDate(e.target.value)}
-                className="focus:border-primary focus:ring-primary rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:ring-1 focus:outline-none"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setQuickRange("week")}
-                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-              >
-                This week
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setQuickRange("2weeks")}
-                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-              >
-                Last 14 days
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setQuickRange("month")}
-                className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-              >
-                Last 30 days
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-neutral-400 hover:text-white"
-            >
-              Clear
-            </Button>
-          </m.div>
+            {error}
+          </p>
+        )}
 
-          {loading ? (
-            <div className="flex justify-center py-12 text-neutral-400">
-              Loading...
-            </div>
-          ) : logs.length === 0 ? (
-            <m.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-8 text-center text-neutral-400"
+        {/* Filters */}
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="grid min-w-0 gap-1">
+            <label
+              htmlFor="activity-employee"
+              className="text-muted-foreground text-[12.5px]"
             >
-              No timesheet edits or deletions match the filters.
-            </m.div>
-          ) : (
-            <m.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/50"
+              Employee
+            </label>
+            <select
+              id="activity-employee"
+              value={filterEmployeeId}
+              onChange={(e) => setFilterEmployeeId(e.target.value)}
+              className={field}
             >
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-neutral-700 bg-neutral-800/80">
-                      <th className="px-4 py-3 font-medium text-neutral-300">
-                        Date
-                      </th>
-                      <th className="px-4 py-3 font-medium text-neutral-300">
-                        Employee
-                      </th>
-                      <th className="px-4 py-3 font-medium text-neutral-300">
-                        Work day
-                      </th>
-                      <th className="px-4 py-3 font-medium text-neutral-300">
-                        Action
-                      </th>
-                      <th className="px-4 py-3 font-medium text-neutral-300">
-                        By
-                      </th>
-                      <th className="px-4 py-3 font-medium text-neutral-300">
-                        Previous times
-                      </th>
-                      <th className="px-4 py-3 font-medium text-neutral-300">
-                        New times
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {logs.map((log) => {
-                      const name = log.employee
-                        ? `${log.employee.first_name} ${log.employee.last_name}`.trim()
-                        : "—";
-                      return (
-                        <tr
-                          key={log.id}
-                          className="border-b border-neutral-800 hover:bg-neutral-800/50"
-                        >
-                          <td className="px-4 py-3 whitespace-nowrap text-neutral-400">
-                            {format(
-                              new Date(log.edited_at),
-                              "dd MMM yyyy, h:mm a",
-                            )}
-                          </td>
-                          <td className="px-4 py-3 font-medium">{name}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-neutral-300">
-                            {format(new Date(log.work_date), "EEE d MMM")}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                                log.action === "delete"
-                                  ? "bg-red-500/20 text-red-400"
-                                  : "bg-primary/20 text-primary"
-                              }`}
-                            >
-                              {log.action === "delete" ? "Deleted" : "Edited"}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-neutral-400 capitalize">
-                            {log.edited_by}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-neutral-400">
-                            {timeRangeAmPm(
-                              log.previous_start_time,
-                              log.previous_end_time,
-                            )}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-neutral-300">
-                            {log.action === "delete"
-                              ? "—"
-                              : timeRangeAmPm(
-                                  log.new_start_time,
-                                  log.new_end_time,
-                                )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </m.div>
+              <option value="">All employees</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.first_name} {emp.last_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="grid min-w-0 gap-1">
+            <label
+              htmlFor="activity-from"
+              className="text-muted-foreground text-[12.5px]"
+            >
+              From
+            </label>
+            <input
+              id="activity-from"
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+              className={cn(field, "font-mono text-[13.5px]")}
+            />
+          </div>
+          <div className="grid min-w-0 gap-1">
+            <label
+              htmlFor="activity-to"
+              className="text-muted-foreground text-[12.5px]"
+            >
+              To
+            </label>
+            <input
+              id="activity-to"
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+              className={cn(field, "font-mono text-[13.5px]")}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10"
+              onClick={() => setQuickRange("week")}
+            >
+              This week
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10"
+              onClick={() => setQuickRange("2weeks")}
+            >
+              Last 14 days
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10"
+              onClick={() => setQuickRange("month")}
+            >
+              Last 30 days
+            </Button>
+          </div>
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-muted-foreground hover:text-primary focus-visible:ring-ring inline-block rounded-sm py-2 text-sm transition-colors outline-none focus-visible:ring-2"
+            >
+              Clear filters
+            </button>
           )}
-        </main>
-      </div>
-    </LazyMotion>
+        </div>
+
+        {loading ? (
+          <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
+            <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
+            Loading…
+          </div>
+        ) : logs.length === 0 ? (
+          <div className="bg-card border-border text-muted-foreground rounded-lg border px-4 py-10 text-center text-sm">
+            No timesheet edits or deletions match the filters
+          </div>
+        ) : (
+          <>
+            {/* sm and up: table */}
+            <div className="bg-card border-border hidden overflow-x-auto rounded-lg border sm:block">
+              <table className="w-full min-w-[720px] border-collapse text-left">
+                <thead>
+                  <tr className="border-border border-b">
+                    <th className={th}>When</th>
+                    <th className={th}>Employee</th>
+                    <th className={th}>Shift date</th>
+                    <th className={th}>Change</th>
+                    <th className={th}>Times</th>
+                    <th className={th}>By</th>
+                  </tr>
+                </thead>
+                <tbody className="[&>tr:last-child>td]:border-b-0">
+                  {logs.map((log) => (
+                    <tr key={log.id}>
+                      <td className={cn(td, "whitespace-nowrap")}>
+                        {format(new Date(log.edited_at), "EEE d MMM yyyy")}
+                        <span className={sub}>
+                          {format(new Date(log.edited_at), "h:mm a")}
+                        </span>
+                      </td>
+                      <td className={cn(td, "font-sans text-sm font-medium")}>
+                        {employeeName(log)}
+                      </td>
+                      <td className={cn(td, "whitespace-nowrap")}>
+                        {format(new Date(log.work_date), "EEE d MMM")}
+                      </td>
+                      <td className={td}>
+                        <ChangeTag action={log.action} />
+                      </td>
+                      <td className={cn(td, "whitespace-nowrap")}>
+                        <TimesChange log={log} />
+                      </td>
+                      <td
+                        className={cn(
+                          td,
+                          "text-muted-foreground font-sans text-sm capitalize",
+                        )}
+                      >
+                        {log.edited_by}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Below sm: stacked cards */}
+            <div className="bg-card border-border divide-border divide-y rounded-lg border sm:hidden">
+              {logs.map((log) => (
+                <div
+                  key={log.id}
+                  className="grid grid-cols-3 gap-x-3 gap-y-2.5 px-4 py-3.5"
+                >
+                  <p className="col-span-3 text-[15px] font-medium">
+                    {employeeName(log)}
+                  </p>
+                  <div className="min-w-0">
+                    <p className={micro}>When</p>
+                    <p className="font-mono text-[13px] tabular-nums">
+                      {format(new Date(log.edited_at), "d MMM")}
+                    </p>
+                    <p className={sub}>
+                      {format(new Date(log.edited_at), "h:mm a")}
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className={micro}>Shift date</p>
+                    <p className="font-mono text-[13px] tabular-nums">
+                      {format(new Date(log.work_date), "EEE d MMM")}
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className={micro}>Change</p>
+                    <ChangeTag action={log.action} />
+                  </div>
+                  <div className="col-span-2 min-w-0">
+                    <p className={micro}>Times</p>
+                    <p className="font-mono text-[13px] tabular-nums">
+                      <TimesChange log={log} />
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className={micro}>By</p>
+                    <p className="text-muted-foreground text-sm capitalize">
+                      {log.edited_by}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </main>
+    </>
   );
 }
+
+function employeeName(log: LogEntry): string {
+  return log.employee
+    ? `${log.employee.first_name} ${log.employee.last_name}`.trim()
+    : "—";
+}
+
+function ChangeTag({ action }: { action: LogEntry["action"] }) {
+  return action === "delete" ? (
+    <span className="text-warn bg-warn/10 rounded-lg px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap">
+      Deleted
+    </span>
+  ) : (
+    <span className="border-input text-muted-foreground rounded-lg border px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap">
+      Edited
+    </span>
+  );
+}
+
+/** Old range struck through, then the new one (none for a deletion) */
+function TimesChange({ log }: { log: LogEntry }) {
+  const previous = timeRangeAmPm(
+    log.previous_start_time,
+    log.previous_end_time,
+  );
+  const next =
+    log.action === "delete"
+      ? null
+      : timeRangeAmPm(log.new_start_time, log.new_end_time);
+  return (
+    <>
+      <span className="text-muted-foreground line-through">{previous}</span>
+      {next && <> → {next}</>}
+    </>
+  );
+}
+
+/** Micro label: table heads and stat labels */
+const micro =
+  "text-muted-foreground font-mono text-[11px] tracking-[0.1em] uppercase";
+const th = `${micro} px-3.5 py-3 font-normal whitespace-nowrap`;
+const td =
+  "border-border border-b px-3.5 py-3 align-middle font-mono text-[13px] tabular-nums";
+const sub =
+  "text-muted-foreground mt-px block font-mono text-[11px] font-normal";
+/** Native select / date input, styled like <Input> */
+const field =
+  "bg-card text-foreground border-input focus-visible:border-primary focus-visible:ring-primary/15 h-10 min-w-0 rounded-lg border px-3 text-sm transition-[border-color,box-shadow] outline-none focus-visible:ring-[3px]";
