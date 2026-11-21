@@ -87,6 +87,10 @@ export default function ManagerSettingsPage() {
 
   // Per-category view update loading state
   const [updatingViewId, setUpdatingViewId] = useState<string | null>(null);
+  // Per-category break logging update loading state
+  const [updatingBreakLoggingId, setUpdatingBreakLoggingId] = useState<
+    string | null
+  >(null);
 
   /**
    * Fetch employees
@@ -340,6 +344,30 @@ export default function ManagerSettingsPage() {
       console.error("Error updating dashboard view:", error);
     } finally {
       setUpdatingViewId(null);
+    }
+  };
+
+  /**
+   * Update break logging toggle for a category (auto-saves on change)
+   */
+  const handleUpdateBreakLogging = async (id: string, allow: boolean) => {
+    setUpdatingBreakLoggingId(id);
+    try {
+      const response = await fetch(`/api/client/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ allowBreakLogging: allow }),
+      });
+      if (response.ok) {
+        await fetchCategories();
+      } else {
+        const data = (await response.json()) as { error?: string };
+        alert(data.error ?? "Failed to update break logging");
+      }
+    } catch (error) {
+      console.error("Error updating break logging:", error);
+    } finally {
+      setUpdatingBreakLoggingId(null);
     }
   };
 
@@ -782,6 +810,57 @@ export default function ManagerSettingsPage() {
                                           </p>
                                         );
                                       })()}
+
+                                      <div className="mt-3 border-t border-neutral-800 pt-3">
+                                        <p className="mb-2 text-xs font-medium text-neutral-400">
+                                          Break Logging
+                                        </p>
+                                        <div className="flex rounded-lg border border-neutral-700 bg-neutral-800 p-0.5">
+                                          <button
+                                            disabled={
+                                              updatingBreakLoggingId === cat.id
+                                            }
+                                            onClick={() => {
+                                              if (!cat.allow_break_logging)
+                                                void handleUpdateBreakLogging(
+                                                  cat.id,
+                                                  true,
+                                                );
+                                            }}
+                                            className={`flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                              cat.allow_break_logging
+                                                ? "bg-neutral-600 text-neutral-100 shadow-sm"
+                                                : "text-neutral-500 hover:text-neutral-300"
+                                            }`}
+                                          >
+                                            Allow
+                                          </button>
+                                          <button
+                                            disabled={
+                                              updatingBreakLoggingId === cat.id
+                                            }
+                                            onClick={() => {
+                                              if (cat.allow_break_logging)
+                                                void handleUpdateBreakLogging(
+                                                  cat.id,
+                                                  false,
+                                                );
+                                            }}
+                                            className={`flex-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                                              !cat.allow_break_logging
+                                                ? "bg-neutral-600 text-neutral-100 shadow-sm"
+                                                : "text-neutral-500 hover:text-neutral-300"
+                                            }`}
+                                          >
+                                            Off
+                                          </button>
+                                        </div>
+                                        <p className="mt-2 text-xs text-neutral-600">
+                                          {cat.allow_break_logging
+                                            ? "Employees see Start Break / End Break on the clock page."
+                                            : "Employees don't see break buttons on the clock page."}
+                                        </p>
+                                      </div>
                                     </div>
                                   )}
 

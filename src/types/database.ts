@@ -40,6 +40,7 @@ export interface EmployeeCategory {
   name: string;
   dashboard_view: 'weekly' | 'today_only';
   clock_in_rounding_minutes: number;
+  allow_break_logging: boolean; // Whether employees in this category see Start/End Break on the clock page
   created_at: string;
 }
 
@@ -98,6 +99,19 @@ export interface BreakRule {
   client_id: string;
   min_hours: number;
   break_minutes: number;
+  created_at: string;
+}
+
+/**
+ * A single logged break within a shift (start/finish break on the clock page).
+ * Completed breaks (break_end_time set) are summed into Timesheet.break_minutes,
+ * overriding the rule-based BreakRule estimate for that day.
+ */
+export interface TimesheetBreak {
+  id: string;
+  timesheet_id: string;
+  break_start_time: string; // HH:MM:SS
+  break_end_time: string | null; // HH:MM:SS, null while break is in progress
   created_at: string;
 }
 
