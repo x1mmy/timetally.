@@ -44,6 +44,10 @@
  * `text-white` on `bg-primary`, and white on the lighter ink blue (#60a5fa)
  * would be unreadable. Move dark primary to #60a5fa once those screens use
  * `text-primary-foreground`.
+ *
+ * `:root:has(.dark)` repeats the dark values on <html> whenever a page has
+ * the `.dark` wrapper. Radix dialogs, selects and popovers render into
+ * <body>, outside that wrapper, so without it they would read the light set.
  */
 :root {
   --radius: 0.625rem;
@@ -67,7 +71,8 @@
   --ring: #2563eb;
 }
 
-.dark {
+.dark,
+:root:has(.dark) {
   --background: #0c0b0a;
   --foreground: #f4f1eb;
   --card: #141210;
