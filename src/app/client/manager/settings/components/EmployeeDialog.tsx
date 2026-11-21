@@ -38,8 +38,22 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Edit, Loader2, Clock, Calendar, Coffee } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Employee, EmployeeCategory } from "@/types/database";
+
+// Segmented control ("on" = bg-secondary for readable contrast) and field label styles
+const segGroup =
+  "inline-flex divide-x divide-input overflow-hidden rounded-lg border border-input bg-card";
+const segBtn = (on: boolean): string =>
+  cn(
+    "min-h-10 px-4 text-sm transition-colors",
+    on
+      ? "bg-secondary text-foreground"
+      : "text-muted-foreground hover:text-foreground",
+  );
+const fieldLabel = "text-muted-foreground text-[13px] font-normal";
+const hint = "text-muted-foreground text-xs";
 
 interface EmployeeDialogProps {
   mode: "add" | "edit";
@@ -247,72 +261,68 @@ export function EmployeeDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* Trigger button - uses custom trigger if provided, otherwise default styled button */}
+      {/* Trigger - uses custom trigger if provided, otherwise "Add employee" button or "Edit" text link */}
       <DialogTrigger asChild>
-        {trigger ?? (
-          <Button
-            size={mode === "edit" ? "sm" : "default"}
-            variant={mode === "edit" ? "outline" : "default"}
-            className={
-              mode === "edit"
-                ? "hover:bg-primary/20 hover:border-primary border-neutral-700 bg-neutral-800"
-                : "bg-primary hover:bg-primary/90 text-primary-foreground"
-            }
-          >
-            {mode === "edit" ? (
-              <Edit className="h-4 w-4" />
-            ) : (
-              <>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Employee
-              </>
-            )}
-          </Button>
-        )}
+        {trigger ??
+          (mode === "edit" ? (
+            <button
+              type="button"
+              className="text-muted-foreground hover:text-primary -mx-2 inline-block px-2 py-2 text-sm transition-colors"
+            >
+              Edit
+            </button>
+          ) : (
+            <Button>Add employee</Button>
+          ))}
       </DialogTrigger>
-      <DialogContent className="border-neutral-700 bg-neutral-800 text-white sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="sm:max-w-[540px]">
+        <form onSubmit={handleSubmit} className="grid gap-5">
           <DialogHeader>
             <DialogTitle>
-              {mode === "add" ? "Add New Employee" : "Edit Employee"}
+              {mode === "add" ? "Add employee" : "Edit employee"}
             </DialogTitle>
-            <DialogDescription className="text-neutral-400">
+            <DialogDescription>
               {mode === "add"
                 ? "Enter employee details and pay rates"
                 : "Update employee details and pay rates"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            {/* First Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="John"
-                required
-                className="border-neutral-600 bg-neutral-700"
-              />
-            </div>
+          <div className="grid gap-5">
+            {/* First Name + Last Name */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="firstName" className={fieldLabel}>
+                  First name
+                </Label>
+                <Input
+                  id="firstName"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  required
+                />
+              </div>
 
-            {/* Last Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Doe"
-                required
-                className="border-neutral-600 bg-neutral-700"
-              />
+              <div className="grid gap-1.5">
+                <Label htmlFor="lastName" className={fieldLabel}>
+                  Last name
+                </Label>
+                <Input
+                  id="lastName"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  required
+                />
+              </div>
             </div>
 
             {/* PIN */}
-            <div className="grid gap-2">
-              <Label htmlFor="pin">4-Digit PIN</Label>
+            <div className="grid gap-1.5">
+              <Label htmlFor="pin" className={fieldLabel}>
+                4-digit PIN
+              </Label>
               <Input
                 id="pin"
                 type="text"
@@ -322,43 +332,39 @@ export function EmployeeDialog({
                 placeholder="1234"
                 maxLength={4}
                 required
-                className="border-neutral-600 bg-neutral-700"
+                className="max-w-36 font-mono tracking-[0.2em] tabular-nums"
               />
-              <p className="text-xs text-neutral-400">
-                Used for employee clock in/out
-              </p>
+              <p className={hint}>Used for employee clock in/out</p>
             </div>
 
             {/* Pay Type Selector */}
-            <div className="grid gap-2">
-              <Label>Pay Type</Label>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1.5">
+              <Label id="payTypeLabel" className={fieldLabel}>
+                Pay type
+              </Label>
+              <div
+                role="group"
+                aria-labelledby="payTypeLabel"
+                className={segGroup}
+              >
                 <button
                   type="button"
+                  aria-pressed={payType === "hourly"}
                   onClick={() => setPayType("hourly")}
-                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
-                    payType === "hourly"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
-                  }`}
+                  className={segBtn(payType === "hourly")}
                 >
-                  <Clock className="h-4 w-4" />
-                  Hourly Rate
+                  Hourly
                 </button>
                 <button
                   type="button"
+                  aria-pressed={payType === "day_rate"}
                   onClick={() => setPayType("day_rate")}
-                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
-                    payType === "day_rate"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
-                  }`}
+                  className={segBtn(payType === "day_rate")}
                 >
-                  <Calendar className="h-4 w-4" />
-                  Day Rate
+                  Day rate
                 </button>
               </div>
-              <p className="text-xs text-neutral-400">
+              <p className={hint}>
                 {payType === "hourly"
                   ? "Paid based on hours worked"
                   : "Paid a flat rate per day worked"}
@@ -366,34 +372,33 @@ export function EmployeeDialog({
             </div>
 
             {/* Break Rules Toggle */}
-            <div className="grid gap-2">
-              <Label>Break Time Rules</Label>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1.5">
+              <Label id="breakRulesLabel" className={fieldLabel}>
+                Break time rules
+              </Label>
+              <div
+                role="group"
+                aria-labelledby="breakRulesLabel"
+                className={segGroup}
+              >
                 <button
                   type="button"
+                  aria-pressed={applyBreakRules}
                   onClick={() => setApplyBreakRules(true)}
-                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
-                    applyBreakRules
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
-                  }`}
+                  className={segBtn(applyBreakRules)}
                 >
-                  <Coffee className="h-4 w-4" />
-                  Apply Breaks
+                  Apply breaks
                 </button>
                 <button
                   type="button"
+                  aria-pressed={!applyBreakRules}
                   onClick={() => setApplyBreakRules(false)}
-                  className={`flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-medium transition-all ${
-                    !applyBreakRules
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-neutral-600 bg-neutral-700 text-neutral-300 hover:border-neutral-500 hover:bg-neutral-600"
-                  }`}
+                  className={segBtn(!applyBreakRules)}
                 >
-                  No Breaks
+                  No breaks
                 </button>
               </div>
-              <p className="text-xs text-neutral-400">
+              <p className={hint}>
                 {applyBreakRules
                   ? "Break time will be deducted based on shift length"
                   : "No break time deductions applied"}
@@ -401,38 +406,51 @@ export function EmployeeDialog({
             </div>
 
             {/* Category */}
-            <div className="grid gap-2">
-                <Label htmlFor="category">Category</Label>
-                <select
-                  id="category"
-                  value={categoryId ?? "__none__"}
-                  onChange={(e) => setCategoryId(e.target.value === "__none__" ? null : e.target.value)}
-                  className="rounded-md border border-neutral-600 bg-neutral-700 px-3 py-2 text-sm text-white focus:border-primary/50 focus:outline-none"
-                >
-                  <option value="__none__">— None —</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
-                <p className="text-xs italic text-neutral-500">
-                  * Optional. Used to organise staff on the payroll dashboard.
-                </p>
-              </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="category" className={fieldLabel}>
+                Category
+              </Label>
+              <select
+                id="category"
+                value={categoryId ?? "__none__"}
+                onChange={(e) =>
+                  setCategoryId(
+                    e.target.value === "__none__" ? null : e.target.value,
+                  )
+                }
+                className="bg-card text-foreground border-input focus-visible:border-primary focus-visible:ring-primary/15 h-10 w-full rounded-lg border px-3 text-base outline-none focus-visible:ring-[3px] md:text-sm"
+              >
+                <option value="__none__">None</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <p className={hint}>
+                Optional. Used to organise staff on the payroll dashboard
+              </p>
+            </div>
 
             {/* Pay Rates */}
-            <div className="grid gap-2">
-              <Label className="text-base font-semibold">
-                Pay Rates ({rateLabel})
-              </Label>
+            <fieldset className="grid gap-1.5">
+              <legend className="text-muted-foreground mb-1.5 text-[13px]">
+                Pay rates {rateLabel}
+              </legend>
 
-              <div className="grid gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {/* Weekday Rate */}
-                <div className="grid grid-cols-2 items-center gap-2">
-                  <Label htmlFor="weekdayRate" className="text-sm font-normal">
-                    Mon-Fri
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="weekdayRate"
+                    className={cn(fieldLabel, "text-xs")}
+                  >
+                    Weekday
                   </Label>
-                  <div className="flex items-center">
-                    <span className="mr-2 text-neutral-400">$</span>
+                  <div className="relative">
+                    <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                      $
+                    </span>
                     <Input
                       id="weekdayRate"
                       type="number"
@@ -441,18 +459,23 @@ export function EmployeeDialog({
                       value={weekdayRate}
                       onChange={(e) => setWeekdayRate(e.target.value)}
                       required
-                      className="border-neutral-600 bg-neutral-700"
+                      className="pl-6 font-mono tabular-nums"
                     />
                   </div>
                 </div>
 
                 {/* Saturday Rate */}
-                <div className="grid grid-cols-2 items-center gap-2">
-                  <Label htmlFor="saturdayRate" className="text-sm font-normal">
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="saturdayRate"
+                    className={cn(fieldLabel, "text-xs")}
+                  >
                     Saturday
                   </Label>
-                  <div className="flex items-center">
-                    <span className="mr-2 text-neutral-400">$</span>
+                  <div className="relative">
+                    <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                      $
+                    </span>
                     <Input
                       id="saturdayRate"
                       type="number"
@@ -461,18 +484,23 @@ export function EmployeeDialog({
                       value={saturdayRate}
                       onChange={(e) => setSaturdayRate(e.target.value)}
                       required
-                      className="border-neutral-600 bg-neutral-700"
+                      className="pl-6 font-mono tabular-nums"
                     />
                   </div>
                 </div>
 
                 {/* Sunday Rate */}
-                <div className="grid grid-cols-2 items-center gap-2">
-                  <Label htmlFor="sundayRate" className="text-sm font-normal">
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="sundayRate"
+                    className={cn(fieldLabel, "text-xs")}
+                  >
                     Sunday
                   </Label>
-                  <div className="flex items-center">
-                    <span className="mr-2 text-neutral-400">$</span>
+                  <div className="relative">
+                    <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                      $
+                    </span>
                     <Input
                       id="sundayRate"
                       type="number"
@@ -481,18 +509,23 @@ export function EmployeeDialog({
                       value={sundayRate}
                       onChange={(e) => setSundayRate(e.target.value)}
                       required
-                      className="border-neutral-600 bg-neutral-700"
+                      className="pl-6 font-mono tabular-nums"
                     />
                   </div>
                 </div>
 
                 {/* Public Holiday Rate */}
-                <div className="grid grid-cols-2 items-center gap-2">
-                  <Label htmlFor="publicHolidayRate" className="text-sm font-normal">
-                    Public Holiday
+                <div className="grid gap-1">
+                  <Label
+                    htmlFor="publicHolidayRate"
+                    className={cn(fieldLabel, "text-xs")}
+                  >
+                    Public holiday
                   </Label>
-                  <div className="flex items-center">
-                    <span className="mr-2 text-neutral-400">$</span>
+                  <div className="relative">
+                    <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                      $
+                    </span>
                     <Input
                       id="publicHolidayRate"
                       type="number"
@@ -501,16 +534,19 @@ export function EmployeeDialog({
                       value={publicHolidayRate}
                       onChange={(e) => setPublicHolidayRate(e.target.value)}
                       required
-                      className="border-neutral-600 bg-neutral-700"
+                      className="pl-6 font-mono tabular-nums"
                     />
                   </div>
                 </div>
               </div>
-            </div>
+            </fieldset>
 
             {/* Error Message */}
             {error && (
-              <div className="rounded-lg border border-red-500/50 bg-red-900/20 p-3 text-sm text-red-400">
+              <div
+                role="alert"
+                className="bg-warn/10 text-warn rounded-lg px-3 py-2 text-sm"
+              >
                 {error}
               </div>
             )}
@@ -522,24 +558,19 @@ export function EmployeeDialog({
               variant="outline"
               onClick={() => setOpen(false)}
               disabled={loading}
-              className="border-neutral-600 bg-neutral-700 hover:bg-neutral-600"
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {mode === "add" ? "Adding..." : "Updating..."}
+                  <Loader2 strokeWidth={1.5} className="size-4 animate-spin" />
+                  {mode === "add" ? "Adding…" : "Saving…"}
                 </>
               ) : mode === "add" ? (
-                "Add Employee"
+                "Add employee"
               ) : (
-                "Update Employee"
+                "Save changes"
               )}
             </Button>
           </DialogFooter>

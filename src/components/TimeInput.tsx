@@ -66,10 +66,17 @@ export function TimeInput({
   };
 
   return (
-    <div className="space-y-2">
-      {label && <label className="text-sm font-medium">{label}</label>}
+    <div className="space-y-1">
+      {label && (
+        <label className="text-muted-foreground block text-[13px]">
+          {label}
+        </label>
+      )}
       <div className="relative">
-        <Clock className="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-neutral-400" />
+        <Clock
+          className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          strokeWidth={1.5}
+        />
         <Input
           type="text"
           value={value}
@@ -77,7 +84,7 @@ export function TimeInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           maxLength={5}
-          className="border-neutral-700 bg-neutral-800 pl-10"
+          className="pl-9 font-mono tabular-nums"
         />
       </div>
     </div>

@@ -62,13 +62,13 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
         <button
           type="button"
           className={cn(
-            "flex h-9 w-full items-center justify-between rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white transition-colors",
-            "hover:border-neutral-600 focus:outline-none focus:ring-2 focus:ring-primary/50",
+            "bg-card text-foreground border-input flex h-10 w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 font-mono text-[13.5px] tabular-nums transition-colors",
+            "hover:border-primary focus-visible:border-primary focus-visible:ring-primary/15 outline-none focus-visible:ring-[3px]",
             className
           )}
         >
           <span>{format(value, "dd / MM / yyyy")}</span>
-          <Calendar className="h-4 w-4 text-neutral-400" />
+          <Calendar className="text-muted-foreground size-4" strokeWidth={1.5} />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
@@ -77,22 +77,22 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
           <div className="mb-3 flex items-center justify-between">
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => setViewDate(subMonths(viewDate, 1))}
-              className="h-7 w-7 p-0 hover:bg-neutral-800"
+              size="icon"
+              aria-label="Previous month"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" strokeWidth={1.5} />
             </Button>
             <span className="text-sm font-medium">
               {format(viewDate, "MMMM yyyy")}
             </span>
             <Button
               variant="ghost"
-              size="sm"
               onClick={() => setViewDate(addMonths(viewDate, 1))}
-              className="h-7 w-7 p-0 hover:bg-neutral-800"
+              size="icon"
+              aria-label="Next month"
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="size-4" strokeWidth={1.5} />
             </Button>
           </div>
 
@@ -102,8 +102,8 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
               <div
                 key={day}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center text-xs font-medium",
-                  idx >= 5 ? "text-red-400" : "text-neutral-500"
+                  "flex size-9 items-center justify-center font-mono text-[11px]",
+                  idx === 5 ? "text-sat" : idx === 6 ? "text-sun" : "text-muted-foreground"
                 )}
               >
                 {day}
@@ -115,7 +115,7 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
           <div className="grid grid-cols-7 gap-1">
             {/* Empty cells for days before month starts */}
             {Array.from({ length: adjustedStartDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="h-8 w-8" />
+              <div key={`empty-${i}`} className="size-9" />
             ))}
 
             {/* Day cells */}
@@ -123,7 +123,6 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
               const isSelected = isSameDay(day, value);
               const isCurrentMonth = isSameMonth(day, viewDate);
               const dayOfWeek = getDay(day);
-              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
               return (
                 <button
@@ -131,12 +130,13 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
                   type="button"
                   onClick={() => handleSelectDate(day)}
                   className={cn(
-                    "h-8 w-8 rounded-md text-sm transition-colors",
+                    "focus-visible:ring-ring size-9 rounded-lg font-mono text-[13px] tabular-nums transition-colors outline-none focus-visible:ring-2",
                     isSelected
-                      ? "bg-primary text-white"
-                      : "hover:bg-neutral-800",
-                    !isCurrentMonth && "text-neutral-600",
-                    isWeekend && !isSelected && "text-red-400"
+                      ? "bg-primary text-primary-foreground"
+                      : "hover:bg-secondary",
+                    !isCurrentMonth && "text-muted-foreground",
+                    !isSelected && dayOfWeek === 6 && "text-sat",
+                    !isSelected && dayOfWeek === 0 && "text-sun"
                   )}
                 >
                   {format(day, "d")}
@@ -151,7 +151,7 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
               variant="outline"
               size="sm"
               onClick={handleClear}
-              className="w-full border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+              className="w-full"
             >
               Clear
             </Button>

@@ -1,17 +1,11 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { TimePicker } from "@/components/TimePicker";
 import { Button } from "@/components/ui/button";
-import {
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
-  Clock,
-  CheckCircle2,
-  Calendar,
-  Trash2,
-} from "lucide-react";
 import {
   format,
   addWeeks,
@@ -23,8 +17,7 @@ import {
 import { useRouter } from "next/navigation";
 import type { Timesheet } from "@/types/database";
 import { formatHoursAndMinutes } from "@/lib/timeUtils";
-import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { loadDomAnimation } from "@/lib/motion-features";
+import { cn } from "@/lib/utils";
 
 interface DayEntry {
   date: Date;
@@ -96,9 +89,7 @@ export function EmployeeDashboardClient({
   const [lastSavedDate, setLastSavedDate] = useState<string | null>(null);
 
   // Past timesheets
-  const [timesheets, setTimesheets] = useState<Timesheet[]>(
-    initialTimesheets,
-  );
+  const [timesheets, setTimesheets] = useState<Timesheet[]>(initialTimesheets);
 
   /**
    * Re-fetch timesheets — used after a save/delete mutation, not on load
@@ -210,7 +201,7 @@ export function EmployeeDashboardClient({
         return;
       }
 
-      setSuccess("Time saved successfully!");
+      setSuccess("Saved");
       setLastSavedDate(dateStr);
       setTimeout(() => setSuccess(""), 2000);
       setTimeout(() => setLastSavedDate(null), 3500);
@@ -244,7 +235,7 @@ export function EmployeeDashboardClient({
         setError(hasError(json) ? json.error : "Failed to remove entry");
         return;
       }
-      setSuccess("Entry removed.");
+      setSuccess("Entry removed");
       setTimeout(() => setSuccess(""), 2000);
       void fetchTimesheets();
     } catch {
@@ -279,303 +270,187 @@ export function EmployeeDashboardClient({
     .reduce((sum, ts) => sum + parseFloat(ts.total_hours.toString()), 0);
 
   return (
-    <LazyMotion features={loadDomAnimation}>
-      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-        {/* Animated Background - Mobile Optimized */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-20 left-0 h-64 w-64 animate-pulse rounded-full bg-blue-500/5 blur-3xl md:h-80 md:w-80" />
-          <div className="absolute right-0 bottom-20 h-64 w-64 animate-pulse rounded-full bg-blue-400/5 blur-3xl md:h-80 md:w-80" />
+    <>
+      <header className="bg-card border-border border-b">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Logo />
+            <span className="border-input text-muted-foreground truncate border-l pl-3 text-sm">
+              {employeeName}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Log out
+            </Button>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-[560px] gap-4 px-4 py-6 sm:px-6 sm:py-8">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Your timesheet
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Enter your hours for the week
+          </p>
         </div>
 
-        {/* Header */}
-        <m.header
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 100 }}
-          className="sticky top-0 z-10 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-lg"
-        >
-          <div className="container mx-auto px-4 py-4 md:px-6 md:py-6">
-            <div className="flex items-center justify-between">
-              <m.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <h1 className="text-2xl font-bold md:text-3xl">
-                  Welcome, <span className="text-primary">{employeeName}</span>
-                </h1>
-                <p className="mt-1 text-sm text-neutral-400 md:text-base">
-                  Enter your hours for the week
-                </p>
-              </m.div>
-
-              <m.div
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-2"
-              >
-                <button
-                  onClick={handleLogout}
-                  className="hover:border-primary/50 flex items-center gap-2 rounded-xl border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-800 md:px-4"
-                >
-                  <LogOut className="h-4 w-4 md:h-5 md:w-5" />
-                  <span className="hidden md:inline">Logout</span>
-                </button>
-              </m.div>
-            </div>
-          </div>
-        </m.header>
-
-        {/* Main Content */}
-        <main className="relative container mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8">
-          {/* Week Navigation */}
-          <m.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring" }}
-            className="mb-6 overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-neutral-900/90 to-neutral-900/50 p-4 shadow-2xl shadow-blue-500/10 backdrop-blur-sm md:p-6"
+        {/* Week Navigation */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => navigateWeek("prev")}
+            aria-label="Previous week"
           >
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <m.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigateWeek("prev")}
-                className="flex items-center gap-1 rounded-xl bg-neutral-800/80 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-700 active:scale-95 md:gap-2 md:px-4 md:text-base"
-              >
-                <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
-                <span className="hidden md:inline">Previous</span>
-              </m.button>
+            <ChevronLeft strokeWidth={1.5} />
+            <span className="hidden sm:inline">Previous</span>
+          </Button>
+          <h2 className="text-center text-base font-semibold">
+            {format(weekStart, "d MMM")} – {format(weekEnd, "d MMM yyyy")}
+          </h2>
+          <Button
+            variant="outline"
+            onClick={() => navigateWeek("next")}
+            aria-label="Next week"
+          >
+            <span className="hidden sm:inline">Next</span>
+            <ChevronRight strokeWidth={1.5} />
+          </Button>
+        </div>
 
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-2 text-neutral-400">
-                  <Calendar className="h-4 w-4" />
-                </div>
-                <h2 className="text-base font-semibold md:text-xl">
-                  {format(weekStart, "d MMM")} - {format(weekEnd, "d MMM yyyy")}
-                </h2>
-              </div>
+        {/* Total Hours */}
+        <div className="border-border bg-card flex items-baseline justify-between gap-3 rounded-lg border px-4 py-3.5">
+          <span className="text-muted-foreground font-mono text-[11px] tracking-[0.1em] uppercase">
+            Total this week
+          </span>
+          <span className="text-primary text-3xl font-semibold tracking-tight tabular-nums">
+            {formatHoursAndMinutes(weeklyHours)}
+          </span>
+        </div>
 
-              <m.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigateWeek("next")}
-                className="flex items-center gap-1 rounded-xl bg-neutral-800/80 px-3 py-2 text-sm backdrop-blur-sm transition-all hover:bg-neutral-700 active:scale-95 md:gap-2 md:px-4 md:text-base"
-              >
-                <span className="hidden md:inline">Next</span>
-                <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
-              </m.button>
-            </div>
+        {/* Success/Error Messages */}
+        {success && (
+          <p role="status" className="text-ok text-sm">
+            {success}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="text-warn text-sm">
+            {error}
+          </p>
+        )}
 
-            {/* Total Hours */}
-            <m.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="flex justify-center"
+        {/* Days List */}
+        {weekDays.map((day, index) => {
+          const dateStr = format(day.date, "yyyy-MM-dd");
+          const isLoading = loading === dateStr;
+          const isDeleting = deletingDate === dateStr;
+          const isTodayDay = isToday(day.date);
+          const justSaved = lastSavedDate === dateStr;
+          const hasSavedEntry = timesheets.some(
+            (ts) => format(new Date(ts.work_date), "yyyy-MM-dd") === dateStr,
+          );
+          const weekday = day.date.getDay();
+
+          return (
+            <section
+              key={dateStr}
+              aria-label={`${day.dayName} ${format(day.date, "d MMMM")}`}
+              className={cn(
+                "bg-card grid gap-3.5 rounded-lg border p-4 transition-colors",
+                justSaved
+                  ? "border-ok"
+                  : isTodayDay
+                    ? "border-primary"
+                    : "border-border",
+              )}
             >
-              <div className="from-primary shadow-primary/30 relative overflow-hidden rounded-full bg-gradient-to-r to-blue-500 px-6 py-3 shadow-lg md:px-8 md:py-4">
-                <div className="absolute inset-0 animate-pulse bg-white/10" />
-                <div className="relative flex items-center gap-2">
-                  <Clock className="h-5 w-5 md:h-6 md:w-6" />
-                  <p className="text-base font-bold md:text-lg">
-                    Total: {formatHoursAndMinutes(weeklyHours)}
-                  </p>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h3
+                  className={cn(
+                    "text-[17px] font-semibold tracking-tight",
+                    weekday === 6 && "text-sat",
+                    weekday === 0 && "text-sun",
+                  )}
+                >
+                  {day.dayName}
+                  <span className="text-muted-foreground ml-2 font-mono text-xs font-normal">
+                    {format(day.date, "d MMMM")}
+                  </span>
+                </h3>
+                {isTodayDay && (
+                  <span className="text-primary bg-primary/10 rounded-lg px-1.5 py-0.5 font-mono text-[11px]">
+                    Today
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                <div className="grid min-w-0 gap-1">
+                  <span className="text-muted-foreground text-[13px]">
+                    Start time
+                  </span>
+                  <TimePicker
+                    value={day.startTime}
+                    onChange={(value: string) =>
+                      updateDayTime(index, "startTime", value)
+                    }
+                    placeholder="--:-- --"
+                  />
+                </div>
+                <div className="grid min-w-0 gap-1">
+                  <span className="text-muted-foreground text-[13px]">
+                    End time
+                  </span>
+                  <TimePicker
+                    value={day.endTime}
+                    onChange={(value: string) =>
+                      updateDayTime(index, "endTime", value)
+                    }
+                    placeholder="--:-- --"
+                  />
                 </div>
               </div>
-            </m.div>
-          </m.div>
 
-          {/* Success/Error Messages */}
-          <AnimatePresence>
-            {success && (
-              <m.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="mb-4 flex items-center gap-2 rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400 backdrop-blur-sm"
-              >
-                <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-                <span>{success}</span>
-              </m.div>
-            )}
-            {error && (
-              <m.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400 backdrop-blur-sm"
-              >
-                {error}
-              </m.div>
-            )}
-          </AnimatePresence>
-
-          {/* Days List */}
-          <div className="space-y-3 md:space-y-4">
-            {weekDays.map((day, index) => {
-              const dateStr = format(day.date, "yyyy-MM-dd");
-              const isLoading = loading === dateStr;
-              const isDeleting = deletingDate === dateStr;
-              const hasTime = day.startTime || day.endTime;
-              const isTodayDay = isToday(day.date);
-              const justSaved = lastSavedDate === dateStr;
-              const hasSavedEntry = timesheets.some(
-                (ts) =>
-                  format(new Date(ts.work_date), "yyyy-MM-dd") === dateStr,
-              );
-
-              return (
-                <m.div
-                  key={dateStr}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  whileHover={{ scale: 1.01 }}
-                  className={`group rounded-xl border p-4 backdrop-blur-sm transition-all md:p-6 ${
-                    justSaved
-                      ? "border-green-500/60 bg-green-500/5 shadow-lg ring-2 shadow-green-500/10 ring-green-400/30"
-                      : isTodayDay
-                        ? "border-primary/50 shadow-primary/10 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 shadow-md"
-                        : "hover:border-primary/30 hover:shadow-primary/5 border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 hover:shadow-lg"
-                  }`}
+              {/* Save + remove */}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  onClick={() => saveDay(day)}
+                  disabled={isLoading || (!day.startTime && !day.endTime)}
+                  variant={justSaved ? "outline" : "default"}
+                  className={cn(
+                    justSaved && "border-ok text-ok hover:border-ok",
+                  )}
                 >
-                  <div className="flex items-start gap-3 md:gap-6">
-                    {/* Day Number Badge */}
-                    <m.div
-                      whileHover={{ rotate: 5 }}
-                      className={`flex min-w-[60px] flex-col items-center justify-center rounded-xl px-3 py-2 shadow-lg transition-all md:min-w-[70px] md:px-4 ${
-                        hasTime
-                          ? "from-primary shadow-primary/30 bg-linear-to-br to-blue-500 text-white"
-                          : isTodayDay
-                            ? "ring-primary/60 bg-neutral-700/80 text-white ring-2"
-                            : "bg-neutral-800/80 text-neutral-400"
-                      }`}
-                    >
-                      <div className="text-2xl font-bold md:text-3xl">
-                        {day.dayNumber}
-                      </div>
-                      <div className="text-xs tracking-wide uppercase opacity-80">
-                        {day.monthName}
-                      </div>
-                    </m.div>
-
-                    {/* Day Info and Times */}
-                    <div className="flex-1">
-                      <div className="mb-3 md:mb-4">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold md:text-xl">
-                            {day.dayName}
-                          </h3>
-                          {isTodayDay && (
-                            <span className="bg-primary shadow-primary/50 rounded-full px-2 py-0.5 text-xs font-semibold text-white shadow-sm">
-                              Today
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-neutral-400 md:text-sm">
-                          {format(day.date, "EEEE, MMMM d")}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-                        {/* Start Time */}
-                        <div>
-                          <label className="mb-2 block text-xs font-medium text-neutral-400 md:text-sm">
-                            Start Time
-                          </label>
-                          <TimePicker
-                            value={day.startTime}
-                            onChange={(value: string) =>
-                              updateDayTime(index, "startTime", value)
-                            }
-                            placeholder="--:-- --"
-                          />
-                        </div>
-
-                        {/* End Time */}
-                        <div>
-                          <label className="mb-2 block text-xs font-medium text-neutral-400 md:text-sm">
-                            End Time
-                          </label>
-                          <TimePicker
-                            value={day.endTime}
-                            onChange={(value: string) =>
-                              updateDayTime(index, "endTime", value)
-                            }
-                            placeholder="--:-- --"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Save Button + per-day saved state */}
-                      <div className="mt-4 space-y-2">
-                        <m.div whileTap={{ scale: 0.98 }}>
-                          <Button
-                            onClick={() => saveDay(day)}
-                            disabled={
-                              isLoading || (!day.startTime && !day.endTime)
-                            }
-                            className={`w-full rounded-xl py-6 text-base font-semibold shadow-lg transition-all disabled:opacity-50 md:text-lg ${
-                              justSaved
-                                ? "bg-green-600 text-white shadow-green-500/30 hover:bg-green-700"
-                                : "from-primary shadow-primary/30 hover:shadow-primary/40 bg-gradient-to-r to-blue-500 hover:shadow-xl"
-                            }`}
-                          >
-                            {isLoading ? (
-                              <span className="flex items-center justify-center gap-2">
-                                <m.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{
-                                    repeat: Infinity,
-                                    duration: 1,
-                                    ease: "linear",
-                                  }}
-                                >
-                                  <Clock className="h-5 w-5" />
-                                </m.div>
-                                Saving...
-                              </span>
-                            ) : justSaved ? (
-                              <span className="flex items-center justify-center gap-2">
-                                <CheckCircle2 className="h-5 w-5" />
-                                Saved!
-                              </span>
-                            ) : (
-                              <span className="flex items-center justify-center gap-2">
-                                <CheckCircle2 className="h-5 w-5" />
-                                Save
-                              </span>
-                            )}
-                          </Button>
-                        </m.div>
-                        {/* Remove entry - for wrong day or to clear */}
-                        {hasSavedEntry && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteDayEntry(dateStr)}
-                            disabled={isDeleting || isLoading}
-                            className="w-full text-neutral-400 hover:bg-red-500/10 hover:text-red-400"
-                          >
-                            {isDeleting ? (
-                              "Removing..."
-                            ) : (
-                              <>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Remove entry
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </m.div>
-              );
-            })}
-          </div>
-        </main>
-      </div>
-    </LazyMotion>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="animate-spin" strokeWidth={1.5} />
+                      Saving…
+                    </>
+                  ) : justSaved ? (
+                    "Saved ✓"
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+                {hasSavedEntry && (
+                  <button
+                    type="button"
+                    onClick={() => deleteDayEntry(dateStr)}
+                    disabled={isDeleting || isLoading}
+                    className="text-warn inline-block py-2 text-sm transition-colors hover:underline disabled:opacity-40"
+                  >
+                    {isDeleting ? "Removing…" : "Remove entry"}
+                  </button>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </main>
+    </>
   );
 }

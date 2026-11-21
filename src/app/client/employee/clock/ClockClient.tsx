@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { LazyMotion, m } from "framer-motion";
-import { loadDomAnimation } from "@/lib/motion-features";
-import { LogOut, Clock, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 
 interface ClockState {
@@ -128,134 +128,116 @@ export function ClockClient({
   const formatAmPm = (time: string | null) => {
     if (!time) return "";
     const [h, m] = time.split(":").map(Number);
-    const period = h! >= 12 ? "PM" : "AM";
+    const period = h! >= 12 ? "pm" : "am";
     const hour = h! % 12 || 12;
     return `${hour}:${String(m).padStart(2, "0")} ${period}`;
   };
 
   return (
-    <LazyMotion features={loadDomAnimation}>
-      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-neutral-950 text-white">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-20 left-0 h-64 w-64 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
-          <div className="absolute right-0 bottom-20 h-64 w-64 animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
-        </div>
-
-        {/* Header */}
-        <div className="absolute top-0 right-0 left-0 flex items-center justify-between border-b border-neutral-800 bg-neutral-900/80 px-6 py-4 backdrop-blur-lg">
-          <div>
-            <h1 className="text-xl font-bold">
-              Welcome, <span className="text-primary">{employeeName}</span>
-            </h1>
+    <>
+      {/* Header */}
+      <header className="bg-card border-border border-b">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Logo />
+            <span className="border-input text-muted-foreground truncate border-l pl-3 text-sm">
+              {employeeName}
+            </span>
           </div>
-          <button
-            onClick={handleLogout}
-            className="hover:border-primary/50 flex items-center gap-2 rounded-xl border border-neutral-700 bg-neutral-800/50 px-3 py-2 text-sm transition-all"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Logout</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Log out
+            </Button>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      {/* Main */}
+      <main className="mx-auto grid max-w-[420px] gap-4 px-4 py-6 sm:px-6 sm:py-8 [@media(orientation:landscape)_and_(max-height:540px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:540px)]:items-center [@media(orientation:landscape)_and_(max-height:540px)]:gap-x-8 [@media(orientation:landscape)_and_(max-height:540px)]:py-5">
+        {/* Live clock */}
+        <div className="pt-4 text-center [@media(orientation:landscape)_and_(max-height:540px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:540px)]:row-span-3 [@media(orientation:landscape)_and_(max-height:540px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:540px)]:pt-0">
+          <p className="text-7xl leading-none font-medium tracking-tight tabular-nums [@media(orientation:landscape)_and_(max-height:540px)]:text-6xl">
+            {format(currentTime, "h:mm")}
+            <span className="text-muted-foreground ml-1.5 text-2xl tracking-normal">
+              {format(currentTime, "aaa")}
+            </span>
+          </p>
+          <p className="text-muted-foreground mt-2.5">
+            {format(currentTime, "EEEE d MMMM yyyy")}
+          </p>
         </div>
 
-        {/* Main */}
-        <div className="relative flex w-full max-w-sm flex-col items-center gap-8 px-6">
-          {/* Live clock */}
-          <m.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center"
+        {error && (
+          <p
+            role="alert"
+            className="bg-warn/10 text-warn rounded-lg px-3 py-2 text-center text-sm [@media(orientation:landscape)_and_(max-height:540px)]:col-start-2"
           >
-            <p className="text-6xl font-bold tabular-nums">
-              {format(currentTime, "h:mm a")}
-            </p>
-            <p className="mt-2 text-neutral-400">
-              {format(currentTime, "EEEE, d MMMM yyyy")}
-            </p>
-          </m.div>
+            {error}
+          </p>
+        )}
 
-          {error && (
-            <div className="w-full rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-sm text-red-400">
-              {error}
+        {/* State: not clocked in */}
+        {isNotClockedIn && (
+          <Button
+            variant="go"
+            onClick={handleClockIn}
+            disabled={loading}
+            className="h-18 w-full rounded-xl text-xl [@media(orientation:landscape)_and_(max-height:540px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:540px)]:h-16"
+          >
+            {loading ? (
+              <Loader2 className="size-6 animate-spin" strokeWidth={1.5} />
+            ) : (
+              "Clock in"
+            )}
+          </Button>
+        )}
+
+        {/* State: clocked in, no clock out yet */}
+        {isClockedIn && (
+          <div className="grid gap-4 [@media(orientation:landscape)_and_(max-height:540px)]:col-start-2">
+            <div className="border-border bg-card grid gap-1.5 rounded-lg border p-4 text-center">
+              <p className="text-muted-foreground text-sm">Clocked in at</p>
+              <p className="text-3xl font-semibold tracking-tight tabular-nums">
+                {formatAmPm(clockState.startTime)}
+              </p>
             </div>
-          )}
-
-          {/* State: not clocked in */}
-          {isNotClockedIn && (
-            <m.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full"
+            <Button
+              variant="destructive"
+              onClick={handleClockOut}
+              disabled={loading}
+              className="h-18 w-full rounded-xl text-xl [@media(orientation:landscape)_and_(max-height:540px)]:h-16"
             >
-              <Button
-                onClick={handleClockIn}
-                disabled={loading}
-                className="h-24 w-full rounded-2xl bg-gradient-to-r from-green-500 to-emerald-600 text-2xl font-bold shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 disabled:opacity-50"
-              >
-                {loading ? (
-                  <Clock className="h-8 w-8 animate-spin" />
-                ) : (
-                  "Clock In"
-                )}
-              </Button>
-            </m.div>
-          )}
+              {loading ? (
+                <Loader2 className="size-6 animate-spin" strokeWidth={1.5} />
+              ) : (
+                "Clock out"
+              )}
+            </Button>
+          </div>
+        )}
 
-          {/* State: clocked in, no clock out yet */}
-          {isClockedIn && (
-            <m.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full space-y-4"
-            >
-              <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4 text-center">
-                <p className="text-sm text-neutral-400">Clocked in at</p>
-                <p className="text-3xl font-bold text-green-400">
+        {/* State: complete for today */}
+        {isComplete && (
+          <div className="border-border bg-card grid gap-1.5 rounded-lg border p-4 text-center [@media(orientation:landscape)_and_(max-height:540px)]:col-start-2">
+            <p className="text-lg font-semibold">Done for today</p>
+            <div className="mt-1.5 flex justify-center gap-10 text-sm">
+              <div>
+                <p className="text-muted-foreground">In</p>
+                <p className="text-xl font-semibold tabular-nums">
                   {formatAmPm(clockState.startTime)}
                 </p>
               </div>
-              <Button
-                onClick={handleClockOut}
-                disabled={loading}
-                className="h-24 w-full rounded-2xl bg-gradient-to-r from-red-500 to-rose-600 text-2xl font-bold shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40 disabled:opacity-50"
-              >
-                {loading ? (
-                  <Clock className="h-8 w-8 animate-spin" />
-                ) : (
-                  "Clock Out"
-                )}
-              </Button>
-            </m.div>
-          )}
-
-          {/* State: complete for today */}
-          {isComplete && (
-            <m.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="w-full"
-            >
-              <div className="space-y-3 rounded-xl border border-blue-500/30 bg-blue-500/10 p-6 text-center">
-                <CheckCircle2 className="text-primary mx-auto h-10 w-10" />
-                <p className="text-lg font-semibold">Done for today!</p>
-                <div className="flex justify-center gap-8 text-sm text-neutral-400">
-                  <div>
-                    <p>In</p>
-                    <p className="text-xl font-bold text-white">
-                      {formatAmPm(clockState.startTime)}
-                    </p>
-                  </div>
-                  <div>
-                    <p>Out</p>
-                    <p className="text-xl font-bold text-white">
-                      {formatAmPm(clockState.endTime)}
-                    </p>
-                  </div>
-                </div>
+              <div>
+                <p className="text-muted-foreground">Out</p>
+                <p className="text-xl font-semibold tabular-nums">
+                  {formatAmPm(clockState.endTime)}
+                </p>
               </div>
-            </m.div>
-          )}
-        </div>
-      </div>
-    </LazyMotion>
+            </div>
+          </div>
+        )}
+      </main>
+    </>
   );
 }

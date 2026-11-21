@@ -5,12 +5,12 @@
  * Read-only view focused on payroll tracking and employee time data.
  *
  * Features:
- * - Employee cards with pay rates and hours breakdown by calendar day (weekday/Saturday/Sunday); PH uses rate only
+ * - Employee table with pay rates and hours breakdown by calendar day (weekday/Saturday/Sunday); PH uses rate only
  * - Weekly pay calculations with break deductions
  * - Search employees by name
  * - Week navigator (previous/next week)
  * - Settings access (for employee management and break rules)
- * - Click employee card to view detailed daily breakdown
+ * - Click an employee row to view detailed daily breakdown
  *
  * Note: Employee CRUD operations (add/edit/delete) are handled in Settings page.
  * This dashboard focuses on viewing payroll data and navigating between weeks.
@@ -22,19 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WeekNavigator } from "@/components/WeekNavigator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DollarSign,
-  Search,
-  LogOut,
-  Settings,
-  Users,
-  Clock,
-  Calendar,
-  Download,
-  ArrowRight,
-  Printer,
-  FileText,
-} from "lucide-react";
+import { ChevronRight, Loader2, Search } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type {
   Employee,
@@ -45,9 +33,11 @@ import { formatHoursAndMinutes } from "@/lib/timeUtils";
 import { exportPayrollToCSV } from "@/lib/csvExport";
 import { PrintSelectModal } from "@/components/PrintSelectModal";
 import { payrollForPeriod } from "~/lib/payrollRates";
-import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { loadDomMax } from "@/lib/motion-features";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Logo } from "@/components/Logo";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { formatAUD } from "@/lib/format";
+import { cn } from "~/lib/utils";
 
 function getCalendarDayBucket(
   dateString: string,
@@ -367,464 +357,545 @@ function ManagerDashboardContent() {
     [employees],
   );
 
+  // Column totals for the table footer (the rows currently shown)
+  const tableTotals = useMemo(
+    () =>
+      filteredEmployees.reduce(
+        (t, emp) => ({
+          weekday: t.weekday + emp.weekdayHours,
+          saturday: t.saturday + emp.saturdayHours,
+          sunday: t.sunday + emp.sundayHours,
+          paid: t.paid + emp.totalHours,
+          breakMinutes: t.breakMinutes + emp.breakMinutes,
+          pay: t.pay + emp.totalPay,
+        }),
+        { weekday: 0, saturday: 0, sunday: 0, paid: 0, breakMinutes: 0, pay: 0 },
+      ),
+    [filteredEmployees],
+  );
+
+  const openEmployee = (employeeId: string) => {
+    const params = new URLSearchParams({
+      viewMode,
+      startDate: format(actualStartDate, "yyyy-MM-dd"),
+      endDate: format(actualEndDate, "yyyy-MM-dd"),
+    });
+    router.push(`/client/manager/employee/${employeeId}?${params.toString()}`);
+  };
+
   return (
-    <LazyMotion features={loadDomMax}>
-      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-        {/* Animated Background */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-20 -left-40 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
-          <div className="absolute -right-40 bottom-20 h-[500px] w-[500px] animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
-        </div>
-
-        {/* Header */}
-        <m.header
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ type: "spring", stiffness: 100 }}
-          className="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-900/80 backdrop-blur-xl"
-        >
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <m.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-3"
-              >
-                <div className="bg-primary/10 ring-primary/20 rounded-xl p-2 ring-2">
-                  <DollarSign className="text-primary h-8 w-8" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">
-                    Payroll Dashboard<span className="text-primary">.</span>
-                  </h1>
-                  <p className="text-sm text-neutral-400">
-                    {format(actualStartDate, "MMM dd")} -{" "}
-                    {format(actualEndDate, "MMM dd, yyyy")}
-                  </p>
-                </div>
-              </m.div>
-
-              <m.div
-                initial={{ x: 20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.2 }}
-                className="flex gap-2"
-              >
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    router.push("/client/manager/timesheet-activity")
-                  }
-                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Activity
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/client/manager/settings")}
-                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </m.div>
-            </div>
+    <>
+      <header className="bg-card border-border border-b">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <Logo />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/client/manager/timesheet-activity")}
+            >
+              <span className="hidden sm:inline">Timesheet activity</span>
+              <span className="sm:hidden">Activity</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/client/manager/settings")}
+            >
+              Settings
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              Log out
+            </Button>
+            <ThemeToggle />
           </div>
-        </m.header>
+        </div>
+      </header>
 
-        {/* Main Content */}
-        <main className="container mx-auto px-4 py-8">
-          <div className="space-y-6">
-            {/* View Mode Toggle */}
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === "week" ? "default" : "outline"}
-                  onClick={() => setViewMode("week")}
-                  className={
-                    viewMode === "week"
-                      ? "bg-primary text-white"
-                      : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-                  }
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Week View
-                </Button>
-                <Button
-                  variant={viewMode === "custom" ? "default" : "outline"}
-                  onClick={() => setViewMode("custom")}
-                  className={
-                    viewMode === "custom"
-                      ? "bg-primary text-white"
-                      : "border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
-                  }
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Custom Range
-                </Button>
+      <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+        {/* Page head: title, range, view switch, week navigator, actions */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+              Payroll dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              {format(actualStartDate, "d MMM")} –{" "}
+              {format(actualEndDate, "d MMM yyyy")}
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <div
+                role="group"
+                aria-label="View"
+                className="border-input bg-card inline-flex overflow-hidden rounded-lg border"
+              >
+                {(
+                  [
+                    ["week", "Week view"],
+                    ["custom", "Custom range"],
+                  ] as const
+                ).map(([mode, label], i) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={viewMode === mode}
+                    onClick={() => setViewMode(mode)}
+                    className={cn(
+                      "focus-visible:ring-ring min-h-10 px-3 text-[13.5px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset",
+                      i > 0 && "border-border border-l",
+                      viewMode === mode
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-            </div>
 
-            {/* Week Navigator - Show only in week mode */}
-            {viewMode === "week" && (
-              <WeekNavigator
-                weekStart={currentWeekStart}
-                weekEnd={weekEnd}
-                onPrevious={() =>
-                  setCurrentWeekStart(addWeeks(currentWeekStart, -1))
-                }
-                onNext={() =>
-                  setCurrentWeekStart(addWeeks(currentWeekStart, 1))
-                }
-              />
-            )}
-
-            {/* Custom Date Range Picker - Show only in custom mode */}
-            {viewMode === "custom" && (
-              <div className="rounded-lg border border-neutral-700 bg-neutral-800 p-4">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm text-neutral-400">
-                      Start Date
-                    </label>
+              {viewMode === "week" ? (
+                <WeekNavigator
+                  weekStart={currentWeekStart}
+                  weekEnd={weekEnd}
+                  onPrevious={() =>
+                    setCurrentWeekStart(addWeeks(currentWeekStart, -1))
+                  }
+                  onNext={() =>
+                    setCurrentWeekStart(addWeeks(currentWeekStart, 1))
+                  }
+                />
+              ) : (
+                <>
+                  <div className="grid gap-1">
+                    <span className="text-muted-foreground text-[12.5px]">
+                      Start date
+                    </span>
                     <DatePicker
                       value={customStartDate}
                       onChange={setCustomStartDate}
+                      className="w-44"
                     />
                   </div>
-                  <div>
-                    <label className="mb-2 block text-sm text-neutral-400">
-                      End Date
-                    </label>
+                  <div className="grid gap-1">
+                    <span className="text-muted-foreground text-[12.5px]">
+                      End date
+                    </span>
                     <DatePicker
                       value={customEndDate}
                       onChange={setCustomEndDate}
+                      className="w-44"
                     />
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Summary Stats */}
-            <m.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="grid grid-cols-1 gap-4 md:grid-cols-3"
-            >
-              {/* Total Payroll */}
-              <m.div
-                whileHover={{ y: -5 }}
-                className="group hover:border-primary/30 hover:shadow-primary/10 relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
-              >
-                <div className="bg-primary/10 group-hover:bg-primary/20 absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full blur-2xl transition-all" />
-                <div className="relative flex items-center justify-between">
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-neutral-400">
-                      Total Payroll
-                    </p>
-                    <p className="text-primary text-4xl font-bold">
-                      ${totalPay.toFixed(2)}
-                    </p>
-                  </div>
-                  <div className="bg-primary/10 ring-primary/20 group-hover:ring-primary/40 rounded-xl p-3 ring-2 transition-all group-hover:scale-110">
-                    <DollarSign className="text-primary h-8 w-8" />
-                  </div>
-                </div>
-              </m.div>
-
-              {/* Total Hours */}
-              <m.div
-                whileHover={{ y: -5 }}
-                transition={{ delay: 0.05 }}
-                className="group hover:border-primary/30 hover:shadow-primary/10 relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
-              >
-                <div className="absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-blue-500/10 blur-2xl transition-all group-hover:bg-blue-500/20" />
-                <div className="relative flex items-center justify-between">
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-neutral-400">
-                      Total Hours
-                    </p>
-                    <p className="text-4xl font-bold">
-                      {formatHoursAndMinutes(totalHours)}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-blue-500/10 p-3 ring-2 ring-blue-500/20 transition-all group-hover:scale-110 group-hover:ring-blue-500/40">
-                    <Clock className="h-8 w-8 text-blue-400" />
-                  </div>
-                </div>
-              </m.div>
-
-              {/* Employees Count */}
-              <m.div
-                whileHover={{ y: -5 }}
-                transition={{ delay: 0.1 }}
-                className="group hover:border-primary/30 hover:shadow-primary/10 relative overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
-              >
-                <div className="absolute top-0 right-0 h-32 w-32 translate-x-8 -translate-y-8 rounded-full bg-purple-500/10 blur-2xl transition-all group-hover:bg-purple-500/20" />
-                <div className="relative flex items-center justify-between">
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-neutral-400">
-                      Employees
-                    </p>
-                    <p className="text-4xl font-bold">{employees.length}</p>
-                  </div>
-                  <div className="rounded-xl bg-purple-500/10 p-3 ring-2 ring-purple-500/20 transition-all group-hover:scale-110 group-hover:ring-purple-500/40">
-                    <Users className="h-8 w-8 text-purple-400" />
-                  </div>
-                </div>
-              </m.div>
-            </m.div>
-
-            {/* Search Bar and Export Buttons */}
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="relative flex-1">
-                <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                <Input
-                  placeholder="Search employees by name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="border-neutral-700 bg-neutral-800 pl-10"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setPrintModalOpen(true)}
-                  variant="outline"
-                  className="hover:border-primary/50 border-neutral-700 bg-neutral-800/50 backdrop-blur-sm transition-all hover:bg-neutral-800"
-                  disabled={filteredEmployees.length === 0}
-                >
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </Button>
-                <Button
-                  onClick={handleExportCSV}
-                  className="bg-primary hover:bg-primary/90 text-white"
-                  disabled={filteredEmployees.length === 0}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Export to CSV
-                </Button>
-              </div>
+                </>
+              )}
             </div>
+          </div>
 
-            {/* Category filter pills */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPrintModalOpen(true)}
+              disabled={filteredEmployees.length === 0}
+            >
+              Print
+            </Button>
+            <Button
+              onClick={handleExportCSV}
+              disabled={filteredEmployees.length === 0}
+            >
+              Export CSV
+            </Button>
+          </div>
+        </div>
+
+        {/* Summary strip */}
+        <div className="bg-card border-border grid grid-cols-2 rounded-lg border sm:grid-cols-3">
+          <div className="col-span-2 min-w-0 p-4 sm:col-span-1">
+            <p className={micro}>Total payroll</p>
+            <p className="text-primary mt-1 text-3xl font-semibold tracking-tight tabular-nums">
+              {formatAUD(totalPay)}
+            </p>
+          </div>
+          <div className="border-border min-w-0 border-t p-4 sm:border-t-0 sm:border-l">
+            <p className={micro}>Total hours</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
+              {formatHoursAndMinutes(totalHours)}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[12.5px]">
+              After breaks
+            </p>
+          </div>
+          <div className="border-border min-w-0 border-t border-l p-4 sm:border-t-0">
+            <p className={micro}>Employees</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums sm:text-3xl">
+              {employees.length}
+            </p>
+          </div>
+        </div>
+
+        {/* Search and category filter */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="relative w-full sm:w-64">
+              <span className="sr-only">Search employees</span>
+              <Search
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                strokeWidth={1.5}
+              />
+              <Input
+                placeholder="Search employees"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </label>
             {categories.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2">
+              <div
+                role="group"
+                aria-label="Category"
+                className="flex flex-wrap gap-0.5"
+              >
                 <button
+                  type="button"
+                  aria-pressed={selectedCategory === null}
                   onClick={() => setSelectedCategory(null)}
-                  className={`rounded-full border px-3 py-1 text-sm font-medium transition-all ${
-                    selectedCategory === null
-                      ? "border-blue-500 bg-blue-500 text-white"
-                      : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
-                  }`}
+                  className={chipClass(selectedCategory === null)}
                 >
                   All
+                  <span className="text-muted-foreground ml-1 font-mono text-[11px]">
+                    {rawEmployees.length}
+                  </span>
                 </button>
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
+                    type="button"
+                    aria-pressed={selectedCategory === cat.id}
                     onClick={() =>
                       setSelectedCategory(
                         cat.id === selectedCategory ? null : cat.id,
                       )
                     }
-                    className={`rounded-full border px-3 py-1 text-sm font-medium transition-all ${
-                      selectedCategory === cat.id
-                        ? "border-blue-500 bg-blue-500 text-white"
-                        : "border-neutral-700 bg-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200"
-                    }`}
+                    className={chipClass(selectedCategory === cat.id)}
                   >
                     {cat.name}
+                    <span className="text-muted-foreground ml-1 font-mono text-[11px]">
+                      {
+                        rawEmployees.filter((e) => e.category_id === cat.id)
+                          .length
+                      }
+                    </span>
                   </button>
                 ))}
-                <p className="w-full text-xs text-neutral-600 italic">
-                  * Filter by department. Manage categories in Settings.
-                </p>
-              </div>
-            )}
-
-            {/* Employee Cards */}
-            {loading || computingPay ? (
-              <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-12"
-              >
-                <m.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                >
-                  <Clock className="text-primary h-12 w-12" />
-                </m.div>
-                <p className="mt-4 text-neutral-400">Loading employees...</p>
-              </m.div>
-            ) : filteredEmployees.length === 0 ? (
-              <m.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-12 text-center text-neutral-400 backdrop-blur-sm"
-              >
-                <Users className="mx-auto mb-4 h-16 w-16 text-neutral-600" />
-                <p className="text-lg">
-                  {searchQuery
-                    ? "No employees found matching your search"
-                    : "No employees yet. Add your first employee to get started."}
-                </p>
-              </m.div>
-            ) : (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <AnimatePresence mode="popLayout">
-                  {filteredEmployees.map((emp, index) => {
-                    const params = new URLSearchParams({
-                      viewMode,
-                      startDate: format(actualStartDate, "yyyy-MM-dd"),
-                      endDate: format(actualEndDate, "yyyy-MM-dd"),
-                    });
-                    return (
-                      <m.div
-                        key={emp.id}
-                        layout
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.2 }}
-                        whileHover={{ y: -5 }}
-                        onClick={() =>
-                          router.push(
-                            `/client/manager/employee/${emp.id}?${params.toString()}`,
-                          )
-                        }
-                        className="group hover:border-primary/30 hover:shadow-primary/10 relative cursor-pointer overflow-hidden rounded-2xl border border-neutral-800 bg-linear-to-br from-neutral-900/90 to-neutral-900/50 p-6 backdrop-blur-sm transition-all hover:shadow-2xl"
-                      >
-                        {/* Gradient overlay */}
-                        <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                          <div className="from-primary/5 absolute inset-0 bg-linear-to-br to-transparent" />
-                        </div>
-
-                        {/* Employee Header with Total Pay */}
-                        <div className="relative mb-4 flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="mb-1 flex items-center gap-2">
-                              <h3 className="text-xl font-bold">
-                                {emp.first_name} {emp.last_name}
-                              </h3>
-                              {emp.category ? (
-                                <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-blue-400">
-                                  {emp.category.name}
-                                </span>
-                              ) : (
-                                <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-500">
-                                  Uncategorised
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-neutral-400">
-                              Weekday: ${emp.weekday_rate.toFixed(2)}
-                              {emp.pay_type === "day_rate" ? "/day" : "/hr"} |
-                              Sat: ${emp.saturday_rate.toFixed(2)}
-                              {emp.pay_type === "day_rate" ? "/day" : "/hr"} |
-                              Sun: ${emp.sunday_rate.toFixed(2)}
-                              {emp.pay_type === "day_rate" ? "/day" : "/hr"}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-primary mb-1 text-3xl font-bold">
-                              ${emp.totalPay.toFixed(2)}
-                            </div>
-                            <div className="text-xs text-neutral-500">
-                              {formatHoursAndMinutes(emp.rawHours)} →{" "}
-                              {formatHoursAndMinutes(emp.totalHours)}
-                            </div>
-                            <div className="text-xs text-neutral-500">
-                              ({emp.breakMinutes} min break)
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Day boxes: calendar Sat/Sun; PH dates still use PH rate in pay */}
-                        <div className="relative grid grid-cols-3 gap-3">
-                          <m.div
-                            whileHover={{ y: -3 }}
-                            className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-blue-500/50 hover:bg-blue-500/20"
-                          >
-                            <div className="mb-2 text-xs font-medium tracking-wide text-neutral-400 uppercase">
-                              Weekday
-                            </div>
-                            <div className="text-xl font-bold">
-                              {formatHoursAndMinutes(emp.weekdayHours)}
-                            </div>
-                          </m.div>
-                          <m.div
-                            whileHover={{ y: -3 }}
-                            className="rounded-xl border border-purple-500/30 bg-purple-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-purple-500/50 hover:bg-purple-500/20"
-                          >
-                            <div className="mb-2 text-xs font-medium tracking-wide text-neutral-400 uppercase">
-                              Saturday
-                            </div>
-                            <div className="text-xl font-bold">
-                              {formatHoursAndMinutes(emp.saturdayHours)}
-                            </div>
-                          </m.div>
-                          <m.div
-                            whileHover={{ y: -3 }}
-                            className="rounded-xl border border-pink-500/30 bg-pink-500/10 p-4 text-center backdrop-blur-sm transition-all hover:border-pink-500/50 hover:bg-pink-500/20"
-                          >
-                            <div className="mb-2 text-xs font-medium tracking-wide text-neutral-400 uppercase">
-                              Sunday
-                            </div>
-                            <div className="text-xl font-bold">
-                              {formatHoursAndMinutes(emp.sundayHours)}
-                            </div>
-                          </m.div>
-                        </div>
-
-                        {/* Day-rate staff totals — only shown for day_rate employees */}
-                        {emp.pay_type === "day_rate" && (
-                          <div className="relative mt-3 border-t border-neutral-800 pt-2 text-sm text-blue-400">
-                            {emp.daysWorked}{" "}
-                            {emp.daysWorked === 1 ? "day" : "days"} worked
-                            &middot; {emp.totalHours.toFixed(1)}h total
-                          </div>
-                        )}
-
-                        {/* View Details Indicator */}
-                        <div className="text-primary relative mt-4 flex items-center justify-end gap-2 text-sm opacity-0 transition-opacity group-hover:opacity-100">
-                          <span>View Details</span>
-                          <m.div
-                            animate={{ x: [0, 5, 0] }}
-                            transition={{ repeat: Infinity, duration: 1.5 }}
-                          >
-                            <ArrowRight className="h-4 w-4" />
-                          </m.div>
-                        </div>
-                      </m.div>
-                    );
-                  })}
-                </AnimatePresence>
               </div>
             )}
           </div>
-        </main>
-        <PrintSelectModal
-          open={printModalOpen}
-          onClose={() => setPrintModalOpen(false)}
-          employees={rawEmployees}
-          timesheets={rawTimesheets}
-          weekStart={actualStartDate}
-          weekEnd={actualEndDate}
-        />
-      </div>
-    </LazyMotion>
+          {categories.length > 0 && (
+            <p className="text-muted-foreground text-[12.5px]">
+              Filter by department. Manage categories in Settings
+            </p>
+          )}
+        </div>
+
+        {/* Employees */}
+        {loading || computingPay ? (
+          <div className="text-muted-foreground flex items-center justify-center gap-2 py-12 text-sm">
+            <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
+            Loading employees…
+          </div>
+        ) : filteredEmployees.length === 0 ? (
+          <div className="bg-card border-border text-muted-foreground rounded-lg border px-4 py-10 text-center text-sm">
+            {searchQuery
+              ? "No employees found matching your search"
+              : "No employees yet. Add your first employee to get started"}
+          </div>
+        ) : (
+          <>
+            {/* sm and up: one table */}
+            <div className="bg-card border-border hidden overflow-x-auto rounded-lg border sm:block">
+              <table className="w-full min-w-[760px] border-collapse text-left">
+                <thead>
+                  <tr className="border-border border-b">
+                    <th className={th}>Employee</th>
+                    <th className={cn(th, "text-wk")}>Weekday</th>
+                    <th className={cn(th, "bg-sat/[0.06] text-sat")}>
+                      Saturday
+                    </th>
+                    <th className={cn(th, "bg-sun/[0.06] text-sun")}>
+                      Sunday
+                    </th>
+                    <th className={cn(th, "text-right")}>Paid hours</th>
+                    <th className={cn(th, "text-right")}>Break</th>
+                    <th className={cn(th, "text-right")}>Pay</th>
+                    <th className={cn(th, "w-10")}>
+                      <span className="sr-only">View details</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="[&>tr:last-child>td]:border-b-0">
+                  {filteredEmployees.map((emp) => {
+                    const unit = emp.pay_type === "day_rate" ? "/day" : "/hr";
+                    return (
+                      <tr
+                        key={emp.id}
+                        tabIndex={0}
+                        onClick={() => openEmployee(emp.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") openEmployee(emp.id);
+                        }}
+                        className="group hover:bg-secondary focus-visible:bg-secondary focus-visible:ring-ring cursor-pointer transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                      >
+                        <td className={cn(td, "font-sans whitespace-nowrap")}>
+                          <span className="group-hover:text-primary text-[15px] font-medium transition-colors">
+                            {emp.first_name} {emp.last_name}
+                          </span>
+                          <span className={sub}>
+                            {emp.category?.name ?? "Uncategorised"}
+                          </span>
+                        </td>
+                        <td className={td}>
+                          {formatHoursAndMinutes(emp.weekdayHours)}
+                          <span className={sub}>
+                            {formatAUD(emp.weekday_rate)}
+                            {unit}
+                          </span>
+                        </td>
+                        <td className={cn(td, "bg-sat/[0.06]")}>
+                          {formatHoursAndMinutes(emp.saturdayHours)}
+                          <span className={sub}>
+                            {formatAUD(emp.saturday_rate)}
+                            {unit}
+                          </span>
+                        </td>
+                        <td className={cn(td, "bg-sun/[0.06]")}>
+                          {formatHoursAndMinutes(emp.sundayHours)}
+                          <span className={sub}>
+                            {formatAUD(emp.sunday_rate)}
+                            {unit}
+                          </span>
+                        </td>
+                        <td className={cn(td, "text-right")}>
+                          {formatHoursAndMinutes(emp.totalHours)}
+                          <span className={sub}>
+                            {formatHoursAndMinutes(emp.rawHours)} logged
+                          </span>
+                        </td>
+                        <td className={cn(td, "text-right")}>
+                          {emp.breakMinutes} min
+                        </td>
+                        <td className={cn(td, "text-right")}>
+                          {formatAUD(emp.totalPay)}
+                          {emp.pay_type === "day_rate" && (
+                            <span className={sub}>
+                              {emp.daysWorked}{" "}
+                              {emp.daysWorked === 1 ? "day" : "days"} worked ·{" "}
+                              {emp.totalHours.toFixed(1)}h total
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-muted-foreground w-10 pr-3 text-right">
+                          <ChevronRight
+                            aria-hidden
+                            strokeWidth={1.5}
+                            className="inline size-[18px]"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-input border-t">
+                    <td className={cn(tf, micro)}>Total</td>
+                    <td className={tf}>
+                      {formatHoursAndMinutes(tableTotals.weekday)}
+                    </td>
+                    <td className={cn(tf, "bg-sat/[0.06]")}>
+                      {formatHoursAndMinutes(tableTotals.saturday)}
+                    </td>
+                    <td className={cn(tf, "bg-sun/[0.06]")}>
+                      {formatHoursAndMinutes(tableTotals.sunday)}
+                    </td>
+                    <td className={cn(tf, "text-right")}>
+                      {formatHoursAndMinutes(tableTotals.paid)}
+                    </td>
+                    <td className={cn(tf, "text-right")}>
+                      {tableTotals.breakMinutes} min
+                    </td>
+                    <td className="text-primary px-3.5 py-3 text-right text-xl font-semibold tracking-tight whitespace-nowrap tabular-nums">
+                      {formatAUD(tableTotals.pay)}
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Below sm: the same rows as stacked cards */}
+            <div className="bg-card border-border divide-border divide-y rounded-lg border sm:hidden">
+              {filteredEmployees.map((emp) => {
+                const unit = emp.pay_type === "day_rate" ? "/day" : "/hr";
+                return (
+                  <div
+                    key={emp.id}
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => openEmployee(emp.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") openEmployee(emp.id);
+                    }}
+                    className="hover:bg-secondary focus-visible:bg-secondary focus-visible:ring-ring grid cursor-pointer grid-cols-3 gap-x-3 gap-y-2.5 px-4 py-3.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                  >
+                    <div className="col-span-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-[15px] font-medium">
+                          {emp.first_name} {emp.last_name}
+                        </span>
+                        <span className={sub}>
+                          {emp.category?.name ?? "Uncategorised"}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground inline-flex shrink-0 items-center gap-0.5 text-[13px]">
+                        View details
+                        <ChevronRight
+                          aria-hidden
+                          strokeWidth={1.5}
+                          className="size-4"
+                        />
+                      </span>
+                    </div>
+                    <StackFigure
+                      label="Weekday"
+                      labelClass="text-wk"
+                      value={formatHoursAndMinutes(emp.weekdayHours)}
+                      sub={`${formatAUD(emp.weekday_rate)}${unit}`}
+                    />
+                    <StackFigure
+                      label="Saturday"
+                      labelClass="text-sat"
+                      value={formatHoursAndMinutes(emp.saturdayHours)}
+                      sub={`${formatAUD(emp.saturday_rate)}${unit}`}
+                    />
+                    <StackFigure
+                      label="Sunday"
+                      labelClass="text-sun"
+                      value={formatHoursAndMinutes(emp.sundayHours)}
+                      sub={`${formatAUD(emp.sunday_rate)}${unit}`}
+                    />
+                    <StackFigure
+                      label="Paid hours"
+                      value={formatHoursAndMinutes(emp.totalHours)}
+                      sub={`${formatHoursAndMinutes(emp.rawHours)} logged`}
+                    />
+                    <StackFigure
+                      label="Break"
+                      value={`${emp.breakMinutes} min`}
+                    />
+                    <StackFigure
+                      label="Pay"
+                      value={formatAUD(emp.totalPay)}
+                      valueClass="font-sans text-[17px] font-semibold"
+                      sub={
+                        emp.pay_type === "day_rate"
+                          ? `${emp.daysWorked} ${emp.daysWorked === 1 ? "day" : "days"} worked · ${emp.totalHours.toFixed(1)}h total`
+                          : undefined
+                      }
+                    />
+                  </div>
+                );
+              })}
+              <div className="grid grid-cols-3 gap-x-3 gap-y-2.5 px-4 py-3.5">
+                <p className={cn(micro, "col-span-3")}>Total</p>
+                <StackFigure
+                  label="Weekday"
+                  labelClass="text-wk"
+                  value={formatHoursAndMinutes(tableTotals.weekday)}
+                />
+                <StackFigure
+                  label="Saturday"
+                  labelClass="text-sat"
+                  value={formatHoursAndMinutes(tableTotals.saturday)}
+                />
+                <StackFigure
+                  label="Sunday"
+                  labelClass="text-sun"
+                  value={formatHoursAndMinutes(tableTotals.sunday)}
+                />
+                <StackFigure
+                  label="Paid hours"
+                  value={formatHoursAndMinutes(tableTotals.paid)}
+                />
+                <StackFigure
+                  label="Break"
+                  value={`${tableTotals.breakMinutes} min`}
+                />
+                <StackFigure
+                  label="Total pay"
+                  value={formatAUD(tableTotals.pay)}
+                  valueClass="text-primary font-sans text-xl font-semibold"
+                />
+              </div>
+            </div>
+
+            <p className="text-muted-foreground text-right text-[13px]">
+              Select an employee to see their shifts
+            </p>
+          </>
+        )}
+      </main>
+
+      <PrintSelectModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        employees={rawEmployees}
+        timesheets={rawTimesheets}
+        weekStart={actualStartDate}
+        weekEnd={actualEndDate}
+      />
+    </>
+  );
+}
+
+/** Micro label: table heads and stat labels */
+const micro =
+  "text-muted-foreground font-mono text-[11px] tracking-[0.1em] uppercase";
+const th = `${micro} px-3.5 py-3 font-normal whitespace-nowrap`;
+const td =
+  "border-border border-b px-3.5 py-3 align-middle font-mono text-[13px] tabular-nums";
+const tf = "px-3.5 py-3 font-mono text-[13px] whitespace-nowrap tabular-nums";
+const sub = "text-muted-foreground mt-px block font-mono text-[11px] font-normal";
+
+function chipClass(selected: boolean): string {
+  return cn(
+    "focus-visible:ring-ring min-h-10 rounded-lg border px-2.5 text-[13px] transition-colors outline-none focus-visible:ring-2",
+    selected
+      ? "border-input bg-card text-foreground"
+      : "text-muted-foreground hover:text-foreground border-transparent",
+  );
+}
+
+/** One labelled value in a stacked (phone) row */
+function StackFigure({
+  label,
+  labelClass,
+  value,
+  valueClass,
+  sub: subText,
+}: {
+  label: string;
+  labelClass?: string;
+  value: string;
+  valueClass?: string;
+  sub?: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className={cn(micro, labelClass)}>{label}</p>
+      <p className={cn("font-mono text-[13px] tabular-nums", valueClass)}>
+        {value}
+      </p>
+      {subText && <p className={sub}>{subText}</p>}
+    </div>
   );
 }
 
@@ -832,10 +903,8 @@ export default function ManagerDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-neutral-900 text-white">
-          <div className="text-center">
-            <div className="mb-4 text-xl">Loading dashboard...</div>
-          </div>
+        <div className="text-muted-foreground flex min-h-screen items-center justify-center text-sm">
+          Loading dashboard…
         </div>
       }
     >
