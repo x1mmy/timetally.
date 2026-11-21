@@ -22,7 +22,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WeekNavigator } from "@/components/WeekNavigator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search } from "lucide-react";
+import { ChevronRight, Loader2, Search } from "lucide-react";
 import { startOfWeek, endOfWeek, addWeeks, format, getDay } from "date-fns";
 import type {
   Employee,
@@ -627,6 +627,9 @@ function ManagerDashboardContent() {
                     <th className={cn(th, "text-right")}>Paid hours</th>
                     <th className={cn(th, "text-right")}>Break</th>
                     <th className={cn(th, "text-right")}>Pay</th>
+                    <th className={cn(th, "w-10")}>
+                      <span className="sr-only">View details</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="[&>tr:last-child>td]:border-b-0">
@@ -685,9 +688,17 @@ function ManagerDashboardContent() {
                           {emp.pay_type === "day_rate" && (
                             <span className={sub}>
                               {emp.daysWorked}{" "}
-                              {emp.daysWorked === 1 ? "day" : "days"} worked
+                              {emp.daysWorked === 1 ? "day" : "days"} worked ·{" "}
+                              {emp.totalHours.toFixed(1)}h total
                             </span>
                           )}
+                        </td>
+                        <td className="text-muted-foreground w-10 pr-3 text-right">
+                          <ChevronRight
+                            aria-hidden
+                            strokeWidth={1.5}
+                            className="inline size-[18px]"
+                          />
                         </td>
                       </tr>
                     );
@@ -714,6 +725,7 @@ function ManagerDashboardContent() {
                     <td className="text-primary px-3.5 py-3 text-right text-xl font-semibold tracking-tight whitespace-nowrap tabular-nums">
                       {formatAUD(tableTotals.pay)}
                     </td>
+                    <td />
                   </tr>
                 </tfoot>
               </table>
@@ -734,12 +746,22 @@ function ManagerDashboardContent() {
                     }}
                     className="hover:bg-secondary focus-visible:bg-secondary focus-visible:ring-ring grid cursor-pointer grid-cols-3 gap-x-3 gap-y-2.5 px-4 py-3.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
                   >
-                    <div className="col-span-3">
-                      <span className="text-[15px] font-medium">
-                        {emp.first_name} {emp.last_name}
-                      </span>
-                      <span className={sub}>
-                        {emp.category?.name ?? "Uncategorised"}
+                    <div className="col-span-3 flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="text-[15px] font-medium">
+                          {emp.first_name} {emp.last_name}
+                        </span>
+                        <span className={sub}>
+                          {emp.category?.name ?? "Uncategorised"}
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground inline-flex shrink-0 items-center gap-0.5 text-[13px]">
+                        View details
+                        <ChevronRight
+                          aria-hidden
+                          strokeWidth={1.5}
+                          className="size-4"
+                        />
                       </span>
                     </div>
                     <StackFigure
@@ -775,7 +797,7 @@ function ManagerDashboardContent() {
                       valueClass="font-sans text-[17px] font-semibold"
                       sub={
                         emp.pay_type === "day_rate"
-                          ? `${emp.daysWorked} ${emp.daysWorked === 1 ? "day" : "days"} worked`
+                          ? `${emp.daysWorked} ${emp.daysWorked === 1 ? "day" : "days"} worked · ${emp.totalHours.toFixed(1)}h total`
                           : undefined
                       }
                     />

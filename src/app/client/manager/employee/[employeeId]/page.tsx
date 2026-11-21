@@ -464,11 +464,12 @@ function EmployeeDetailContent() {
         </div>
 
         {/* Week summary */}
-        <div className="bg-card border-border grid grid-cols-2 rounded-lg border lg:grid-cols-4">
+        <h2 className="text-xl font-semibold">Week summary</h2>
+        <div className="bg-card border-border -mt-3 grid grid-cols-2 rounded-lg border lg:grid-cols-4">
           <div className="min-w-0 p-4">
             <p className={micro}>Days worked</p>
             <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
-              {daysWorked}
+              {daysWorked} {daysWorked === 1 ? "day" : "days"}
             </p>
           </div>
           <div className="border-border min-w-0 border-l p-4">

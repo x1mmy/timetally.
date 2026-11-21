@@ -62,7 +62,7 @@
   --card-foreground: #16130f;
   --popover: #fbf9f5;
   --popover-foreground: #16130f;
-  --primary: #2563eb;
+  --primary: #1d4ed8;
   --primary-foreground: #ffffff;
   --secondary: #e7e0d5;
   --secondary-foreground: #16130f;
@@ -73,15 +73,15 @@
   --destructive: #b42318;
   --border: rgba(22, 19, 15, 0.14);
   --input: rgba(22, 19, 15, 0.28);
-  --ring: #2563eb;
-  --wk: #2563eb;
+  --ring: #1d4ed8;
+  --wk: #1d4ed8;
   --sat: #7c3aed;
-  --sun: #db2777;
+  --sun: #be185d;
   --ph: #b45309;
   --go: #1f7a45;
   --stop: #b42318;
   --ok: #1f7a45;
-  --warn: #c2410c;
+  --warn: #9a3412;
 }
 
 :root:has([data-portal]):not([data-theme="light"]) {

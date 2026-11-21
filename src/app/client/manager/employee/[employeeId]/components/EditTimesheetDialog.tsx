@@ -180,7 +180,7 @@ export function EditTimesheetDialog({
             )}
           </div>
 
-          <DialogFooter className="border-border border-t pt-4">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"

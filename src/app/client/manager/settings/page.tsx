@@ -779,7 +779,7 @@ export default function ManagerSettingsPage() {
                     type="button"
                     aria-expanded={bulkOpen}
                     onClick={() => setBulkOpen((o) => !o)}
-                    className="hover:text-primary inline-flex items-center gap-2 text-left transition-colors"
+                    className="hover:text-primary inline-flex min-h-10 items-center gap-2 py-1 text-left transition-colors"
                   >
                     Assign categories in bulk
                     <ChevronDown
@@ -803,7 +803,8 @@ export default function ManagerSettingsPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-border text-muted-foreground border-b text-left font-mono text-[11px] tracking-[0.1em] uppercase">
-                          <th className="w-10 py-2.5 pr-2 pl-4 font-normal">
+                          <th className="w-12 p-0 font-normal">
+                            <label className="flex size-11 cursor-pointer items-center justify-center">
                             <input
                               type="checkbox"
                               aria-label="Select all employees"
@@ -814,6 +815,7 @@ export default function ManagerSettingsPage() {
                               onChange={toggleSelectAll}
                               className="accent-primary size-5 align-middle"
                             />
+                            </label>
                           </th>
                           <th className="py-2.5 pr-4 font-normal">Name</th>
                           <th className="hidden py-2.5 pr-4 font-normal sm:table-cell">
@@ -833,7 +835,8 @@ export default function ManagerSettingsPage() {
                           )
                           .map((emp) => (
                             <tr key={emp.id} className="hover:bg-secondary/50">
-                              <td className="py-2 pr-2 pl-4">
+                              <td className="p-0">
+                                <label className="flex size-11 cursor-pointer items-center justify-center">
                                 <input
                                   type="checkbox"
                                   aria-label={`Select ${emp.first_name} ${emp.last_name}`}
@@ -843,6 +846,7 @@ export default function ManagerSettingsPage() {
                                   }
                                   className="accent-primary size-5 align-middle"
                                 />
+                                </label>
                               </td>
                               <td className="py-2 pr-4">
                                 {emp.first_name} {emp.last_name}
@@ -980,7 +984,7 @@ export default function ManagerSettingsPage() {
                   type="button"
                   aria-expanded={previewOpen}
                   onClick={() => setPreviewOpen((o) => !o)}
-                  className="hover:text-primary inline-flex items-center gap-2 text-left transition-colors"
+                  className="hover:text-primary inline-flex min-h-10 items-center gap-2 py-1 text-left transition-colors"
                 >
                   Preview employee views
                   <ChevronDown

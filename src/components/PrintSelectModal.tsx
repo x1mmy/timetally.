@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -228,14 +229,14 @@ export function PrintSelectModal({
           </div>
         )}
 
-        <div className="border-border flex justify-end gap-2 border-t pt-4">
+        <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
           <Button onClick={() => void handlePrint()} disabled={!selected}>
             Print
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

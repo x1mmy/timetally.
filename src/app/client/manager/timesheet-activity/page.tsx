@@ -122,7 +122,6 @@ export default function TimesheetActivityPage() {
     router.push("/client");
   };
 
-  const hasFilters = !!(filterEmployeeId || filterStartDate || filterEndDate);
 
   return (
     <>
@@ -250,15 +249,13 @@ export default function TimesheetActivityPage() {
               Last 30 days
             </Button>
           </div>
-          {hasFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-muted-foreground hover:text-primary focus-visible:ring-ring inline-block rounded-sm py-2 text-sm transition-colors outline-none focus-visible:ring-2"
-            >
-              Clear filters
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-muted-foreground hover:text-primary focus-visible:ring-ring inline-block rounded-sm py-2 text-sm transition-colors outline-none focus-visible:ring-2"
+          >
+            Clear
+          </button>
         </div>
 
         {loading ? (
