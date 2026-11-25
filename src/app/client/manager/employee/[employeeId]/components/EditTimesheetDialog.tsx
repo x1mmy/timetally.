@@ -21,11 +21,14 @@ import {
 } from "@/components/ui/dialog";
 import { TimeInput } from "@/components/TimeInput";
 import { Loader2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
 
 interface EditTimesheetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   employeeId: string;
+  /** Shown in the dialog's sub-line next to the date */
+  employeeName?: string;
   workDate: string;
   startTime: string | null;
   endTime: string | null;
@@ -36,6 +39,7 @@ export function EditTimesheetDialog({
   open,
   onOpenChange,
   employeeId,
+  employeeName,
   workDate,
   startTime: initialStartTime,
   endTime: initialEndTime,
@@ -140,37 +144,39 @@ export function EditTimesheetDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-neutral-700 bg-neutral-800 text-white sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{initialStartTime ? "Edit Timesheet" : "Add Hours"}</DialogTitle>
-            <DialogDescription className="text-neutral-400">
-              {initialStartTime ? "Update" : "Add"} start and end times for {new Date(workDate).toLocaleDateString()}
+      <DialogContent className="sm:max-w-[480px]">
+        <form onSubmit={handleSubmit} className="grid gap-5">
+          <DialogHeader className="pr-8">
+            <DialogTitle>
+              {initialStartTime ? "Edit timesheet" : "Add hours"}
+            </DialogTitle>
+            <DialogDescription>
+              {employeeName ? `${employeeName} · ` : ""}
+              {format(parseISO(workDate), "EEEE d MMMM yyyy")}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            {/* Start Time */}
+          <div className="grid gap-4">
             <TimeInput
-              label="Start Time"
+              label="Start time"
               value={startTime}
               onChange={setStartTime}
               placeholder="09:00"
             />
-
-            {/* End Time */}
             <TimeInput
-              label="End Time"
+              label="End time"
               value={endTime}
               onChange={setEndTime}
               placeholder="17:00"
             />
 
-            {/* Error Message */}
             {error && (
-              <div className="rounded-lg border border-red-500/50 bg-red-900/20 p-3 text-sm text-red-400">
+              <p
+                role="alert"
+                className="bg-warn/10 text-warn rounded-lg px-3 py-2 text-sm"
+              >
                 {error}
-              </div>
+              </p>
             )}
           </div>
 
@@ -180,22 +186,17 @@ export function EditTimesheetDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
-              className="border-neutral-600 bg-neutral-700 hover:bg-neutral-600"
             >
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
+            <Button type="submit" disabled={loading}>
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
+                  <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
+                  Saving…
                 </>
               ) : (
-                initialStartTime ? "Save Changes" : "Add Hours"
+                "Save"
               )}
             </Button>
           </DialogFooter>
@@ -204,4 +205,3 @@ export function EditTimesheetDialog({
     </Dialog>
   );
 }
-

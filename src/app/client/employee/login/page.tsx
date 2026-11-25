@@ -12,11 +12,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PinPad } from "@/components/PinPad";
-import { Label } from "@/components/ui/label";
-import { Clock, Users, ArrowLeft } from "lucide-react";
-import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { loadDomAnimation } from "@/lib/motion-features";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function EmployeeLoginPage() {
   const router = useRouter();
@@ -38,7 +36,7 @@ export default function EmployeeLoginPage() {
         body: JSON.stringify({ pin }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as { error?: string };
 
       if (!response.ok) {
         setError(data.error || "Login failed");
@@ -48,7 +46,7 @@ export default function EmployeeLoginPage() {
       // Fetch employee details to check category
       const meRes = await fetch("/api/client/auth/employee/me");
       if (!meRes.ok) {
-        setError("Failed to load employee info. Please try again.");
+        setError("Could not load your details. Please try again.");
         return;
       }
       const meJson = (await meRes.json()) as {
@@ -61,7 +59,7 @@ export default function EmployeeLoginPage() {
         };
       };
       if (!meJson.employee) {
-        setError("Failed to load employee info. Please try again.");
+        setError("Could not load your details. Please try again.");
         return;
       }
       const dashboardView = meJson.employee.dashboardView ?? "weekly";
@@ -72,8 +70,8 @@ export default function EmployeeLoginPage() {
       } else {
         router.push("/client/employee/dashboard");
       }
-    } catch (err) {
-      setError("An error occurred");
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -88,130 +86,60 @@ export default function EmployeeLoginPage() {
   };
 
   return (
-    <LazyMotion features={loadDomAnimation}>
-      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-neutral-950 text-white">
-        {/* Animated Background */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-20 left-1/4 h-96 w-96 animate-pulse rounded-full bg-blue-500/10 blur-3xl" />
-          <div className="bg-primary/10 absolute right-1/4 bottom-20 h-96 w-96 animate-pulse rounded-full blur-3xl" />
+    <>
+      <header className="bg-card border-border border-b">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <Link
+            href="/client"
+            className="text-muted-foreground hover:text-primary inline-block py-2 text-sm transition-colors"
+          >
+            ‹ Back
+          </Link>
+          <ThemeToggle />
+        </div>
+      </header>
+
+      <main className="mx-auto grid max-w-[340px] justify-items-center gap-5 px-4 py-12 text-center [@media(orientation:landscape)_and_(max-height:540px)]:max-w-2xl [@media(orientation:landscape)_and_(max-height:540px)]:grid-cols-[minmax(0,1fr)_280px] [@media(orientation:landscape)_and_(max-height:540px)]:items-center [@media(orientation:landscape)_and_(max-height:540px)]:gap-x-10 [@media(orientation:landscape)_and_(max-height:540px)]:gap-y-2 [@media(orientation:landscape)_and_(max-height:540px)]:py-5 [@media(orientation:portrait)_and_(max-height:700px)]:gap-3.5 [@media(orientation:portrait)_and_(max-height:700px)]:py-5">
+        <div className="grid gap-5 [@media(orientation:landscape)_and_(max-height:540px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:540px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:540px)]:gap-3 [@media(orientation:portrait)_and_(max-height:700px)]:gap-3.5">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Employee login
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Enter your 4-digit PIN to open your timesheet
+            </p>
+          </div>
+          <p className="font-medium">Enter PIN</p>
         </div>
 
-        <div className="relative w-full max-w-md space-y-8 p-8">
-          {/* Header */}
-          <m.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="space-y-4 text-center"
-          >
-            <m.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 200 }}
-              className="flex justify-center"
-            >
-              <div className="relative">
-                <div className="bg-primary/10 ring-primary/20 rounded-2xl p-6 ring-2">
-                  <Users className="text-primary h-16 w-16" />
-                </div>
-                <m.div
-                  initial={{ scale: 1, opacity: 1 }}
-                  animate={{ scale: 1.5, opacity: 0 }}
-                  transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
-                  className="absolute inset-0"
-                >
-                  <div className="bg-primary/20 rounded-2xl p-6">
-                    <Users className="text-primary/30 h-16 w-16" />
-                  </div>
-                </m.div>
-              </div>
-            </m.div>
-            <m.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="text-4xl font-bold"
-            >
-              Employee Login
-            </m.h1>
-            <m.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="text-neutral-400"
-            >
-              Enter your 4-digit PIN to access your timesheet
-            </m.p>
-          </m.div>
-
-          {/* PIN Pad */}
-          <m.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6 backdrop-blur-sm"
-          >
-            <Label className="mb-4 block text-center text-lg font-semibold">
-              Enter PIN
-            </Label>
-            <PinPad
-              length={4}
-              onComplete={handlePinComplete}
-              onClear={handlePinClear}
-            />
-          </m.div>
-
-          {/* Error Message */}
-          <AnimatePresence>
-            {error && (
-              <m.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-center text-sm text-red-400 backdrop-blur-sm"
-              >
-                {error}
-              </m.div>
-            )}
-          </AnimatePresence>
-
-          {/* Loading State */}
-          <AnimatePresence>
-            {loading && (
-              <m.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center justify-center gap-3 text-neutral-400"
-              >
-                <m.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                >
-                  <Clock className="text-primary h-5 w-5" />
-                </m.div>
-                <span>Authenticating...</span>
-              </m.div>
-            )}
-          </AnimatePresence>
-
-          {/* Back Link */}
-          <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="text-center"
-          >
-            <Link
-              href="/client"
-              className="hover:text-primary inline-flex items-center gap-2 text-sm text-neutral-400 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to portal selection
-            </Link>
-          </m.div>
+        <div className="w-full [@media(orientation:landscape)_and_(max-height:540px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:540px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:540px)]:row-start-1">
+          <PinPad
+            length={4}
+            onComplete={handlePinComplete}
+            onClear={handlePinClear}
+          />
         </div>
-      </div>
-    </LazyMotion>
+
+        <div
+          className="min-h-5 w-full [@media(orientation:landscape)_and_(max-height:540px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:540px)]:row-start-2"
+          aria-live="polite"
+        >
+          {error && (
+            <p
+              role="alert"
+              className="bg-warn/10 text-warn rounded-lg px-3 py-2 text-sm"
+            >
+              {error}
+            </p>
+          )}
+          {loading && (
+            <p className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
+              <Loader2 className="size-4 animate-spin" strokeWidth={1.5} />
+              Checking…
+            </p>
+          )}
+        </div>
+      </main>
+    </>
   );
 }

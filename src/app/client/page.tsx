@@ -1,243 +1,96 @@
 /**
  * Client Portal Landing Page
  * Entry point for client subdomains (e.g., acme.timetally.com)
- * Features:
- * - Welcome message with business name
- * - Two login options: Employee and Manager
- * - Navigation to respective login pages
+ * Shows the business's name and the two ways in: employee and manager login.
  */
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
-import { Clock, Users, Lock, Sparkles } from "lucide-react";
-import { LazyMotion, m } from "framer-motion";
-import { loadDomAnimation } from "@/lib/motion-features";
+import { Logo } from "~/components/Logo";
+import { ThemeToggle } from "~/components/ThemeToggle";
+import { createSupabaseAdmin } from "~/lib/supabase/server";
+import { getSubdomain } from "~/lib/subdomain";
+import type { Client } from "~/types/database";
 
-export default function ClientLandingPage() {
-  const [businessName, setBusinessName] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+async function getBusinessName(): Promise<string> {
+  const subdomain = await getSubdomain();
+  if (!subdomain) return "TimeTally";
 
-  /**
-   * Fetch client information on mount
-   */
-  useEffect(() => {
-    const fetchClientInfo = async () => {
-      try {
-        // In a real implementation, you'd fetch this from an API endpoint
-        // For now, we'll use a placeholder
-        setBusinessName("Welcome");
-      } catch (error) {
-        console.error("Error fetching client info:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { data } = await createSupabaseAdmin()
+    .from("clients")
+    .select("business_name")
+    .eq("subdomain", subdomain)
+    .single();
+  const client = data as Pick<Client, "business_name"> | null;
 
-    fetchClientInfo();
-  }, []);
+  return client?.business_name ?? "TimeTally";
+}
 
-  if (loading) {
-    return (
-      <LazyMotion features={loadDomAnimation}>
-        <div className="flex min-h-screen items-center justify-center bg-neutral-950">
-          <m.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-white"
-          >
-            <div className="flex items-center gap-3">
-              <Clock className="text-primary h-8 w-8 animate-spin" />
-              <span className="text-lg">Loading...</span>
-            </div>
-          </m.div>
-        </div>
-      </LazyMotion>
-    );
-  }
+const doors = [
+  {
+    href: "/client/employee/login",
+    title: "Employee login",
+    description: "Submit your weekly timesheet",
+    action: "Login with PIN",
+  },
+  {
+    href: "/client/manager/login",
+    title: "Manager login",
+    description: "Review and export payroll data",
+    action: "Manager login",
+  },
+];
+
+export default async function ClientLandingPage(): Promise<React.JSX.Element> {
+  const businessName = await getBusinessName();
 
   return (
-    <LazyMotion features={loadDomAnimation}>
-      <div className="relative min-h-screen overflow-hidden bg-neutral-950 text-white">
-        {/* Animated Background */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute top-20 -left-40 h-96 w-96 animate-pulse rounded-full bg-blue-500/5 blur-3xl" />
-          <div className="absolute -right-40 bottom-20 h-96 w-96 animate-pulse rounded-full bg-blue-400/5 blur-3xl" />
-        </div>
-
-        <div className="relative container mx-auto px-4 py-16">
-          {/* Header */}
-          <m.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="mb-16 text-center"
-          >
-            <m.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 200 }}
-              className="mb-6 flex justify-center"
-            >
-              <div className="relative">
-                <Clock className="text-primary relative z-10 h-20 w-20 drop-shadow-2xl" />
-                <m.div
-                  initial={{ scale: 1, opacity: 1 }}
-                  animate={{ scale: 1.5, opacity: 0 }}
-                  transition={{ delay: 0.1, duration: 0.8, ease: "easeOut" }}
-                  className="absolute inset-0"
-                >
-                  <Clock className="text-primary/30 h-20 w-20" />
-                </m.div>
-              </div>
-            </m.div>
-
-            <m.h1
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="mb-3 text-5xl font-bold tracking-tight md:text-6xl"
-            >
-              TimeTally<span className="text-primary">.</span>
-            </m.h1>
-
-            <m.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center justify-center gap-2 text-xl text-neutral-400"
-            >
-              <Sparkles className="h-5 w-5" />
-              Payroll Management System
-            </m.p>
-          </m.div>
-
-          {/* Login Options */}
-          <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
-            {/* Employee Login Card */}
-            <m.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ type: "spring", stiffness: 100 }}
-            >
-              <Link
-                href="/client/employee/login"
-                className="group block h-full"
-              >
-                <Card className="hover:border-primary/50 hover:shadow-primary/20 relative h-full overflow-hidden border-neutral-800 bg-neutral-900/50 p-8 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:bg-neutral-900/80 hover:shadow-2xl">
-                  {/* Gradient overlay on hover */}
-                  <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <div className="from-primary/10 absolute inset-0 bg-gradient-to-br to-transparent" />
-                  </div>
-
-                  <div className="relative space-y-5 text-center">
-                    <m.div
-                      className="flex justify-center"
-                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      <div className="bg-primary/10 ring-primary/20 rounded-2xl p-5 ring-2">
-                        <Users className="text-primary h-16 w-16" />
-                      </div>
-                    </m.div>
-
-                    <h2 className="text-3xl font-bold text-white">
-                      Employee Login
-                    </h2>
-
-                    <p className="text-neutral-400">
-                      Submit your weekly timesheet
-                    </p>
-
-                    <div className="pt-4">
-                      <div className="bg-primary shadow-primary/30 group-hover:shadow-primary/40 inline-flex items-center gap-2 rounded-xl px-8 py-3 font-semibold text-white shadow-lg transition-all group-hover:shadow-xl">
-                        Login with PIN
-                        <m.span
-                          className="inline-block"
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.5 }}
-                        >
-                          →
-                        </m.span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            </m.div>
-
-            {/* Manager Login Card */}
-            <m.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ type: "spring", stiffness: 100 }}
-            >
-              <Link href="/client/manager/login" className="group block h-full">
-                <Card className="hover:border-primary/50 hover:shadow-primary/20 relative h-full overflow-hidden border-neutral-800 bg-neutral-900/50 p-8 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:bg-neutral-900/80 hover:shadow-2xl">
-                  {/* Gradient overlay on hover */}
-                  <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                    <div className="from-primary/10 absolute inset-0 bg-gradient-to-br to-transparent" />
-                  </div>
-
-                  <div className="relative space-y-5 text-center">
-                    <m.div
-                      className="flex justify-center"
-                      whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                      transition={{ duration: 0.5 }}
-                    >
-                      <div className="bg-primary/10 ring-primary/20 rounded-2xl p-5 ring-2">
-                        <Lock className="text-primary h-16 w-16" />
-                      </div>
-                    </m.div>
-
-                    <h2 className="text-3xl font-bold text-white">
-                      Manager Access
-                    </h2>
-
-                    <p className="text-neutral-400">
-                      Review and export payroll data
-                    </p>
-
-                    <div className="pt-4">
-                      <div className="bg-primary shadow-primary/30 group-hover:shadow-primary/40 inline-flex items-center gap-2 rounded-xl px-8 py-3 font-semibold text-white shadow-lg transition-all group-hover:shadow-xl">
-                        Manager Login
-                        <m.span
-                          className="inline-block"
-                          animate={{ x: [0, 5, 0] }}
-                          transition={{ repeat: Infinity, duration: 1.5 }}
-                        >
-                          →
-                        </m.span>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            </m.div>
-          </div>
-
-          {/* Footer */}
-          <m.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="mt-16 text-center text-sm text-neutral-500"
-          >
-            <p>
-              2025 © TimeTally. | Built by{" "}
-              <a
-                href="https://stashlabs.com.au"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary text-neutral-400 transition-colors hover:underline"
-              >
-                Stash Labs.
-              </a>
-            </p>
-          </m.div>
-        </div>
+    <div className="mx-auto grid max-w-3xl gap-9 px-4 py-10 sm:px-6 sm:py-14 [@media(orientation:landscape)_and_(max-height:540px)]:gap-6 [@media(orientation:landscape)_and_(max-height:540px)]:py-7">
+      <div className="flex items-center justify-between gap-3">
+        <Logo />
+        <ThemeToggle />
       </div>
-    </LazyMotion>
+
+      <div>
+        <h1 className="text-[clamp(40px,6vw,64px)] leading-none font-semibold tracking-tight break-words">
+          {businessName}
+        </h1>
+        <p className="text-muted-foreground mt-3.5 text-lg">
+          Payroll and timesheets
+        </p>
+      </div>
+
+      <div>
+        {doors.map((door) => (
+          <Link
+            key={door.href}
+            href={door.href}
+            className="group border-border hover:text-primary grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 border-t py-5 transition-colors last:border-b"
+          >
+            <div>
+              <div className="text-xl font-semibold tracking-tight sm:text-2xl">
+                {door.title}
+              </div>
+              <div className="text-muted-foreground mt-0.5 text-[15px]">
+                {door.description}
+              </div>
+            </div>
+            <span className="border-input group-hover:border-primary inline-flex items-center gap-2 rounded-full border px-3.5 py-2 font-mono text-sm whitespace-nowrap transition-colors">
+              {door.action} <span aria-hidden>→</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      <p className="text-muted-foreground text-[13px]">
+        © 2026 TimeTally · Built by{" "}
+        <a
+          href="https://stashlabs.com.au"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-primary inline-block py-2 transition-colors"
+        >
+          Stash Labs
+        </a>
+      </p>
+    </div>
   );
 }

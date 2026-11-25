@@ -1,10 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { LazyMotion, m, AnimatePresence } from "framer-motion";
-import { loadDomAnimation } from "@/lib/motion-features";
-import { X, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "~/lib/utils";
 import {
   printWeekSummary,
   printDayBreakdown,
@@ -149,113 +155,89 @@ export function PrintSelectModal({
   };
 
   return (
-    <LazyMotion features={loadDomAnimation}>
-      <AnimatePresence>
-        {open && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <m.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={onClose}
-            />
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <DialogContent className="gap-5 sm:max-w-md">
+        <DialogHeader className="pr-8">
+          <DialogTitle>Select print format</DialogTitle>
+          <DialogDescription className="sr-only">
+            Choose a layout and category, then print
+          </DialogDescription>
+        </DialogHeader>
 
-            <m.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="relative z-10 w-full max-w-sm rounded-2xl border border-neutral-700 bg-neutral-900 p-6 shadow-2xl"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Select Print Format</h2>
-                <button
-                  onClick={onClose}
-                  aria-label="Close modal"
-                  className="rounded-lg p-1 text-neutral-400 hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {(
-                  ["week-summary", "day-breakdown", "clock-times"] as const
-                ).map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => setSelected(opt)}
-                    className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left transition-all ${
-                      selected === opt
-                        ? "border-primary bg-primary/10 text-white"
-                        : "border-neutral-700 hover:border-neutral-500"
-                    }`}
-                  >
-                    <FileText className="text-primary h-5 w-5 shrink-0" />
-                    <div>
-                      <p className="font-medium">
-                        {opt === "week-summary"
-                          ? "Week Summary"
-                          : opt === "day-breakdown"
-                            ? "Day Breakdown"
-                            : "Clock Times"}
-                      </p>
-                      <p className="text-xs text-neutral-400">
-                        {opt === "week-summary"
-                          ? "One row per employee — weekly hour totals"
-                          : opt === "day-breakdown"
-                            ? "One row per employee — hours per day across the week"
-                            : "One row per shift — exact clock-in and clock-out times"}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {categories.length > 0 && (
-                <div className="mt-4">
-                  <p className="mb-2 text-sm font-medium text-neutral-300">
-                    Filter by category
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setSelectedCategory(null)}
-                      className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
-                        selectedCategory === null
-                          ? "border-primary bg-primary/10 text-white"
-                          : "border-neutral-700 text-neutral-400 hover:border-neutral-500"
-                      }`}
-                    >
-                      All
-                    </button>
-                    {categories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
-                        className={`rounded-lg border px-3 py-1.5 text-sm transition-all ${
-                          selectedCategory === cat.id
-                            ? "border-primary bg-primary/10 text-white"
-                            : "border-neutral-700 text-neutral-400 hover:border-neutral-500"
-                        }`}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Button
-                onClick={() => void handlePrint()}
-                disabled={!selected}
-                className="from-primary mt-6 w-full bg-gradient-to-r to-blue-500 disabled:opacity-40"
+        <div className="grid gap-2">
+          {(["week-summary", "day-breakdown", "clock-times"] as const).map(
+            (opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setSelected(opt)}
+                aria-pressed={selected === opt}
+                className={cn(
+                  "focus-visible:ring-ring grid w-full gap-0.5 rounded-lg border p-3.5 text-left transition-colors outline-none focus-visible:ring-2",
+                  selected === opt
+                    ? "border-primary bg-secondary"
+                    : "border-border bg-card hover:border-primary",
+                )}
               >
-                Print
-              </Button>
-            </m.div>
+                <span className="font-medium">
+                  {opt === "week-summary"
+                    ? "Week summary"
+                    : opt === "day-breakdown"
+                      ? "Day breakdown"
+                      : "Clock times"}
+                </span>
+                <span className="text-muted-foreground text-[13px]">
+                  {opt === "week-summary"
+                    ? "One row per employee, weekly hour totals"
+                    : opt === "day-breakdown"
+                      ? "One row per employee, hours per day across the week"
+                      : "One row per shift, exact clock-in and clock-out times"}
+                </span>
+              </button>
+            ),
+          )}
+        </div>
+
+        {categories.length > 0 && (
+          <div className="grid gap-2">
+            <p className="text-muted-foreground text-[13px]">
+              Filter by category
+            </p>
+            <div className="flex flex-wrap gap-0.5">
+              {[{ id: null, name: "All" }, ...categories].map((cat) => (
+                <button
+                  key={cat.id ?? "all"}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat.id)}
+                  aria-pressed={selectedCategory === cat.id}
+                  className={cn(
+                    "focus-visible:ring-ring min-h-10 rounded-lg border px-2.5 text-[13px] transition-colors outline-none focus-visible:ring-2",
+                    selectedCategory === cat.id
+                      ? "border-input bg-card text-foreground"
+                      : "text-muted-foreground hover:text-foreground border-transparent",
+                  )}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
-      </AnimatePresence>
-    </LazyMotion>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={() => void handlePrint()} disabled={!selected}>
+            Print
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

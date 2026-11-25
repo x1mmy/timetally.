@@ -30,31 +30,28 @@ export function WeekNavigator({
   onNext,
 }: WeekNavigatorProps) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      {/* Previous Week Button */}
+    <div className="inline-flex items-center gap-2">
       <Button
         variant="outline"
+        size="icon"
         onClick={onPrevious}
-        className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+        aria-label="Previous week"
       >
-        <ChevronLeft className="mr-2 h-5 w-5" />
-        Previous Week
+        <ChevronLeft className="size-4" strokeWidth={1.5} />
       </Button>
 
-      {/* Week Date Range Display */}
-      <div className="text-lg font-semibold">
-        {/* Format: "4 Jan - 10 Jan 2025" */}
-        {format(weekStart, "d MMM")} - {format(weekEnd, "d MMM yyyy")}
-      </div>
+      {/* Format: "4 Jan – 10 Jan 2025" */}
+      <span className="text-muted-foreground min-w-[150px] text-center font-mono text-sm tabular-nums">
+        {format(weekStart, "d MMM")} – {format(weekEnd, "d MMM yyyy")}
+      </span>
 
-      {/* Next Week Button */}
       <Button
         variant="outline"
+        size="icon"
         onClick={onNext}
-        className="border-neutral-700 bg-neutral-800 hover:bg-neutral-700"
+        aria-label="Next week"
       >
-        Next Week
-        <ChevronRight className="ml-2 h-5 w-5" />
+        <ChevronRight className="size-4" strokeWidth={1.5} />
       </Button>
     </div>
   );

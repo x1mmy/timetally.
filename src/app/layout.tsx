@@ -1,8 +1,9 @@
 import "~/styles/globals.css";
 
 import { type Metadata, type Viewport } from "next";
-import localFont from "next/font/local";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+
+import { landingFonts } from "~/app/_components/landing/fonts";
 
 const title = "TimeTally: timesheets and payroll for Australian small businesses";
 const description =
@@ -23,28 +24,11 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-const satoshi = localFont({
-  src: [
-    {
-      path: "../../public/fonts/Satoshi-Variable.woff2",
-      weight: "300 900",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/Satoshi-VariableItalic.woff2",
-      weight: "300 900",
-      style: "italic",
-    },
-  ],
-  variable: "--font-satoshi",
-  display: "swap",
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${satoshi.variable}`}>
+    <html lang="en" className={landingFonts} suppressHydrationWarning>
       <body>
         {children}
         <SpeedInsights />
